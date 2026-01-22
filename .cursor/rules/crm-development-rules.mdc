@@ -1,0 +1,199 @@
+---
+alwaysApply: true
+---
+
+# 📘 CRM Mobile Enterprise Cursor Rules (React Native + TypeScript)
+
+Bu proje %100 **React Native + TypeScript** ile geliştirilmiştir.
+Cursor, aşağıdaki kurallara HER DOSYADA, OTOMATİK ve ZORUNLU olarak uyar.
+
+AMAÇ:
+- Feature-first mimari
+- Screen / Hook ayrımı
+- Service / Component / Model standardı
+- Tip güvenli API kullanımı
+- ApiResponse<T> ve PagedResponse<T> ile otomatik listeleme & pagination
+- UI ve business logic kesin ayrımı
+
+================================================================================
+
+1. TEMEL UI KURALLARI
+
+KULLANILABİLECEK BİLEŞENLER:
+- View
+- Text
+- TextInput
+- Pressable / TouchableOpacity
+- FlatList
+- ScrollView
+- Modal
+- ActivityIndicator
+
+KESİN YASAKLAR:
+- div, span, table, className
+- css, tailwind, shadcn
+- inline style (StyleSheet.create ZORUNLU)
+- screen veya component içinde API çağrısı
+- map ile liste render (FlatList ZORUNLU)
+
+================================================================================
+
+2. MİMARİ – FEATURE FIRST (ZORUNLU)
+
+Klasör yapısı:
+
+src/
+  features/
+    auth/
+    customer/
+    order/
+    stock/
+
+Her feature içinde:
+- api/
+- hooks/
+- screens/
+- components/
+- types/
+- index.ts
+
+KURALLAR:
+- Başka feature’dan direkt import YASAK
+- Sadece index.ts üzerinden erişim serbest
+
+================================================================================
+
+3. SCREEN – HOOK AYRIMI (KATİ)
+
+SCREEN:
+- Sadece UI render eder
+- API çağrısı YASAK
+- Navigation YASAK
+- State yönetimi YASAK
+
+HOOK:
+- Tüm business logic burada olur
+- ApiResponse<T> kontrolü
+- Loading / Error / Success yönetimi
+- Navigation
+- Form validation
+- Pagination kontrolü
+
+================================================================================
+
+4. API & SERVICE PATTERN
+
+- Tüm servisler feature/api altında
+- Axios veya fetch tabanlı client
+- Service → SADECE HTTP çağrısı yapar
+- Service içinde state veya logic YASAK
+
+AKIŞ:
+Screen → Hook → Service → API
+
+Query key standardı:
+['feature', 'entity', params]
+
+================================================================================
+
+5. RESPONSE & TYPE STANDARTLARI
+
+ZORUNLU RESPONSE TİPLERİ:
+- ApiResponse<T>
+- PagedResponse<T>
+
+Örnek:
+ApiResponse<PagedResponse<CustomerDto>>
+
+KURALLAR:
+- any YASAK
+- unknown sadece zorunlu durumlarda
+- Tüm fonksiyonlarda explicit return type
+- Tüm DTO ve type’lar feature/types altında
+
+================================================================================
+
+6. STATE YÖNETİMİ
+
+Server State:
+- @tanstack/react-query
+
+Form State:
+- react-hook-form
+- zod (zorunlu)
+
+Global UI State:
+- Zustand veya Context API
+
+Redux KESİN YASAK
+
+================================================================================
+
+7. LİSTELEME & PAGINATION
+
+- SADECE FlatList kullanılır
+- renderItem ayrı component olur
+- map ile render KESİN YASAK
+
+Cursor OTOMATİK OLARAK:
+- PagedResponse.items render eder
+- hasNextPage kontrolü yapar
+- Infinite scroll (onEndReached) uygular
+- pageNumber / pageSize query param gönderir
+
+================================================================================
+
+8. COMPONENT KURALLARI
+
+- Component sadece props alır
+- Logic component içinde YASAK
+- Memoized component tercih edilir
+- Props destructuring zorunlu
+
+================================================================================
+
+9. STYLE KURALLARI
+
+- StyleSheet.create zorunlu
+- Inline style YASAK
+- Theme / color sabitleri merkezi dosyada tutulur
+
+================================================================================
+
+10. NAVIGATION
+
+- Navigation SADECE hook içinde
+- Screen içinde navigation KESİN YASAK
+- react-navigation (native-stack) kullanılır
+
+================================================================================
+
+11. ÖRNEK FEATURE AKIŞI
+
+LOGIN:
+LoginScreen
+ → useLoginScreen
+   → useLoginMutation
+     → AuthService
+
+CUSTOMER (PAGED):
+CustomerListScreen
+ → useCustomerListScreen
+   → useCustomerListQuery
+     → CustomerService
+
+================================================================================
+
+12. GENEL YASAKLAR
+
+- Screen içinde API çağrısı
+- Component içinde logic
+- map ile liste render
+- any kullanımı
+- inline style
+- feature dışı type kullanımı
+
+================================================================================
+
+Cursor bu kurallara uymayan KOD ÜRETMEMELİDİR.
+Bu kurallar HER ZAMAN ve HER DOSYADA geçerlidir.

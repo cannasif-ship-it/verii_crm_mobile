@@ -1,0 +1,681 @@
+# 🎨 v3rii CRM - Tasarım Sistemi Rehberi
+
+Bu doküman, v3rii CRM projesinin renk paleti, tipografi, component stilleri ve genel tasarım prensiplerini içerir. Hem React/TypeScript hem de Flutter geliştirmeleri için referans olarak kullanılabilir.
+
+---
+
+## 📐 1. RENK PALETİ (Color Palette)
+
+### 1.1. Ana Gradient Renkler
+Projenin imza renkleri **Pink → Orange → Yellow** gradientidir:
+
+```css
+/* Ana Gradient */
+from-pink-600 (#db2777) 
+via-orange-500 (#f97316) 
+to-yellow-500 (#eab308)
+
+/* Hover Gradient */
+from-pink-500 (#ec4899)
+via-orange-400 (#fb923c)
+to-yellow-400 (#facc15)
+```
+
+**Hex Değerleri:**
+- Pink: `#ec4899` / `#db2777`
+- Orange: `#f97316` / `#fb923c`
+- Yellow: `#fbbf24` / `#eab308`
+
+### 1.2. Dark Mode Arka Plan Renkleri
+```css
+/* Ana Dark Background */
+#0f0518  /* Login sayfası ana arka plan */
+#0c0516  /* Main layout dark background */
+#140a1e  /* Login card background (70% opacity) */
+
+/* Radial Gradient */
+radial-gradient(circle at 50% 50%, #1a0b2e 0%, #000000 100%)
+```
+
+### 1.3. Light Mode Arka Plan Renkleri
+```css
+#f8f9fc  /* Main layout light background */
+```
+
+### 1.4. Glassmorphism (Cam Efekti) Renkleri
+```css
+/* Card Background */
+bg-[#140a1e]/70  /* 70% opacity */
+backdrop-blur-xl  /* Blur efekti */
+
+/* Border */
+border-white/10  /* 10% opacity beyaz border */
+
+/* Shadow */
+shadow-[0_20px_40px_rgba(0,0,0,0.4), inset_0_0_20px_rgba(255,255,255,0.07)]
+```
+
+### 1.5. Ambient Glow (Işık Efektleri)
+```css
+/* Pink Glow */
+bg-pink-300/30 dark:bg-pink-600/5
+blur-[120px]
+
+/* Orange Glow */
+bg-orange-300/30 dark:bg-orange-600/5
+blur-[100px]
+```
+
+### 1.6. Text Renkleri
+```css
+/* Primary Text */
+text-white  /* Dark mode */
+text-foreground  /* Light mode */
+
+/* Secondary Text */
+text-slate-400  /* Gri ton */
+text-slate-500  /* Daha koyu gri */
+
+/* Gradient Text */
+bg-gradient-to-r from-pink-400 to-yellow-400
+bg-clip-text
+text-transparent
+```
+
+### 1.7. Icon Renkleri (Sidebar Menü)
+- Ana Sayfa: `text-blue-500`
+- Müşteriler: `text-purple-500`
+- Aktiviteler: `text-emerald-500`
+- Ürün & Stok: `text-pink-500`
+- Satış Yönetimi: `text-orange-500`
+- Onay Tanım: `text-teal-500`
+- Tanımlar: `text-slate-500`
+- Kullanıcılar: `text-indigo-500`
+- Ayarlar: `text-gray-500`
+
+### 1.8. Sosyal Medya Icon Hover Renkleri
+- Telefon: `hover:text-lime-400`
+- Website: `hover:text-pink-400`
+- E-posta: `hover:text-orange-400`
+- WhatsApp: `hover:text-emerald-400`
+- Telegram: `hover:text-sky-400`
+- Instagram: `hover:text-fuchsia-400`
+- X (Twitter): `hover:text-white`
+
+---
+
+## 🔤 2. TİPOGRAFİ (Typography)
+
+### 2.1. Font Ailesi
+```css
+font-family: 'Outfit', sans-serif;
+```
+
+**Google Fonts Import:**
+```html
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap');
+```
+
+### 2.2. Font Ağırlıkları
+- `300` - Light
+- `400` - Regular (Normal)
+- `500` - Medium
+- `600` - Semi-bold
+- `700` - Bold
+
+### 2.3. Font Boyutları ve Kullanımları
+```css
+/* Başlıklar */
+text-3xl font-bold  /* Ana başlıklar */
+text-xl font-semibold  /* Alt başlıklar */
+
+/* Body Text */
+text-sm  /* Normal metin */
+text-xs  /* Küçük metin, label'lar */
+
+/* Özel */
+text-xs uppercase tracking-[0.15em]  /* Login sayfası alt başlık */
+text-sm font-light tracking-[0.2em] uppercase  /* Footer metin */
+```
+
+---
+
+## 🎯 3. COMPONENT STİLLERİ
+
+### 3.1. Buton Stilleri
+
+#### Primary Gradient Button (Ana Aksiyon Butonu)
+```css
+w-full py-4 rounded-xl
+bg-gradient-to-r from-pink-600 via-orange-500 to-yellow-500
+hover:from-pink-500 hover:via-orange-400 hover:to-yellow-400
+text-white font-bold text-sm
+shadow-lg shadow-orange-900/20
+tracking-wide uppercase
+transition-all transform hover:-translate-y-0.5
+disabled:opacity-70 disabled:cursor-not-allowed
+```
+
+#### Secondary Button
+```css
+bg-secondary border border-border
+hover:bg-accent
+dark:bg-[#1a1025] dark:border-white/10
+dark:text-slate-200 dark:hover:bg-white/5
+```
+
+#### Icon Button (Sosyal Medya)
+```css
+w-12 h-12 rounded-full
+bg-white/5 border border-white/5
+text-slate-400
+hover:text-[color]-400 hover:bg-white/10
+hover:border-[color]-500/30
+hover:shadow-[0_0_15px_rgba(r,g,b,0.3)]
+hover:scale-110
+transition-all duration-300
+```
+
+### 3.2. Input/Form Field Stilleri
+```css
+/* Input Container */
+relative group
+
+/* Input */
+w-full bg-black/30 border border-white/10
+rounded-xl px-4 py-6 pl-12 pr-10
+text-sm text-white placeholder-slate-500
+focus-visible:ring-0 focus-visible:ring-offset-0
+focus-visible:border-pink-500 focus:bg-black/50
+
+/* Icon (Input içinde) */
+absolute left-4 top-1/2 -translate-y-1/2
+text-slate-400
+group-focus-within:text-orange-400
+transition-colors
+```
+
+### 3.3. Card Stilleri
+```css
+/* Login Card */
+w-full max-w-md p-10 rounded-3xl
+bg-[#140a1e]/70 backdrop-blur-xl
+border border-white/10
+shadow-[0_20px_40px_rgba(0,0,0,0.4), inset_0_0_20px_rgba(255,255,255,0.07)]
+animate-[fadeIn_0.8s_ease-out]
+```
+
+### 3.4. Select/Dropdown Stilleri
+```css
+/* Select Trigger */
+w-full h-auto bg-black/10 border border-white/10
+rounded-xl px-4 py-6 pl-12 text-sm text-white
+focus:ring-0 focus:ring-offset-0
+focus:border-pink-500 focus:bg-black/30
+transition-colors
+
+/* Select Content */
+bg-black/90 backdrop-blur-xl border border-white/10 text-white
+
+/* Select Item */
+focus:bg-pink-500/20 focus:text-white cursor-pointer
+```
+
+---
+
+## 🎨 4. ANİMASYONLAR VE EFEKTLER
+
+### 4.1. Hover Efektleri
+```css
+/* Scale */
+hover:scale-110
+hover:scale-[1.01]
+active:scale-[0.99]
+
+/* Translate */
+hover:-translate-y-0.5
+
+/* Transition */
+transition-all duration-300
+transition-colors
+```
+
+### 4.2. Shadow Efektleri
+```css
+/* Button Shadow */
+shadow-lg shadow-orange-900/20
+hover:shadow-pink-500/40
+
+/* Card Shadow */
+shadow-[0_20px_40px_rgba(0,0,0,0.4), inset_0_0_20px_rgba(255,255,255,0.07)]
+
+/* Icon Hover Shadow */
+hover:shadow-[0_0_15px_rgba(244,114,182,0.3)]
+```
+
+### 4.3. Backdrop Blur
+```css
+backdrop-blur-xl  /* Card'lar için */
+backdrop-blur-md  /* Navbar için */
+```
+
+### 4.4. Border Radius
+```css
+rounded-xl  /* Input, Button */
+rounded-3xl  /* Card */
+rounded-full  /* Icon button, Avatar */
+rounded-lg  /* Menu items */
+rounded-md  /* Küçük elementler */
+```
+
+---
+
+## 📱 5. FLUTTER İÇİN UYARLAMA
+
+### 5.1. Renk Paleti (Flutter)
+
+```dart
+class AppColors {
+  // Gradient Colors
+  static const Color pink600 = Color(0xFFDB2777);
+  static const Color pink500 = Color(0xFFEC4899);
+  static const Color orange500 = Color(0xFFF97316);
+  static const Color orange400 = Color(0xFFFB923C);
+  static const Color yellow500 = Color(0xFFEAB308);
+  static const Color yellow400 = Color(0xFFFACC15);
+  
+  // Dark Background
+  static const Color darkBgPrimary = Color(0xFF0F0518);
+  static const Color darkBgSecondary = Color(0xFF0C0516);
+  static const Color darkCardBg = Color(0xFF140A1E);
+  
+  // Light Background
+  static const Color lightBg = Color(0xFFF8F9FC);
+  
+  // Text Colors
+  static const Color textWhite = Colors.white;
+  static const Color textSlate400 = Color(0xFF94A3B8);
+  static const Color textSlate500 = Color(0xFF64748B);
+  
+  // Border
+  static const Color borderWhite10 = Color.fromRGBO(255, 255, 255, 0.1);
+}
+```
+
+### 5.2. Gradient (Flutter)
+
+```dart
+// Primary Button Gradient
+LinearGradient primaryGradient = LinearGradient(
+  colors: [
+    AppColors.pink600,
+    AppColors.orange500,
+    AppColors.yellow500,
+  ],
+  begin: Alignment.centerLeft,
+  end: Alignment.centerRight,
+);
+
+// Hover Gradient
+LinearGradient primaryGradientHover = LinearGradient(
+  colors: [
+    AppColors.pink500,
+    AppColors.orange400,
+    AppColors.yellow400,
+  ],
+  begin: Alignment.centerLeft,
+  end: Alignment.centerRight,
+);
+```
+
+### 5.3. Glassmorphism (Flutter)
+
+```dart
+import 'package:flutter/material.dart';
+
+class GlassmorphismCard extends StatelessWidget {
+  final Widget child;
+  
+  const GlassmorphismCard({required this.child});
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.darkCardBg.withOpacity(0.7),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: AppColors.borderWhite10,
+          width: 1,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 40,
+            offset: Offset(0, 20),
+          ),
+          BoxShadow(
+            color: Colors.white.withOpacity(0.07),
+            blurRadius: 20,
+            spreadRadius: -10,
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: child,
+        ),
+      ),
+    );
+  }
+}
+```
+
+### 5.4. Typography (Flutter)
+
+```dart
+// pubspec.yaml'a ekle:
+// google_fonts: ^6.1.0
+
+import 'package:google_fonts/google_fonts.dart';
+
+TextStyle getTextStyle({
+  double fontSize = 14,
+  FontWeight fontWeight = FontWeight.normal,
+  Color color = Colors.white,
+}) {
+  return GoogleFonts.outfit(
+    fontSize: fontSize,
+    fontWeight: fontWeight,
+    color: color,
+  );
+}
+
+// Kullanım:
+Text(
+  'Başlık',
+  style: getTextStyle(
+    fontSize: 24,
+    fontWeight: FontWeight.bold,
+  ),
+)
+```
+
+### 5.5. Button Widget (Flutter)
+
+```dart
+class PrimaryGradientButton extends StatelessWidget {
+  final String text;
+  final VoidCallback? onPressed;
+  final bool isLoading;
+  
+  const PrimaryGradientButton({
+    required this.text,
+    this.onPressed,
+    this.isLoading = false,
+  });
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: onPressed != null 
+          ? primaryGradient 
+          : primaryGradientHover,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.orange500.withOpacity(0.2),
+            blurRadius: 20,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: isLoading ? null : onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Center(
+            child: isLoading
+              ? CircularProgressIndicator(color: Colors.white)
+              : Text(
+                  text.toUpperCase(),
+                  style: GoogleFonts.outfit(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+### 5.6. Input Field (Flutter)
+
+```dart
+class CustomTextField extends StatelessWidget {
+  final String? hintText;
+  final IconData? prefixIcon;
+  final bool obscureText;
+  final TextEditingController? controller;
+  
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.borderWhite10,
+          width: 1,
+        ),
+      ),
+      child: TextField(
+        controller: controller,
+        obscureText: obscureText,
+        style: GoogleFonts.outfit(
+          color: Colors.white,
+          fontSize: 14,
+        ),
+        decoration: InputDecoration(
+          hintText: hintText,
+          hintStyle: GoogleFonts.outfit(
+            color: AppColors.textSlate500,
+          ),
+          prefixIcon: prefixIcon != null
+            ? Icon(
+                prefixIcon,
+                color: AppColors.textSlate400,
+                size: 18,
+              )
+            : null,
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 20,
+          ),
+        ),
+      ),
+    );
+  }
+}
+```
+
+---
+
+## 🎭 6. TASARIM PRENSİPLERİ
+
+### 6.1. Spacing (Boşluklar)
+```css
+/* Padding */
+p-10  /* Card içi */
+px-4 py-8  /* Container */
+px-4 py-6  /* Input */
+
+/* Gap */
+gap-4  /* Flex container */
+gap-6  /* Grid gap */
+space-y-5  /* Form field'lar arası */
+```
+
+### 6.2. Border Radius Hierarchy
+- **Küçük elementler**: `rounded-md` (6px)
+- **Orta elementler**: `rounded-xl` (12px)
+- **Büyük elementler**: `rounded-3xl` (24px)
+- **Tam yuvarlak**: `rounded-full`
+
+### 6.3. Shadow Hierarchy
+- **Hafif**: `shadow-xs`
+- **Orta**: `shadow-lg`
+- **Ağır**: `shadow-[custom]` (özel değerler)
+
+### 6.4. Opacity Kullanımı
+- **10%**: Border'lar (`border-white/10`)
+- **30%**: Background overlay (`bg-black/30`)
+- **70%**: Card background (`bg-[#140a1e]/70`)
+- **5%**: Ambient glow dark mode (`bg-pink-600/5`)
+
+---
+
+## 🚀 7. ÖRNEK KULLANIM SENARYOLARI
+
+### 7.1. Login Sayfası Tasarımı (React)
+- **Arka Plan**: Dark gradient (`#0f0518`) + Three.js animasyon
+- **Card**: Glassmorphism (`bg-[#140a1e]/70`, `backdrop-blur-xl`)
+- **Input**: Dark semi-transparent (`bg-black/30`)
+- **Button**: Gradient (`from-pink-600 via-orange-500 to-yellow-500`)
+- **Footer**: Sosyal medya icon'ları (yuvarlak, hover efektli)
+
+### 7.2. Ana Layout (React)
+- **Background**: Light (`#f8f9fc`) / Dark (`#0c0516`)
+- **Ambient Glow**: Pink ve Orange blur efektleri
+- **Sidebar**: Glassmorphism + icon renkleri
+- **Navbar**: Backdrop blur + search bar (pink focus)
+
+### 7.3. Flutter Login Sayfası Örneği
+```dart
+Scaffold(
+  body: Container(
+    decoration: BoxDecoration(
+      gradient: RadialGradient(
+        center: Alignment.center,
+        radius: 1.5,
+        colors: [
+          Color(0xFF1A0B2E),
+          Colors.black,
+        ],
+      ),
+    ),
+    child: Center(
+      child: GlassmorphismCard(
+        child: Padding(
+          padding: EdgeInsets.all(40),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Logo
+              Image.asset('assets/logo.png'),
+              SizedBox(height: 32),
+              // Form Fields
+              CustomTextField(
+                hintText: 'E-posta',
+                prefixIcon: Icons.mail_outline,
+              ),
+              SizedBox(height: 20),
+              CustomTextField(
+                hintText: 'Şifre',
+                prefixIcon: Icons.lock_outline,
+                obscureText: true,
+              ),
+              SizedBox(height: 24),
+              // Button
+              PrimaryGradientButton(
+                text: 'Giriş Yap',
+                onPressed: () {},
+              ),
+            ],
+          ),
+        ),
+      ),
+    ),
+  ),
+)
+```
+
+---
+
+## 📋 8. CHECKLIST - YENİ EKRAN EKLEME
+
+Yeni bir ekran eklerken şu kurallara uyun:
+
+- [ ] **Renk Paleti**: Pink-Orange-Yellow gradient kullanıldı mı?
+- [ ] **Typography**: Outfit font ailesi kullanıldı mı?
+- [ ] **Dark Mode**: Dark mode desteği var mı?
+- [ ] **Glassmorphism**: Card'lar için backdrop-blur kullanıldı mı?
+- [ ] **Border Radius**: Tutarlı border radius değerleri kullanıldı mı?
+- [ ] **Spacing**: Standart spacing değerleri kullanıldı mı?
+- [ ] **Hover Efektleri**: Interactive elementlerde hover state var mı?
+- [ ] **Shadow**: Uygun shadow değerleri kullanıldı mı?
+- [ ] **Icon Renkleri**: Sidebar icon renkleri ile uyumlu mu?
+- [ ] **Responsive**: Mobil uyumlu mu?
+
+---
+
+## 🎯 9. PROMPT ÖRNEKLERİ (Cursor AI için)
+
+### 9.1. Login Sayfası için Prompt
+```
+Login sayfası oluştur:
+- Dark mode arka plan (#0f0518)
+- Glassmorphism card (bg-[#140a1e]/70, backdrop-blur-xl)
+- Pink-Orange-Yellow gradient button
+- Outfit font ailesi
+- Input field'lar: dark semi-transparent, pink focus border
+- Sosyal medya icon'ları: yuvarlak, hover efektli
+- Three.js animasyonlu arka plan (opsiyonel)
+```
+
+### 9.2. Form Component için Prompt
+```
+Form component oluştur:
+- Glassmorphism card container
+- Input field'lar: bg-black/30, border-white/10, rounded-xl
+- Icon prefix'ler: sol tarafta, slate-400, focus'ta orange-400
+- Primary button: gradient (pink-600 → orange-500 → yellow-500)
+- Form validation: pink error border
+- Outfit font, dark mode uyumlu
+```
+
+### 9.3. Dashboard Card için Prompt
+```
+Dashboard card component:
+- Glassmorphism effect (backdrop-blur)
+- Border: white/10
+- Shadow: [0_20px_40px_rgba(0,0,0,0.4)]
+- Rounded-3xl
+- Dark mode: bg-[#140a1e]/70
+- Light mode: bg-white/80
+- Hover: scale-105, shadow artışı
+```
+
+---
+
+## 📚 10. EK KAYNAKLAR
+
+- **Shadcn UI**: Component kütüphanesi (projede kullanılıyor)
+- **HugeIcons**: Icon kütüphanesi (React)
+- **Three.js**: 3D animasyonlar (LoginPage)
+- **Tailwind CSS**: Utility-first CSS framework
+- **Google Fonts - Outfit**: Tipografi
+
+
