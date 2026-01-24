@@ -26,7 +26,12 @@ export function useUpdateCustomer() {
   const { t } = useTranslation();
   const showToast = useToastStore((state) => state.showToast);
 
-  return useMutation<CustomerDto, Error, { id: number; data: UpdateCustomerDto }>({
+  return useMutation<
+    CustomerDto,
+    Error,
+    { id: number; data: UpdateCustomerDto },
+    { previousData: CustomerDto | undefined }
+  >({
     mutationFn: ({ id, data }) => customerApi.update(id, data),
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ["customer", "detail", id] });
@@ -58,7 +63,12 @@ export function useDeleteCustomer() {
   const { t } = useTranslation();
   const showToast = useToastStore((state) => state.showToast);
 
-  return useMutation<void, Error, number>({
+  return useMutation<
+    void,
+    Error,
+    number,
+    { previousData: InfiniteData<PagedResponse<CustomerDto>> | undefined }
+  >({
     mutationFn: customerApi.delete,
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["customer", "list"] });

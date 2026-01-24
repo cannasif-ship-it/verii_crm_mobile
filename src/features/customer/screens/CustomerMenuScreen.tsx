@@ -28,6 +28,10 @@ export function CustomerMenuScreen(): React.ReactElement {
     router.push("/(tabs)/customers/shipping");
   }, [router]);
 
+  const handleTitlesPress = useCallback(() => {
+    router.push("/(tabs)/customers/titles");
+  }, [router]);
+
   return (
     <>
       <StatusBar style="light" />
@@ -55,6 +59,12 @@ export function CustomerMenuScreen(): React.ReactElement {
             description={t("customerMenu.shippingAddressesDesc")}
             icon="📍"
             onPress={handleShippingPress}
+          />
+          <MenuCard
+            title={t("customerMenu.titles")}
+            description={t("customerMenu.titlesDesc")}
+            icon="📋"
+            onPress={handleTitlesPress}
           />
         </ScrollView>
       </View>

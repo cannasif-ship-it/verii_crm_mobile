@@ -108,7 +108,7 @@ export function CustomerListScreen(): React.ReactElement {
         <ScreenHeader
           title={t("customer.title")}
           showBackButton
-          rightContent={
+          rightElement={
             <TouchableOpacity onPress={handleCreatePress} style={styles.addButton}>
               <Text style={styles.addIcon}>+</Text>
             </TouchableOpacity>
