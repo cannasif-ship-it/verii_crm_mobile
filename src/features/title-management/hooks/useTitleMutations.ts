@@ -1,0 +1,92 @@
+import { useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import { titleApi } from "../api/titleApi";
+import { useToastStore } from "../../../store/toast";
+import type { CreateTitleDto, UpdateTitleDto, TitleDto, PagedResponse } from "../types";
+
+export function useCreateTitle() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  const showToast = useToastStore((state) => state.showToast);
+
+  return useMutation<TitleDto, Error, CreateTitleDto>({
+    mutationFn: titleApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["title", "list"] });
+      showToast("success", t("titleManagement.createSuccess"));
+    },
+    onError: (error) => {
+      showToast("error", error.message || t("common.unknownError"));
+    },
+  });
+}
+
+export function useUpdateTitle() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  const showToast = useToastStore((state) => state.showToast);
+
+  return useMutation<TitleDto, Error, { id: number; data: UpdateTitleDto }>({
+    mutationFn: ({ id, data }) => titleApi.update(id, data),
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ["title", "detail", id] });
+      const previousData = queryClient.getQueryData<TitleDto>(["title", "detail", id]);
+      if (previousData) {
+        queryClient.setQueryData<TitleDto>(["title", "detail", id], {
+          ...previousData,
+          ...data,
+        });
+      }
+      return { previousData };
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["title", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["title", "detail", variables.id] });
+      showToast("success", t("titleManagement.updateSuccess"));
+    },
+    onError: (error, variables, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["title", "detail", variables.id], context.previousData);
+      }
+      showToast("error", error.message || t("common.unknownError"));
+    },
+  });
+}
+
+export function useDeleteTitle() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  const showToast = useToastStore((state) => state.showToast);
+
+  return useMutation<void, Error, number>({
+    mutationFn: titleApi.delete,
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ["title", "list"] });
+      const previousData = queryClient.getQueryData<InfiniteData<PagedResponse<TitleDto>>>([
+        "title",
+        "list",
+      ]);
+      if (previousData) {
+        queryClient.setQueryData<InfiniteData<PagedResponse<TitleDto>>>(["title", "list"], {
+          ...previousData,
+          pages: previousData.pages.map((page) => ({
+            ...page,
+            items: page.items.filter((title) => title.id !== id),
+            totalCount: page.totalCount - 1,
+          })),
+        });
+      }
+      return { previousData };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["title", "list"] });
+      showToast("success", t("titleManagement.deleteSuccess"));
+    },
+    onError: (error, _, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(["title", "list"], context.previousData);
+      }
+      showToast("error", error.message || t("common.unknownError"));
+    },
+  });
+}
