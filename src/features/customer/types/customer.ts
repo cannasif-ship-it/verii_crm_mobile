@@ -1,0 +1,95 @@
+export interface CustomerDto {
+  id: number;
+  customerCode?: string;
+  name: string;
+  taxNumber?: string;
+  taxOffice?: string;
+  tcknNumber?: string;
+  address?: string;
+  phone?: string;
+  phone2?: string;
+  email?: string;
+  website?: string;
+  notes?: string;
+  countryId?: number;
+  countryName?: string;
+  cityId?: number;
+  cityName?: string;
+  districtId?: number;
+  districtName?: string;
+  customerTypeId?: number;
+  customerTypeName?: string;
+  salesRepCode?: string;
+  groupCode?: string;
+  creditLimit?: number;
+  branchCode: number;
+  businessUnitCode: number;
+  createdDate: string;
+  updatedDate?: string;
+  isDeleted: boolean;
+  createdByFullUser?: string;
+  updatedByFullUser?: string;
+  deletedByFullUser?: string;
+  deletedDate?: string;
+  approvalDate?: string;
+  approvalStatus?: string;
+  approvedByUserId?: number;
+  completionDate?: string;
+  countTriedBy?: number;
+  erpIntegrationNumber?: string;
+  isCompleted?: boolean;
+  isERPIntegrated?: boolean;
+  isPendingApproval?: boolean;
+  lastSyncDate?: string;
+  rejectedReason?: string;
+  year?: string;
+}
+
+export interface CreateCustomerDto {
+  customerCode?: string;
+  name: string;
+  taxNumber?: string;
+  taxOffice?: string;
+  tcknNumber?: string;
+  address?: string;
+  phone?: string;
+  phone2?: string;
+  email?: string;
+  website?: string;
+  notes?: string;
+  countryId?: number;
+  cityId?: number;
+  districtId?: number;
+  customerTypeId?: number;
+  salesRepCode?: string;
+  groupCode?: string;
+  creditLimit?: number;
+  branchCode: number;
+  businessUnitCode: number;
+  isCompleted?: boolean;
+}
+
+export interface UpdateCustomerDto {
+  customerCode?: string;
+  name: string;
+  taxNumber?: string;
+  taxOffice?: string;
+  tcknNumber?: string;
+  address?: string;
+  phone?: string;
+  phone2?: string;
+  email?: string;
+  website?: string;
+  notes?: string;
+  countryId?: number;
+  cityId?: number;
+  districtId?: number;
+  customerTypeId?: number;
+  salesRepCode?: string;
+  groupCode?: string;
+  creditLimit?: number;
+  branchCode: number;
+  businessUnitCode: number;
+  completedDate?: string;
+  isCompleted?: boolean;
+}
