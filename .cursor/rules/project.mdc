@@ -1,0 +1,155 @@
+---
+description: Expo React Native developer and contribution guidelines
+alwaysApply: true
+---
+
+# Expo React Native – Developer & Contribution Guidelines
+
+## TEMEL KURAL
+
+- Asla yorum satırı kullanmayın
+- Folder structure ve mimariye aykırı geliştirme yapmayın
+- API istekleri **TanStack Query** ile yapılmalıdır
+- Her query için özel `staleTime` tanımlanmalıdır, global default kullanımı tercih edilmez
+- UI bileşenleri mümkün olduğunca ortak component kütüphanesinden veya `components/ui` altından kullanılmalıdır
+- Component içinde doğrudan fetch / axios çağrısı yapılmaz
+
+## UI / Component Yaklaşımı
+
+- **Gluestack UI v3** temel UI kütüphanesi olarak kullanılır
+- Gluestack componentleri `@/components/ui` altından import edilir
+- `components/ui` → İş mantığı içermeyen, tamamen presentational bileşenler (Button, Text, Input, Modal, Loader vb.)
+- Feature'a özel görsel bileşenler feature klasörü altında yaşar
+- Yeni component eklemek için: `npx gluestack-ui add <component-name>`
+
+## Renk Paleti
+
+Tüm projede aşağıdaki renk paleti kullanılır:
+
+| Kullanım | Renk Kodu | Açıklama |
+|---|---|---|
+| Primary Dark (Header/Nav) | #1E293B | Navy - Ana koyu arka plan |
+| Primary Accent | #E84855 | Octopus Red - CTA butonlar, vurgular |
+| Primary Accent Light | #F5A3A9 | Disabled state için |
+| Text Primary | #111827 | Ana metin rengi |
+| Text Secondary | #6B7280 | İkincil metin rengi |
+| Text Muted | #9CA3AF | Placeholder, hint text |
+| Text Light | #94A3B8 | Koyu arka plan üzerinde ikincil text |
+| Background | #FFFFFF | Ana beyaz arka plan |
+| Background Secondary | #F9FAFB | Input, card arka planı |
+| Border | #E5E7EB | Input border, ayırıcılar |
+| Border Light | #D1D5DB | Modal handle gibi elementler |
+| Success | #10B981 | Başarılı işlemler |
+| Error | #EF4444 | Hata mesajları |
+| Warning | #F59E0B | Uyarılar |
+
+## i18n (Çoklu Dil Desteği)
+
+- **i18next** ve **react-i18next** kullanılır
+- Dil dosyaları `src/locales/` altında tutulur
+- Her dil için ayrı JSON dosyası: `tr.json`, `en.json`
+- Tüm statik metinler `t()` fonksiyonu ile çağrılır
+- Hardcoded string kullanımı yasaktır
+- Dil değişikliği `AsyncStorage`'da persist edilir
+
+## Mimari ve Klasör Yapısı (Feature-First)
+
+Feature-Based Architecture uygulanır. Kodlar teknik türlerine göre değil, iş domain'lerine göre gruplanır.
+
+### Altın Kural: Co-location
+
+Bir feature ile ilgili olan her şey aynı klasörde bulunur.
+
+```
+src/
+├── app/
+│   ├── (auth)/
+│   ├── (tabs)/
+│   └── _layout.tsx
+├── features/
+│   ├── inventory/
+│   │   ├── api/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   ├── types/
+│   │   └── index.ts
+├── components/
+│   └── ui/
+├── lib/
+│   ├── axios.ts
+│   ├── queryClient.ts
+│   └── storage.ts
+├── store/
+│   └── ui.ts
+└── constants/
+    └── env.ts
+```
+
+## İsimlendirme Kuralları
+
+| Tür | Kural | Örnek |
+|---|---|---|
+| Klasörler | kebab-case | user-profile, order-history |
+| Component Dosyaları | PascalCase | StockCard.tsx |
+| Hook Dosyaları | camelCase (use ile başlar) | useInventory.ts |
+| Utility | camelCase | formatPrice.ts |
+| Type / Interface | PascalCase | InventoryItem |
+| Constants | UPPER_SNAKE_CASE | API_TIMEOUT |
+
+## TypeScript Standartları
+
+### `any` Kullanımı Yasaktır
+
+- `any` kesinlikle yasaktır
+- Bilinmeyen tipler için `unknown` veya Generic yapı kullanılır
+
+### Explicit Return Type Zorunludur
+
+Fonksiyon dönüş tipi açıkça belirtilir.
+
+### Barrel Export Kullanımı
+
+Feature encapsulation için `index.ts` zorunludur. Feature dışına yalnızca gerekli export'lar açılır.
+
+## State Management Stratejisi
+
+### Server State → TanStack Query
+
+- Backend'den gelen tüm veriler
+- Cache, retry, error handling Query'ye bırakılır
+- Her query custom hook içinde tanımlanır
+- Her query'de özel `staleTime` zorunludur
+
+### Global UI State → Zustand
+
+- Tema, Modal visibility, Auth / session bilgisi, Global UI flag'leri
+
+### Form State → React Hook Form + Zod
+
+- `useState` ile form tutulmaz
+- Validation logic component içine yazılmaz
+- Zod schema zorunludur
+
+## API ve Servis Kullanımı
+
+### Axios Instance Zorunluluğu
+
+- Saf axios import'u yasaktır
+- Sadece `lib/axios.ts` içindeki instance kullanılır
+- Token, refresh ve error handling burada yapılır
+
+### API Çağrıları Component İçinde Yapılmaz
+
+- Component sadece hook çağırır
+- Network logic component dışında yaşar
+
+## Yasaklı Pratikler
+
+- Component içinde business logic
+- Feature dışından feature içi dosyaya direkt import
+- Inline fetch / axios
+- Global mutable state
+- Comment satırları
+- God component'ler
+
+Kurallara uymayan kod merge edilmez.
