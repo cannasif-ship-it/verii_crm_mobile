@@ -116,7 +116,6 @@ export default function HomeScreen(): React.ReactElement {
     </>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -174,3 +173,4 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
 });
+

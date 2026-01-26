@@ -6,7 +6,7 @@ import { useUIStore } from "../../store/ui";
 
 export default function TabsLayout(): React.ReactElement {
   const pathname = usePathname();
-  const hideNavBar = pathname === "/scan" || pathname === "/settings";
+  const hideNavBar = pathname === "/settings";
   const { colors } = useUIStore();
 
   return (

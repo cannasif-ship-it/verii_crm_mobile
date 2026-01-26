@@ -4,25 +4,13 @@ import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
-import Svg, { Rect } from "react-native-svg";
 import { Text } from "../ui/text";
 import { useUIStore } from "../../store/ui";
 import { GRADIENT } from "../../constants/theme";
 
-function QRCodeIcon(): React.ReactElement {
+function HomeIcon(): React.ReactElement {
   return (
-    <Svg width={26} height={26} viewBox="0 0 24 24" fill="none">
-      <Rect x="3" y="3" width="7" height="7" rx="1" stroke="#FFFFFF" strokeWidth="2" />
-      <Rect x="14" y="3" width="7" height="7" rx="1" stroke="#FFFFFF" strokeWidth="2" />
-      <Rect x="3" y="14" width="7" height="7" rx="1" stroke="#FFFFFF" strokeWidth="2" />
-      <Rect x="5.5" y="5.5" width="2" height="2" fill="#FFFFFF" />
-      <Rect x="16.5" y="5.5" width="2" height="2" fill="#FFFFFF" />
-      <Rect x="5.5" y="16.5" width="2" height="2" fill="#FFFFFF" />
-      <Rect x="14" y="14" width="3" height="3" fill="#FFFFFF" />
-      <Rect x="18" y="14" width="3" height="3" fill="#FFFFFF" />
-      <Rect x="14" y="18" width="3" height="3" fill="#FFFFFF" />
-      <Rect x="18" y="18" width="3" height="3" fill="#FFFFFF" />
-    </Svg>
+    <Text style={{ fontSize: 28 }}>🏠</Text>
   );
 }
 
@@ -33,9 +21,9 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { key: "home", icon: "🏠", route: "/(tabs)" },
+  { key: "stock", icon: "📦", route: "/(tabs)/stock" },
   { key: "customers", icon: "👥", route: "/(tabs)/customers" },
-  { key: "scan", icon: "scan", route: "/(tabs)/scan" },
+  { key: "home", icon: "home", route: "/(tabs)" },
   { key: "sales", icon: "💰", route: "/(tabs)/sales" },
   { key: "activities", icon: "📅", route: "/(tabs)/activities" },
 ];
@@ -47,19 +35,24 @@ export function BottomNavBar(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const { colors } = useUIStore();
 
-  const handlePress = (route: string, isHome: boolean): void => {
-    if (isHome) {
-      router.replace(route as never);
-    } else {
-      router.push(route as never);
-    }
-  };
-
   const isActive = (route: string): boolean => {
     if (route === "/(tabs)") {
       return pathname === "/" || pathname === "/(tabs)" || pathname === "/index";
     }
     return pathname === route || pathname.startsWith(route.replace("/(tabs)", ""));
+  };
+
+  const handlePress = (route: string, isHome: boolean): void => {
+    const isCurrentlyActive = isActive(route);
+    if (isCurrentlyActive) {
+      return;
+    }
+    
+    if (isHome) {
+      router.replace(route as never);
+    } else {
+      router.push(route as never);
+    }
   };
 
   return (
@@ -77,12 +70,12 @@ export function BottomNavBar(): React.ReactElement {
         {NAV_ITEMS.map((item) => {
           const isHome = item.key === "home";
           
-          if (item.key === "scan") {
+          if (item.key === "home") {
             return (
               <TouchableOpacity
                 key={item.key}
                 style={styles.scanButton}
-                onPress={() => handlePress(item.route, false)}
+                onPress={() => handlePress(item.route, true)}
                 activeOpacity={0.8}
               >
                 <LinearGradient
@@ -91,7 +84,7 @@ export function BottomNavBar(): React.ReactElement {
                   end={{ x: 1, y: 1 }}
                   style={styles.scanButtonInner}
                 >
-                  <QRCodeIcon />
+                  <HomeIcon />
                 </LinearGradient>
               </TouchableOpacity>
             );
