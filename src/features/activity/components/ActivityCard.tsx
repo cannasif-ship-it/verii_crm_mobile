@@ -65,6 +65,47 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
     }
   };
 
+  const getActivityTypeIcon = (activityType?: string): string => {
+    if (!activityType) return "📋";
+    const typeLower = activityType.toLowerCase().replace(/\s+/g, "");
+    switch (typeLower) {
+      case "call":
+      case "telefon":
+      case "arama":
+        return "📞";
+      case "meeting":
+      case "toplantı":
+      case "görüşme":
+        return "🤝";
+      case "email":
+      case "e-posta":
+      case "eposta":
+        return "📧";
+      case "task":
+      case "görev":
+      case "iş":
+        return "✓";
+      case "visit":
+      case "ziyaret":
+        return "🏢";
+      case "note":
+      case "not":
+      case "notlar":
+        return "📝";
+      case "quote":
+      case "teklif":
+        return "💰";
+      case "order":
+      case "sipariş":
+        return "🛒";
+      case "followup":
+      case "takip":
+        return "🔄";
+      default:
+        return "📋";
+    }
+  };
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString("tr-TR", {

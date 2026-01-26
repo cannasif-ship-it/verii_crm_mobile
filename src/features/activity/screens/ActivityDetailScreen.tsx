@@ -128,6 +128,11 @@ export function ActivityDetailScreen(): React.ReactElement {
     }
   };
 
+  const getActivityTypeText = (activityType?: string): string => {
+    if (!activityType) return "-";
+    return activityType;
+  };
+
   const formatDate = (dateString: string): string => {
     const date = new Date(dateString);
     return date.toLocaleDateString("tr-TR", {
