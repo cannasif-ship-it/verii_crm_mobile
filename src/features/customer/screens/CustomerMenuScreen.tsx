@@ -32,6 +32,10 @@ export function CustomerMenuScreen(): React.ReactElement {
     router.push("/(tabs)/customers/titles");
   }, [router]);
 
+  const handleErpCustomersPress = useCallback(() => {
+    router.push("/(tabs)/customers/erp");
+  }, [router]);
+
   return (
     <>
       <StatusBar style="light" />
@@ -47,6 +51,12 @@ export function CustomerMenuScreen(): React.ReactElement {
             description={t("customerMenu.customersDesc")}
             icon="👥"
             onPress={handleCustomersPress}
+          />
+          <MenuCard
+            title={t("customerMenu.erpCustomers")}
+            description={t("customerMenu.erpCustomersDesc")}
+            icon="🏢"
+            onPress={handleErpCustomersPress}
           />
           <MenuCard
             title={t("customerMenu.contacts")}
