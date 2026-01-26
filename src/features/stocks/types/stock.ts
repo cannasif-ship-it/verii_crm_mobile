@@ -1,3 +1,18 @@
+export interface StockDetailDto {
+  id: number;
+  stockId: number;
+  stockName?: string;
+  htmlDescription?: string;
+  technicalSpecsJson?: string;
+  createdDate?: string;
+  updatedDate?: string;
+  deletedDate?: string;
+  isDeleted?: boolean;
+  createdByFullUser?: string;
+  updatedByFullUser?: string;
+  deletedByFullUser?: string;
+}
+
 export interface StockGetDto {
   id: number;
   erpStockCode: string;
@@ -7,6 +22,26 @@ export interface StockGetDto {
   branchCode: number;
   stockImages?: StockImageDto[];
   parentRelations?: StockRelationDto[];
+  grupKodu?: string;
+  grupAdi?: string;
+  kod1?: string;
+  kod1Adi?: string;
+  kod2?: string;
+  kod2Adi?: string;
+  kod3?: string;
+  kod3Adi?: string;
+  kod4?: string;
+  kod4Adi?: string;
+  kod5?: string;
+  kod5Adi?: string;
+  stockDetail?: StockDetailDto;
+  createdDate?: string;
+  updatedDate?: string;
+  createdByFullUser?: string;
+  updatedByFullUser?: string;
+  deletedByFullUser?: string;
+  deletedDate?: string;
+  isDeleted?: boolean;
 }
 
 export interface StockImageDto {
