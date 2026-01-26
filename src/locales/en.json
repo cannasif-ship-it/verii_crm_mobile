@@ -99,6 +99,8 @@
     "title": "Customer Operations",
     "customers": "Customers",
     "customersDesc": "Customer list and management",
+    "erpCustomers": "ERP Customers",
+    "erpCustomersDesc": "Customer list from ERP system",
     "contacts": "Contacts",
     "contactsDesc": "Contact person management",
     "shippingAddresses": "Shipping Addresses",
@@ -163,6 +165,26 @@
     "tabDetail": "Details",
     "tabContacts": "Contacts",
     "tabShippingAddresses": "Addresses"
+  },
+  "erpCustomer": {
+    "title": "ERP Customers",
+    "list": "ERP Customer List",
+    "searchPlaceholder": "Search by customer code, name or phone...",
+    "noCustomers": "No ERP customers found",
+    "customerCode": "Customer Code",
+    "customerName": "Customer Name",
+    "phone": "Phone",
+    "email": "Email",
+    "address": "Address",
+    "city": "City",
+    "district": "District",
+    "country": "Country",
+    "taxNumber": "Tax Number",
+    "taxOffice": "Tax Office",
+    "tcknNumber": "National ID",
+    "website": "Website",
+    "branchCode": "Branch Code",
+    "businessUnitCode": "Business Unit Code"
   },
   "contact": {
     "title": "Contacts",
@@ -320,5 +342,30 @@
     "createSuccess": "Title created successfully",
     "updateSuccess": "Title updated successfully",
     "noTitles": "No titles yet"
+  },
+  "stockMenu": {
+    "title": "Stock Operations",
+    "stockMovements": "Stock Movements",
+    "stockMovementsDesc": "Stock movements list and management",
+    "stockDetails": "Stock Details",
+    "stockDetailsDesc": "Stock detail information and relations"
+  },
+  "stock": {
+    "title": "Stock",
+    "list": "Stock Movements",
+    "detail": "Stock Detail",
+    "stockCode": "Stock Code",
+    "stockName": "Stock Name",
+    "unit": "Unit",
+    "ureticiKodu": "Manufacturer Code",
+    "branchCode": "Branch Code",
+    "basicInfo": "Basic Information",
+    "images": "Images",
+    "relations": "Related Stocks",
+    "quantity": "Quantity",
+    "mandatory": "Mandatory",
+    "unknownStock": "Unknown Stock",
+    "searchPlaceholder": "Search by stock name or code...",
+    "noStocks": "No stocks yet"
   }
 }

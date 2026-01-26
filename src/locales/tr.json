@@ -99,6 +99,8 @@
     "title": "Müşteri İşlemleri",
     "customers": "Müşteriler",
     "customersDesc": "Müşteri listesi ve yönetimi",
+    "erpCustomers": "ERP Müşteriler",
+    "erpCustomersDesc": "ERP sisteminden müşteri listesi",
     "contacts": "Kişiler",
     "contactsDesc": "İletişim kişileri yönetimi",
     "shippingAddresses": "Sevk Adresleri",
@@ -163,6 +165,26 @@
     "tabDetail": "Detay",
     "tabContacts": "Kişiler",
     "tabShippingAddresses": "Sevk Adresleri"
+  },
+  "erpCustomer": {
+    "title": "ERP Müşteriler",
+    "list": "ERP Müşteri Listesi",
+    "searchPlaceholder": "Müşteri kodu, adı veya telefon ile ara...",
+    "noCustomers": "Henüz ERP müşteri bulunamadı",
+    "customerCode": "Müşteri Kodu",
+    "customerName": "Müşteri Adı",
+    "phone": "Telefon",
+    "email": "E-posta",
+    "address": "Adres",
+    "city": "İl",
+    "district": "İlçe",
+    "country": "Ülke",
+    "taxNumber": "Vergi Numarası",
+    "taxOffice": "Vergi Dairesi",
+    "tcknNumber": "TC Kimlik No",
+    "website": "Web Sitesi",
+    "branchCode": "Şube Kodu",
+    "businessUnitCode": "İş Birimi Kodu"
   },
   "contact": {
     "title": "Kişiler",
@@ -320,5 +342,30 @@
     "createSuccess": "Ünvan başarıyla oluşturuldu",
     "updateSuccess": "Ünvan başarıyla güncellendi",
     "noTitles": "Henüz ünvan bulunmuyor"
+  },
+  "stockMenu": {
+    "title": "Stok İşlemleri",
+    "stockMovements": "Stok Hareketleri",
+    "stockMovementsDesc": "Stok hareketleri listesi ve yönetimi",
+    "stockDetails": "Stok Detayı",
+    "stockDetailsDesc": "Stok detay bilgileri ve ilişkileri"
+  },
+  "stock": {
+    "title": "Stok",
+    "list": "Stok Hareketleri",
+    "detail": "Stok Detayı",
+    "stockCode": "Stok Kodu",
+    "stockName": "Stok Adı",
+    "unit": "Birim",
+    "ureticiKodu": "Üretici Kodu",
+    "branchCode": "Şube Kodu",
+    "basicInfo": "Temel Bilgiler",
+    "images": "Resimler",
+    "relations": "Bağlı Stoklar",
+    "quantity": "Miktar",
+    "mandatory": "Zorunlu",
+    "unknownStock": "Bilinmeyen Stok",
+    "searchPlaceholder": "Stok adı veya kodu ile ara...",
+    "noStocks": "Henüz stok bulunmuyor"
   }
 }
