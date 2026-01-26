@@ -85,7 +85,7 @@ function TabBar({
   );
 }
 
-export function CustomerDetailPage(): React.ReactElement {
+function CustomerDetailPage(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -431,3 +431,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
 });
+
+export default CustomerDetailPage;
