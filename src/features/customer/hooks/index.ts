@@ -2,3 +2,4 @@ export { useCountries, useCities, useDistricts, useCustomerTypes, useTitles } fr
 export { useCustomers } from "./useCustomers";
 export { useCustomer } from "./useCustomer";
 export { useCreateCustomer, useUpdateCustomer, useDeleteCustomer } from "./useCustomerMutation";
+export { useBusinessCardScan } from "./useBusinessCardScan";

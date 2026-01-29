@@ -1,0 +1,1 @@
+export { runOCR } from "./ocrService";

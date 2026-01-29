@@ -19,7 +19,7 @@ import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
-import { useCustomer, useCreateCustomer, useUpdateCustomer, useCustomerTypes } from "../hooks";
+import { useCustomer, useCreateCustomer, useUpdateCustomer, useCustomerTypes, useBusinessCardScan } from "../hooks";
 import { FormField, LocationPicker } from "../components";
 import { createCustomerSchema, type CustomerFormData } from "../schemas";
 import type { CountryDto, CityDto, DistrictDto, CustomerTypeDto } from "../types";
@@ -43,6 +43,7 @@ export function CustomerFormScreen(): React.ReactElement {
   const { data: customerTypes } = useCustomerTypes();
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
+  const { scanBusinessCard, isScanning, error: scanError } = useBusinessCardScan();
 
   const schema = useMemo(() => createCustomerSchema(), []);
 
@@ -159,6 +160,22 @@ export function CustomerFormScreen(): React.ReactElement {
     [isEditMode, customerId, createCustomer, updateCustomer, router, t]
   );
 
+  useEffect(() => {
+    if (scanError) {
+      Alert.alert("Kartvizit Tarama", scanError);
+    }
+  }, [scanError]);
+
+  const handleScanBusinessCard = useCallback(() => {
+    scanBusinessCard((data) => {
+      if (data.customerName) setValue("name", data.customerName);
+      if (data.email) setValue("email", data.email ?? "");
+      if (data.phone1) setValue("phone", data.phone1);
+      if (data.address) setValue("address", data.address ?? "");
+      if (data.website) setValue("website", data.website ?? "");
+    });
+  }, [scanBusinessCard, setValue]);
+
   const renderCustomerTypeItem = useCallback(
     ({ item }: { item: CustomerTypeDto }) => {
       const isSelected = watchCustomerTypeId === item.id;
@@ -209,6 +226,25 @@ export function CustomerFormScreen(): React.ReactElement {
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
+          {!isEditMode && (
+            <View style={[styles.businessCardRow, { borderColor: colors.border }]}>
+              <Text style={[styles.businessCardLabel, { color: colors.textSecondary }]}>
+                Kartvizit tara
+              </Text>
+              <TouchableOpacity
+                style={[styles.cameraButton, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
+                onPress={handleScanBusinessCard}
+                disabled={isScanning}
+              >
+                {isScanning ? (
+                  <ActivityIndicator size="small" color={colors.accent} />
+                ) : (
+                  <Text style={styles.cameraIcon}>📷</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          )}
+
           <Controller
             control={control}
             name="name"
@@ -465,6 +501,29 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     padding: 20,
+  },
+  businessCardRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 20,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  businessCardLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  cameraButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cameraIcon: {
+    fontSize: 24,
   },
   loadingContainer: {
     flex: 1,
