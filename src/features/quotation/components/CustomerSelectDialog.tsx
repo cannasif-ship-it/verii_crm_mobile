@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { VoiceSearchButton } from "./VoiceSearchButton";
 import { useErpCustomers } from "../../erp-customer/hooks";
 import { useCustomers } from "../../customer/hooks";
 import type { CariDto } from "../../erp-customer/types";
@@ -55,8 +56,14 @@ export function CustomerSelectDialog({
   const [searchQuery, setSearchQuery] = useState<string>("");
 
   const { data: erpCustomers = [], isLoading: erpLoading } = useErpCustomers(null);
-  const { data: crmCustomersData, isLoading: crmLoading } = useCustomers({
-    pageSize: 1000,
+  const {
+    data: crmCustomersData,
+    isLoading: crmLoading,
+    fetchNextPage: fetchNextCrmPage,
+    hasNextPage: hasNextCrmPage,
+    isFetchingNextPage: isFetchingNextCrmPage,
+  } = useCustomers({
+    pageSize: 20,
     sortBy: "name",
     sortDirection: "asc",
   });
@@ -172,6 +179,12 @@ export function CustomerSelectDialog({
     onOpenChange(false);
   }, [onOpenChange]);
 
+  const handleEndReached = useCallback(() => {
+    if ((activeTab === "crm" || activeTab === "all") && hasNextCrmPage && !isFetchingNextCrmPage) {
+      fetchNextCrmPage();
+    }
+  }, [activeTab, hasNextCrmPage, isFetchingNextCrmPage, fetchNextCrmPage]);
+
   const renderCustomerCard = useCallback(
     ({ item }: { item: CombinedCustomer }) => (
       <CustomerCard customer={item} onPress={() => handleCustomerSelect(item)} colors={colors} />
@@ -244,6 +257,7 @@ export function CustomerSelectDialog({
               onChangeText={setSearchQuery}
               autoFocus
             />
+            <VoiceSearchButton onResult={setSearchQuery} />
           </View>
 
           <View style={[styles.tabContainer, { borderBottomColor: colors.border }]}>
@@ -317,6 +331,15 @@ export function CustomerSelectDialog({
               contentContainerStyle={styles.listContent}
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={renderEmpty}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.4}
+              ListFooterComponent={
+                isFetchingNextCrmPage ? (
+                  <View style={styles.footerLoading}>
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  </View>
+                ) : null
+              }
             />
           )}
         </View>
@@ -570,5 +593,9 @@ const styles = StyleSheet.create({
   contactText: {
     fontSize: 13,
     flex: 1,
+  },
+  footerLoading: {
+    paddingVertical: 16,
+    alignItems: "center",
   },
 });

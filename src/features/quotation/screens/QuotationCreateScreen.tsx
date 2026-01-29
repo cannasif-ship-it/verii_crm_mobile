@@ -1,13 +1,13 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
   ScrollView,
+  FlatList,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
   Modal,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
@@ -29,6 +29,8 @@ import { useCustomer } from "../../customer/hooks";
 import { useCustomerShippingAddresses } from "../../shipping-address/hooks";
 import { useErpCustomers } from "../../erp-customer/hooks";
 import { useStock } from "../../stocks/hooks";
+import { stockApi } from "../../stocks/api";
+import { quotationApi } from "../api";
 import {
   useCreateQuotationBulk,
   usePriceRuleOfQuotation,
@@ -36,6 +38,7 @@ import {
   useExchangeRate,
   useCurrencyOptions,
   usePaymentTypes,
+  useRelatedUsers,
 } from "../hooks";
 import {
   QuotationLineForm,
@@ -44,6 +47,7 @@ import {
   CustomerSelectDialog,
   DocumentSerialTypePicker,
   OfferTypePicker,
+  ProductPicker,
 } from "../components";
 import { createQuotationSchema, type CreateQuotationSchema } from "../schemas";
 import type { CustomerDto } from "../../customer/types";
@@ -53,6 +57,19 @@ import type {
   StockGetDto,
 } from "../types";
 import { calculateLineTotals, calculateTotals } from "../utils";
+import type { ExchangeRateDto } from "../types";
+
+function findExchangeRateByCurrency(
+  currency: string,
+  formRates: QuotationExchangeRateFormState[],
+  erpRates: ExchangeRateDto[] | undefined
+): number | undefined {
+  const formRate = formRates.find((r) => r.currency === currency)?.exchangeRate;
+  if (formRate != null && formRate > 0) return formRate;
+  const erpRate = erpRates?.find((r) => String(r.dovizTipi) === currency)?.kurDegeri;
+  if (erpRate != null && erpRate > 0) return erpRate;
+  return undefined;
+}
 
 export function QuotationCreateScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -66,11 +83,22 @@ export function QuotationCreateScreen(): React.ReactElement {
 
   const [lines, setLines] = useState<QuotationLineFormState[]>([]);
   const [exchangeRates, setExchangeRates] = useState<QuotationExchangeRateFormState[]>([]);
+  const [erpRatesForQuotation, setErpRatesForQuotation] = useState<ExchangeRateDto[]>([]);
+  const hasFilledErpRates = useRef(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDto | undefined>();
   const [deliveryDateModalOpen, setDeliveryDateModalOpen] = useState(false);
   const [offerDateModalOpen, setOfferDateModalOpen] = useState(false);
   const [tempDeliveryDate, setTempDeliveryDate] = useState(new Date());
   const [tempOfferDate, setTempOfferDate] = useState(new Date());
+
+  useEffect(() => {
+    if (deliveryDateModalOpen) {
+      const initial = watchedDeliveryDate
+        ? new Date(watchedDeliveryDate + "T12:00:00")
+        : new Date();
+      setTempDeliveryDate(initial);
+    }
+  }, [deliveryDateModalOpen, watchedDeliveryDate]);
   const [lineFormVisible, setLineFormVisible] = useState(false);
   const [editingLine, setEditingLine] = useState<QuotationLineFormState | null>(null);
   const [exchangeRateDialogVisible, setExchangeRateDialogVisible] = useState(false);
@@ -78,6 +106,7 @@ export function QuotationCreateScreen(): React.ReactElement {
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
   const [shippingAddressModalVisible, setShippingAddressModalVisible] = useState(false);
   const [customerSelectDialogOpen, setCustomerSelectDialogOpen] = useState(false);
+  const [representativeModalVisible, setRepresentativeModalVisible] = useState(false);
 
   const schema = useMemo(() => createQuotationSchema(), []);
 
@@ -86,6 +115,8 @@ export function QuotationCreateScreen(): React.ReactElement {
     handleSubmit,
     setValue,
     watch,
+    setError,
+    clearErrors,
     formState: { errors, isSubmitting },
   } = useForm<CreateQuotationSchema>({
     resolver: zodResolver(schema),
@@ -94,6 +125,7 @@ export function QuotationCreateScreen(): React.ReactElement {
         offerType: "Domestic",
         currency: "",
         offerDate: new Date().toISOString().split("T")[0],
+        deliveryDate: new Date().toISOString().split("T")[0],
         representativeId: user?.id || null,
       },
     },
@@ -109,21 +141,37 @@ export function QuotationCreateScreen(): React.ReactElement {
   const { data: customer } = useCustomer(watchedCustomerId);
   const { data: shippingAddresses } = useCustomerShippingAddresses(watchedCustomerId);
   const { data: erpCustomers } = useErpCustomers(watchedErpCustomerCode || undefined);
-  const { data: currencyOptions } = useCurrencyOptions({
-    tarih: watchedOfferDate || undefined,
-    fiyatTipi: 1,
-  });
-  const { data: paymentTypes } = usePaymentTypes();
-
-  const exchangeRateParams = useMemo(
+  const exchangeRateParamsOnce = useMemo(
     () => ({
-      tarih: watchedOfferDate || undefined,
-      fiyatTipi: 1,
+      tarih: new Date().toISOString().split("T")[0],
+      fiyatTipi: 1 as const,
     }),
-    [watchedOfferDate]
+    []
   );
 
-  const { data: exchangeRatesData } = useExchangeRate(exchangeRateParams);
+  const { data: exchangeRatesData, isLoading: isLoadingErpRates } = useExchangeRate(exchangeRateParamsOnce);
+  const { data: currencyOptions } = useCurrencyOptions(exchangeRateParamsOnce);
+  const { data: paymentTypes } = usePaymentTypes();
+  const { data: relatedUsers = [] } = useRelatedUsers(user?.id);
+
+  useEffect(() => {
+    if (exchangeRatesData && exchangeRatesData.length > 0 && !hasFilledErpRates.current) {
+      setErpRatesForQuotation(exchangeRatesData);
+      hasFilledErpRates.current = true;
+    }
+  }, [exchangeRatesData]);
+
+  const effectiveRatesForLines = useMemo(() => {
+    return erpRatesForQuotation.map((erp) => {
+      const override = exchangeRates.find(
+        (r) => r.currency === String(erp.dovizTipi) || r.dovizTipi === erp.dovizTipi
+      );
+      return {
+        dovizTipi: erp.dovizTipi,
+        kurDegeri: override?.exchangeRate ?? erp.kurDegeri,
+      };
+    });
+  }, [erpRatesForQuotation, exchangeRates]);
 
   const customerCode = useMemo(() => {
     if (customer?.customerCode) return customer.customerCode;
@@ -147,6 +195,12 @@ export function QuotationCreateScreen(): React.ReactElement {
   );
 
   const createQuotation = useCreateQuotationBulk();
+
+  useEffect(() => {
+    if (lines.length > 0) {
+      clearErrors("root");
+    }
+  }, [lines.length, clearErrors]);
 
   useEffect(() => {
     if (customer) {
@@ -185,7 +239,6 @@ export function QuotationCreateScreen(): React.ReactElement {
       if (selectedDate) {
         setTempDeliveryDate(selectedDate);
         setValue("quotation.deliveryDate", selectedDate.toISOString().split("T")[0]);
-        setDeliveryDateModalOpen(false);
       }
     },
     [setValue]
@@ -196,10 +249,63 @@ export function QuotationCreateScreen(): React.ReactElement {
       if (selectedDate) {
         setTempOfferDate(selectedDate);
         setValue("quotation.offerDate", selectedDate.toISOString().split("T")[0]);
-        setOfferDateModalOpen(false);
       }
     },
     [setValue]
+  );
+
+  const applyCurrencyChange = useCallback(
+    (newCurrency: string) => {
+      const oldCurrency = watchedCurrency || "";
+      if (!oldCurrency || oldCurrency === newCurrency) {
+        setValue("quotation.currency", newCurrency);
+        return;
+      }
+      const oldRate = findExchangeRateByCurrency(oldCurrency, exchangeRates, erpRatesForQuotation);
+      const newRate = findExchangeRateByCurrency(newCurrency, exchangeRates, erpRatesForQuotation);
+      if (oldRate == null || newRate <= 0) {
+        setValue("quotation.currency", newCurrency);
+        setLines((prev) => prev);
+        return;
+      }
+      const conversionRatio = oldRate / newRate;
+      setLines((prev) =>
+        prev.map((line) => {
+          const updated = {
+            ...line,
+            unitPrice: line.unitPrice * conversionRatio,
+          };
+          return calculateLineTotals(updated);
+        })
+      );
+      setValue("quotation.currency", newCurrency);
+    },
+    [watchedCurrency, exchangeRates, erpRatesForQuotation, setValue]
+  );
+
+  const handleCurrencySelect = useCallback(
+    (newCurrency: string) => {
+      if (lines.length === 0) {
+        setValue("quotation.currency", newCurrency);
+        setCurrencyModalVisible(false);
+        return;
+      }
+      Alert.alert(
+        "Kur Değişikliği",
+        "Para birimi değişikliği tüm satırları etkileyecektir. Devam etmek istiyor musunuz?",
+        [
+          { text: "Vazgeç", style: "cancel", onPress: () => setCurrencyModalVisible(false) },
+          {
+            text: "Onayla",
+            onPress: () => {
+              applyCurrencyChange(newCurrency);
+              setCurrencyModalVisible(false);
+            },
+          },
+        ]
+      );
+    },
+    [lines.length, setValue, applyCurrencyChange]
   );
 
   const handleAddLine = useCallback(() => {
@@ -223,7 +329,27 @@ export function QuotationCreateScreen(): React.ReactElement {
   const handleSaveLine = useCallback(
     (savedLine: QuotationLineFormState) => {
       if (editingLine) {
-        setLines((prev) => prev.map((line) => (line.id === editingLine.id ? savedLine : line)));
+        setLines((prev) => {
+          const mainNewQty = savedLine.quantity;
+          const mainOldQty = editingLine.quantity;
+          if (
+            editingLine.relatedProductKey &&
+            mainOldQty > 0 &&
+            mainNewQty !== mainOldQty
+          ) {
+            const ratio = mainNewQty / mainOldQty;
+            return prev.map((line) => {
+              if (line.id === editingLine.id) return savedLine;
+              if (line.relatedProductKey === editingLine.relatedProductKey) {
+                const newQty = Math.max(0, Math.round(line.quantity * ratio * 10000) / 10000);
+                const updated = { ...line, quantity: newQty };
+                return calculateLineTotals(updated);
+              }
+              return line;
+            });
+          }
+          return prev.map((line) => (line.id === editingLine.id ? savedLine : line));
+        });
       } else {
         setLines((prev) => [...prev, savedLine]);
       }
@@ -234,22 +360,80 @@ export function QuotationCreateScreen(): React.ReactElement {
   );
 
   const handleProductSelectWithRelatedStocks = useCallback(
-    (stock: StockGetDto) => {
+    async (stock: StockGetDto, relatedStockIds?: number[]) => {
       if (!stock.id) return;
 
-      const mainLine: QuotationLineFormState = {
+      const applyCurrencyToPrice = (listPrice: number, priceCurrency: string): number => {
+        if (!watchedCurrency || priceCurrency === watchedCurrency) return listPrice;
+        const oldRate = findExchangeRateByCurrency(priceCurrency, exchangeRates, erpRatesForQuotation);
+        const newRate = findExchangeRateByCurrency(watchedCurrency, exchangeRates, erpRatesForQuotation);
+        if (oldRate == null || oldRate <= 0 || newRate == null || newRate <= 0) return listPrice;
+        return (listPrice * newRate) / oldRate;
+      };
+
+      let filteredRelations = (stock.parentRelations || []).filter(
+        (r) => r.relatedStockId && r.relatedStockCode
+      );
+      if (relatedStockIds != null && relatedStockIds.length >= 0) {
+        const idSet = new Set(relatedStockIds);
+        filteredRelations = filteredRelations.filter((r) => idSet.has(r.relatedStockId));
+        filteredRelations = relatedStockIds
+          .map((id) => filteredRelations.find((r) => r.relatedStockId === id))
+          .filter((r): r is NonNullable<typeof r> => r != null);
+      }
+      const products = [{ productCode: stock.erpStockCode, groupCode: stock.grupKodu || "" }];
+      let relatedStocks: Array<{ erpStockCode: string; stockName: string; grupKodu?: string }> = [];
+
+      if (filteredRelations.length > 0) {
+        try {
+          const fetched = await Promise.all(
+            filteredRelations.map((r) => stockApi.getById(r.relatedStockId))
+          );
+          relatedStocks = fetched.map((s) => ({
+            erpStockCode: s.erpStockCode,
+            stockName: s.stockName,
+            grupKodu: s.grupKodu,
+          }));
+          relatedStocks.forEach((s) =>
+            products.push({ productCode: s.erpStockCode, groupCode: s.grupKodu || "" })
+          );
+        } catch {
+          relatedStocks = filteredRelations.map((r) => ({
+            erpStockCode: r.relatedStockCode!,
+            stockName: r.relatedStockName || "",
+            grupKodu: undefined,
+          }));
+          products.length = 1;
+          relatedStocks.forEach((s) =>
+            products.push({ productCode: s.erpStockCode, groupCode: s.grupKodu || "" })
+          );
+        }
+      }
+
+      let priceData: Array<{ listPrice: number; currency: string; discount1?: number | null; discount2?: number | null; discount3?: number | null }> = [];
+      try {
+        priceData = await quotationApi.getPriceOfProduct(products);
+      } catch {
+        priceData = products.map(() => ({ listPrice: 0, currency: watchedCurrency || "" }));
+      }
+
+      const mainPrice = priceData[0];
+      const mainUnitPrice = mainPrice
+        ? applyCurrencyToPrice(mainPrice.listPrice, mainPrice.currency)
+        : 0;
+      const mainLine: QuotationLineFormState = calculateLineTotals({
         id: `temp-${Date.now()}`,
         productId: stock.id,
         productCode: stock.erpStockCode,
         productName: stock.stockName,
         groupCode: stock.grupKodu || null,
         quantity: 1,
-        unitPrice: 0,
-        discountRate1: 0,
+        unitPrice: mainUnitPrice,
+        discountRate1: mainPrice?.discount1 ?? 0,
         discountAmount1: 0,
-        discountRate2: 0,
+        discountRate2: mainPrice?.discount2 ?? 0,
         discountAmount2: 0,
-        discountRate3: 0,
+        discountRate3: mainPrice?.discount3 ?? 0,
         discountAmount3: 0,
         vatRate: 18,
         vatAmount: 0,
@@ -257,42 +441,45 @@ export function QuotationCreateScreen(): React.ReactElement {
         lineGrandTotal: 0,
         isMainRelatedProduct: true,
         isEditing: false,
-      };
+      });
 
-      if (stock.parentRelations && stock.parentRelations.length > 0) {
-        const relatedLines: QuotationLineFormState[] = [];
-        for (const relation of stock.parentRelations) {
-          if (relation.relatedStockId && relation.relatedStockCode) {
-            relatedLines.push({
-              id: `temp-${Date.now()}-${relation.id}`,
-              productCode: relation.relatedStockCode,
-              productName: relation.relatedStockName || "",
-              quantity: relation.quantity,
-              unitPrice: 0,
-              discountRate1: 0,
-              discountAmount1: 0,
-              discountRate2: 0,
-              discountAmount2: 0,
-              discountRate3: 0,
-              discountAmount3: 0,
-              vatRate: 18,
-              vatAmount: 0,
-              lineTotal: 0,
-              lineGrandTotal: 0,
-              relatedStockId: relation.relatedStockId,
-              relatedProductKey: `main-${stock.id}`,
-              isMainRelatedProduct: false,
-              isEditing: false,
-            });
-          }
-        }
+      if (filteredRelations.length > 0 && relatedStocks.length > 0) {
+        const relatedLines: QuotationLineFormState[] = filteredRelations.map((relation, idx) => {
+          const relStock = relatedStocks[idx];
+          const price = priceData[idx + 1];
+          const unitPrice =
+            price && relStock
+              ? applyCurrencyToPrice(price.listPrice, price.currency)
+              : 0;
+          return calculateLineTotals({
+            id: `temp-${Date.now()}-${relation.id}`,
+            productCode: relation.relatedStockCode!,
+            productName: relStock?.stockName ?? relation.relatedStockName ?? "",
+            quantity: relation.quantity,
+            unitPrice,
+            discountRate1: price?.discount1 ?? 0,
+            discountAmount1: 0,
+            discountRate2: price?.discount2 ?? 0,
+            discountAmount2: 0,
+            discountRate3: price?.discount3 ?? 0,
+            discountAmount3: 0,
+            vatRate: 18,
+            vatAmount: 0,
+            lineTotal: 0,
+            lineGrandTotal: 0,
+            relatedStockId: relation.relatedStockId,
+            relatedProductKey: `main-${stock.id}`,
+            isMainRelatedProduct: false,
+            isEditing: false,
+          });
+        });
         mainLine.relatedLines = relatedLines;
         setLines((prev) => [...prev, mainLine, ...relatedLines]);
       } else {
         setLines((prev) => [...prev, mainLine]);
       }
     },
-    []
+    [watchedCurrency, exchangeRates, erpRatesForQuotation]
   );
 
   const handleDeleteLine = useCallback(
@@ -325,23 +512,8 @@ export function QuotationCreateScreen(): React.ReactElement {
 
   const onSubmit = useCallback(
     async (formData: CreateQuotationSchema) => {
-      if (!formData.quotation.paymentTypeId) {
-        showToast("error", "Ödeme tipi seçilmelidir");
-        return;
-      }
-
-      if (!formData.quotation.deliveryDate) {
-        showToast("error", "Teslimat tarihi girilmelidir");
-        return;
-      }
-
       if (lines.length === 0) {
-        showToast("error", "En az 1 satır eklenmelidir");
-        return;
-      }
-
-      if (!formData.quotation.currency || formData.quotation.currency === "0") {
-        showToast("error", "Geçerli bir para birimi seçilmelidir");
+        setError("root", { type: "manual", message: "En az 1 satır eklenmelidir." });
         return;
       }
 
@@ -351,6 +523,12 @@ export function QuotationCreateScreen(): React.ReactElement {
           ...rest,
           quotationId: 0,
           productId: rest.productId || null,
+          pricingRuleHeaderId:
+            rest.pricingRuleHeaderId != null && rest.pricingRuleHeaderId > 0
+              ? rest.pricingRuleHeaderId
+              : null,
+          relatedStockId:
+            rest.relatedStockId != null && rest.relatedStockId > 0 ? rest.relatedStockId : null,
         };
       });
 
@@ -372,7 +550,7 @@ export function QuotationCreateScreen(): React.ReactElement {
         exchangeRates: cleanedExchangeRates.length > 0 ? cleanedExchangeRates : undefined,
       });
     },
-    [lines, exchangeRates, createQuotation, showToast]
+    [lines, exchangeRates, createQuotation, setError]
   );
 
   return (
@@ -392,13 +570,35 @@ export function QuotationCreateScreen(): React.ReactElement {
           ]}
           showsVerticalScrollIndicator={false}
         >
+          {(() => {
+            const msg = (e: { message?: string } | undefined) => (e && typeof e.message === "string" ? e.message : null);
+            const list: string[] = [];
+            const q = errors.quotation as Record<string, { message?: string }> | undefined;
+            if (q) {
+              ["potentialCustomerId", "paymentTypeId", "deliveryDate", "offerType", "currency"].forEach((key) => {
+                const m = msg(q[key]);
+                if (m && !list.includes(m)) list.push(m);
+              });
+            }
+            const rootMsg = msg(errors.root as { message?: string } | undefined);
+            if (rootMsg) list.push(rootMsg);
+            return list.length > 0 ? (
+              <View style={[styles.errorSummary, { backgroundColor: colors.error + "18", borderColor: colors.error }]}>
+                <Text style={[styles.errorSummaryTitle, { color: colors.error }]}>Lütfen aşağıdaki hataları düzeltin:</Text>
+                {list.map((text, i) => (
+                  <Text key={i} style={[styles.errorSummaryItem, { color: colors.error }]}>• {text}</Text>
+                ))}
+              </View>
+            ) : null;
+          })()}
+
           <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Müşteri Bilgileri</Text>
 
             <TouchableOpacity
               style={[
                 styles.customerSelectButton,
-                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                { backgroundColor: colors.backgroundSecondary, borderColor: errors.quotation?.potentialCustomerId ? colors.error : colors.border },
               ]}
               onPress={() => setCustomerSelectDialogOpen(true)}
             >
@@ -419,6 +619,9 @@ export function QuotationCreateScreen(): React.ReactElement {
               </View>
               <Text style={[styles.customerSelectArrow, { color: colors.textMuted }]}>›</Text>
             </TouchableOpacity>
+            {errors.quotation?.potentialCustomerId?.message && (
+              <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.potentialCustomerId.message}</Text>
+            )}
 
             {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
               <Controller
@@ -437,7 +640,7 @@ export function QuotationCreateScreen(): React.ReactElement {
                       onPress={() => setShippingAddressModalVisible(true)}
                     >
                       <Text style={[styles.pickerText, { color: colors.text }]}>
-                        {shippingAddresses.find((addr) => addr.id === value)?.addressText || "Seçiniz"}
+                        {shippingAddresses.find((addr) => addr.id === value)?.address || "Seçiniz"}
                       </Text>
                     </TouchableOpacity>
                   </View>
@@ -456,17 +659,22 @@ export function QuotationCreateScreen(): React.ReactElement {
               name="quotation.representativeId"
               render={({ field: { onChange, value } }) => (
                 <View style={styles.fieldContainer}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>Temsilci</Text>
-                  <TextInput
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>Satış Temsilcisi</Text>
+                  <TouchableOpacity
                     style={[
-                      styles.input,
-                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                      styles.pickerButton,
+                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
                     ]}
-                    value={value ? String(value) : ""}
-                    onChangeText={(text) => onChange(text ? Number(text) : null)}
-                    placeholder="Temsilci ID"
-                    keyboardType="numeric"
-                  />
+                    onPress={() => setRepresentativeModalVisible(true)}
+                  >
+                    <Text style={[styles.pickerText, { color: colors.text }]}>
+                      {value
+                        ? relatedUsers.find((u) => u.userId === value)
+                          ? `${relatedUsers.find((u) => u.userId === value)?.firstName} ${relatedUsers.find((u) => u.userId === value)?.lastName}`
+                          : String(value)
+                        : "Seçiniz"}
+                    </Text>
+                  </TouchableOpacity>
                 </View>
               )}
             />
@@ -482,7 +690,7 @@ export function QuotationCreateScreen(): React.ReactElement {
                   <TouchableOpacity
                     style={[
                       styles.pickerButton,
-                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                      { backgroundColor: colors.backgroundSecondary, borderColor: errors.quotation?.paymentTypeId ? colors.error : colors.border },
                     ]}
                     onPress={() => setPaymentTypeModalVisible(true)}
                   >
@@ -490,21 +698,29 @@ export function QuotationCreateScreen(): React.ReactElement {
                       {paymentTypes?.find((pt) => pt.id === value)?.name || "Seçiniz"}
                     </Text>
                   </TouchableOpacity>
+                  {errors.quotation?.paymentTypeId?.message && (
+                    <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.paymentTypeId.message}</Text>
+                  )}
                 </View>
               )}
             />
 
-            <TouchableOpacity
-              style={[
-                styles.dateButton,
-                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-              ]}
-              onPress={() => setDeliveryDateModalOpen(true)}
-            >
-              <Text style={[styles.dateButtonText, { color: colors.text }]}>
-                Teslimat Tarihi: {watchedDeliveryDate || "Seçiniz"}
-              </Text>
-            </TouchableOpacity>
+            <View style={styles.fieldContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.dateButton,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: errors.quotation?.deliveryDate ? colors.error : colors.border },
+                ]}
+                onPress={() => setDeliveryDateModalOpen(true)}
+              >
+                <Text style={[styles.dateButtonText, { color: colors.text }]}>
+                  Teslimat Tarihi: {watchedDeliveryDate || "Seçiniz"}
+                </Text>
+              </TouchableOpacity>
+              {errors.quotation?.deliveryDate?.message && (
+                <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.deliveryDate.message}</Text>
+              )}
+            </View>
 
             <TouchableOpacity
               style={[
@@ -521,7 +737,7 @@ export function QuotationCreateScreen(): React.ReactElement {
             <Controller
               control={control}
               name="quotation.currency"
-              render={({ field: { onChange, value } }) => (
+              render={({ field: { value } }) => (
                 <View style={styles.fieldContainer}>
                   <View style={styles.currencyHeader}>
                     <Text style={[styles.label, { color: colors.textSecondary }]}>
@@ -539,14 +755,17 @@ export function QuotationCreateScreen(): React.ReactElement {
                   <TouchableOpacity
                     style={[
                       styles.pickerButton,
-                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                      { backgroundColor: colors.backgroundSecondary, borderColor: errors.quotation?.currency ? colors.error : colors.border },
                     ]}
                     onPress={() => setCurrencyModalVisible(true)}
                   >
                     <Text style={[styles.pickerText, { color: colors.text }]}>
-                      {currencyOptions?.find((c) => c.code === value)?.dovizIsmi || "Seçiniz"}
+                      {currencyOptions?.find((c) => c.code === value)?.dovizIsmi ?? "Seçiniz"}
                     </Text>
                   </TouchableOpacity>
+                  {errors.quotation?.currency?.message && (
+                    <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.currency.message}</Text>
+                  )}
                 </View>
               )}
             />
@@ -579,16 +798,21 @@ export function QuotationCreateScreen(): React.ReactElement {
                 <Text style={styles.addButtonText}>+ Satır Ekle</Text>
               </TouchableOpacity>
             </View>
+            {errors.root?.message && (
+              <Text style={[styles.fieldError, { color: colors.error }]}>{errors.root.message}</Text>
+            )}
 
             {lines.length === 0 ? (
               <Text style={[styles.emptyText, { color: colors.textMuted }]}>
                 Henüz satır eklenmedi
               </Text>
             ) : (
-              lines
-                .filter((line) => !line.relatedProductKey)
-                .map((line) => (
-                  <View key={line.id}>
+              <FlatList
+                data={lines.filter((line) => !line.relatedProductKey)}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                renderItem={({ item: line }) => (
+                  <View style={styles.lineCardWrapper}>
                     <View
                       style={[
                         styles.lineCard,
@@ -670,7 +894,8 @@ export function QuotationCreateScreen(): React.ReactElement {
                       )}
                     </View>
                   </View>
-                ))
+                )}
+              />
             )}
           </View>
 
@@ -698,21 +923,31 @@ export function QuotationCreateScreen(): React.ReactElement {
             </View>
           )}
 
-          <TouchableOpacity
-            style={[
-              styles.submitButton,
-              { backgroundColor: colors.accent },
-              (isSubmitting || createQuotation.isPending) && styles.submitButtonDisabled,
-            ]}
-            onPress={handleSubmit(onSubmit)}
-            disabled={isSubmitting || createQuotation.isPending}
-          >
-            {isSubmitting || createQuotation.isPending ? (
-              <ActivityIndicator color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitButtonText}>Teklifi Kaydet</Text>
-            )}
-          </TouchableOpacity>
+          <View style={styles.submitRow}>
+            <TouchableOpacity
+              style={[styles.cancelButton, { borderColor: colors.border }]}
+              onPress={() => router.back()}
+            >
+              <Text style={[styles.cancelButtonText, { color: colors.text }]}>İptal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.submitButton,
+                { backgroundColor: colors.accent },
+                (isSubmitting || createQuotation.isPending) && styles.submitButtonDisabled,
+              ]}
+              onPress={handleSubmit(onSubmit)}
+              disabled={isSubmitting || createQuotation.isPending}
+            >
+              {isSubmitting || createQuotation.isPending ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.submitButtonText}>
+                  {isSubmitting || createQuotation.isPending ? "Kaydediliyor..." : "Teklifi Kaydet"}
+                </Text>
+              )}
+            </TouchableOpacity>
+          </View>
         </ScrollView>
 
         <Modal
@@ -742,6 +977,15 @@ export function QuotationCreateScreen(): React.ReactElement {
                 onChange={handleDeliveryDateChange}
                 locale="tr-TR"
               />
+              <TouchableOpacity
+                style={[styles.dateModalTamamButton, { backgroundColor: colors.accent }]}
+                onPress={() => {
+                  setValue("quotation.deliveryDate", tempDeliveryDate.toISOString().split("T")[0]);
+                  setDeliveryDateModalOpen(false);
+                }}
+              >
+                <Text style={styles.dateModalTamamButtonText}>Tamam</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -773,6 +1017,12 @@ export function QuotationCreateScreen(): React.ReactElement {
                 onChange={handleOfferDateChange}
                 locale="tr-TR"
               />
+              <TouchableOpacity
+                style={[styles.dateModalTamamButton, { backgroundColor: colors.accent }]}
+                onPress={() => setOfferDateModalOpen(false)}
+              >
+                <Text style={styles.dateModalTamamButtonText}>Tamam</Text>
+              </TouchableOpacity>
             </View>
           </View>
         </Modal>
@@ -785,18 +1035,29 @@ export function QuotationCreateScreen(): React.ReactElement {
             setEditingLine(null);
           }}
           onSave={handleSaveLine}
+          onAddWithRelatedStocks={
+            !editingLine
+              ? (stock, relatedStockIds) => {
+                  handleProductSelectWithRelatedStocks(stock, relatedStockIds);
+                  setLineFormVisible(false);
+                  setEditingLine(null);
+                }
+              : undefined
+          }
           currency={watchedCurrency || ""}
           currencyOptions={currencyOptions}
           pricingRules={pricingRules}
           userDiscountLimits={userDiscountLimits}
-          exchangeRates={exchangeRatesData}
+          exchangeRates={effectiveRatesForLines}
         />
 
         <ExchangeRateDialog
           visible={exchangeRateDialogVisible}
           exchangeRates={exchangeRates}
           currencyOptions={currencyOptions}
-          erpExchangeRates={exchangeRatesData}
+          erpExchangeRates={erpRatesForQuotation}
+          isLoadingErpRates={isLoadingErpRates && erpRatesForQuotation.length === 0}
+          currencyInUse={lines.length > 0 ? (watchedCurrency || undefined) : undefined}
           onClose={() => setExchangeRateDialogVisible(false)}
           onSave={(rates) => {
             setExchangeRates(rates);
@@ -831,18 +1092,31 @@ export function QuotationCreateScreen(): React.ReactElement {
           options={
             currencyOptions?.map((c) => ({
               id: c.code,
-              name: c.dovizIsmi,
+              name: c.dovizIsmi ?? c.code,
               code: c.code,
             })) || []
           }
           selectedValue={watch("quotation.currency")}
-          onSelect={(option) => {
-            setValue("quotation.currency", option.id as string);
-            setCurrencyModalVisible(false);
-          }}
+          onSelect={(option) => handleCurrencySelect(option.id as string)}
           onClose={() => setCurrencyModalVisible(false)}
           title="Para Birimi Seçiniz"
           searchPlaceholder="Para birimi ara..."
+        />
+
+        <PickerModal
+          visible={representativeModalVisible}
+          options={relatedUsers.map((u) => ({
+            id: u.userId,
+            name: `${u.firstName} ${u.lastName}`.trim(),
+          }))}
+          selectedValue={watch("quotation.representativeId") ?? undefined}
+          onSelect={(option) => {
+            setValue("quotation.representativeId", option.id as number);
+            setRepresentativeModalVisible(false);
+          }}
+          onClose={() => setRepresentativeModalVisible(false)}
+          title="Satış Temsilcisi Seçiniz"
+          searchPlaceholder="Temsilci ara..."
         />
 
         {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
@@ -879,6 +1153,27 @@ const styles = StyleSheet.create({
   contentContainer: {
     padding: 20,
   },
+  errorSummary: {
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    marginBottom: 16,
+  },
+  errorSummaryTitle: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  errorSummaryItem: {
+    fontSize: 13,
+    marginLeft: 4,
+    marginBottom: 4,
+  },
+  fieldError: {
+    fontSize: 12,
+    marginTop: 4,
+    marginBottom: 4,
+  },
   section: {
     padding: 16,
     borderRadius: 12,
@@ -889,7 +1184,21 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    flexWrap: "wrap",
     marginBottom: 12,
+    gap: 8,
+  },
+  addLineButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  addButtonSecondary: {
+    backgroundColor: "transparent",
+    borderWidth: 1,
+  },
+  addButtonTextSecondary: {
+    color: "#111827",
   },
   sectionTitle: {
     fontSize: 16,
@@ -1085,6 +1394,26 @@ const styles = StyleSheet.create({
     textAlign: "center",
     paddingVertical: 20,
   },
+  lineCardWrapper: {
+    marginBottom: 12,
+  },
+  submitRow: {
+    flexDirection: "row",
+    gap: 12,
+    marginTop: 8,
+  },
+  cancelButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    height: 52,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: "600",
+  },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -1098,11 +1427,11 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   submitButton: {
+    flex: 1,
     height: 52,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
   },
   submitButtonDisabled: {
     opacity: 0.6,
@@ -1132,6 +1461,28 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 18,
+    fontWeight: "600",
+    flex: 1,
+  },
+  modalCloseButton: {
+    padding: 4,
+  },
+  modalCloseButtonText: {
+    fontSize: 20,
+    fontWeight: "300",
+  },
+  dateModalTamamButton: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    marginBottom: 8,
+    paddingVertical: 14,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  dateModalTamamButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
     fontWeight: "600",
   },
 });

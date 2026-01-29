@@ -13,7 +13,9 @@ import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { ProductPicker } from "./ProductPicker";
+import { RelatedStocksSelectDialog } from "./RelatedStocksSelectDialog";
 import { quotationApi } from "../api";
+import { stockApi } from "../../stocks/api";
 import { useStock } from "../../stocks/hooks";
 import type {
   QuotationLineFormState,
@@ -29,6 +31,8 @@ interface QuotationLineFormProps {
   line: QuotationLineFormState | null;
   onClose: () => void;
   onSave: (line: QuotationLineFormState) => void;
+  onAddWithRelatedStocks?: (stock: StockGetDto, relatedStockIds: number[]) => void;
+  disableRelatedStocks?: boolean;
   currency: string;
   currencyOptions?: Array<{ code: string; dovizTipi: number; dovizIsmi: string }>;
   pricingRules?: PricingRuleLineGetDto[];
@@ -41,6 +45,8 @@ export function QuotationLineForm({
   line,
   onClose,
   onSave,
+  onAddWithRelatedStocks,
+  disableRelatedStocks = false,
   currency,
   currencyOptions,
   pricingRules,
@@ -52,6 +58,8 @@ export function QuotationLineForm({
   const insets = useSafeAreaInsets();
 
   const [selectedStock, setSelectedStock] = useState<StockGetDto | undefined>();
+  const [pendingStockForRelated, setPendingStockForRelated] = useState<StockGetDto | null>(null);
+  const [relatedStocksDialogVisible, setRelatedStocksDialogVisible] = useState(false);
   const [quantity, setQuantity] = useState<string>("1");
   const [unitPrice, setUnitPrice] = useState<string>("0");
   const [discountRate1, setDiscountRate1] = useState<string>("0");
@@ -125,6 +133,8 @@ export function QuotationLineForm({
 
   const resetForm = useCallback(() => {
     setSelectedStock(undefined);
+    setPendingStockForRelated(null);
+    setRelatedStocksDialogVisible(false);
     setQuantity("1");
     setUnitPrice("0");
     setDiscountRate1("0");
@@ -140,8 +150,32 @@ export function QuotationLineForm({
 
   const handleStockSelect = useCallback(
     async (stock: StockGetDto | undefined) => {
-      setSelectedStock(stock);
-      if (!stock) {
+      let stockToUse: StockGetDto | undefined = stock;
+      if (stock && onAddWithRelatedStocks) {
+        try {
+          const fullStock = await stockApi.getById(stock.id);
+          let relations = fullStock.parentRelations ?? [];
+          if (relations.length === 0 && !disableRelatedStocks) {
+            const relationsRes = await stockApi.getRelations(stock.id, { pageNumber: 1, pageSize: 100 });
+            relations = relationsRes?.items ?? [];
+          }
+          if (relations.length > 0 && !disableRelatedStocks) {
+            setPendingStockForRelated({ ...fullStock, parentRelations: relations });
+            setRelatedStocksDialogVisible(true);
+            return;
+          }
+          setSelectedStock(fullStock);
+          stockToUse = fullStock;
+        } catch {
+          setSelectedStock(stock);
+        }
+      } else if (stock) {
+        setSelectedStock(stock);
+      } else {
+        setSelectedStock(undefined);
+      }
+
+      if (!stockToUse) {
         setUnitPrice("0");
         return;
       }
@@ -150,8 +184,8 @@ export function QuotationLineForm({
       try {
         const priceData = await quotationApi.getPriceOfProduct([
           {
-            productCode: stock.erpStockCode,
-            groupCode: stock.grupKodu || "",
+            productCode: stockToUse.erpStockCode,
+            groupCode: stockToUse.grupKodu || "",
           },
         ]);
 
@@ -187,11 +221,11 @@ export function QuotationLineForm({
             setDiscountRate3(String(price.discount3));
         }
 
-        if (pricingRules && stock.erpStockCode) {
+        if (pricingRules && stockToUse.erpStockCode) {
           const qty = parseFloat(quantity) || 1;
           const matchingRule = pricingRules.find(
             (rule) =>
-              rule.stokCode === stock.erpStockCode &&
+              rule.stokCode === stockToUse.erpStockCode &&
               qty >= rule.minQuantity &&
               (!rule.maxQuantity || qty <= rule.maxQuantity)
           );
@@ -211,8 +245,25 @@ export function QuotationLineForm({
         setIsLoadingPrice(false);
       }
     },
-    [currency, exchangeRates, currencyOptions, pricingRules, quantity]
+    [currency, exchangeRates, currencyOptions, pricingRules, quantity, disableRelatedStocks, onAddWithRelatedStocks]
   );
+
+  const handleRelatedStocksConfirm = useCallback(
+    (selectedStockIds: number[]) => {
+      if (pendingStockForRelated && onAddWithRelatedStocks) {
+        onAddWithRelatedStocks(pendingStockForRelated, selectedStockIds);
+        setRelatedStocksDialogVisible(false);
+        setPendingStockForRelated(null);
+        onClose();
+      }
+    },
+    [pendingStockForRelated, onAddWithRelatedStocks, onClose]
+  );
+
+  const handleRelatedStocksClose = useCallback(() => {
+    setRelatedStocksDialogVisible(false);
+    setPendingStockForRelated(null);
+  }, []);
 
   useEffect(() => {
     if (selectedStock && pricingRules && selectedStock.erpStockCode) {
@@ -297,7 +348,56 @@ export function QuotationLineForm({
     onClose();
   }, [resetForm, onClose]);
 
+  const clampDiscount = useCallback((value: number): number => {
+    return Math.max(0, Math.min(100, Number.isNaN(value) ? 0 : value));
+  }, []);
+
+  const normalizeDiscountOnBlur = useCallback((value: string): string => {
+    const trimmed = value.trim();
+    if (trimmed === "" || trimmed === ".") return "0";
+    const num = parseFloat(trimmed);
+    return String(clampDiscount(Number.isNaN(num) ? 0 : num));
+  }, [clampDiscount]);
+
+  const handleDiscount1Change = useCallback(
+    (text: string) => {
+      const num = parseFloat(text.replace(",", "."));
+      if (text === "" || text === ".") {
+        setDiscountRate1(text);
+        return;
+      }
+      if (!Number.isNaN(num)) setDiscountRate1(String(clampDiscount(num)));
+      else setDiscountRate1(text);
+    },
+    [clampDiscount]
+  );
+  const handleDiscount2Change = useCallback(
+    (text: string) => {
+      const num = parseFloat(text.replace(",", "."));
+      if (text === "" || text === ".") {
+        setDiscountRate2(text);
+        return;
+      }
+      if (!Number.isNaN(num)) setDiscountRate2(String(clampDiscount(num)));
+      else setDiscountRate2(text);
+    },
+    [clampDiscount]
+  );
+  const handleDiscount3Change = useCallback(
+    (text: string) => {
+      const num = parseFloat(text.replace(",", "."));
+      if (text === "" || text === ".") {
+        setDiscountRate3(text);
+        return;
+      }
+      if (!Number.isNaN(num)) setDiscountRate3(String(clampDiscount(num)));
+      else setDiscountRate3(text);
+    },
+    [clampDiscount]
+  );
+
   return (
+    <>
     <Modal
       visible={visible}
       transparent
@@ -322,6 +422,7 @@ export function QuotationLineForm({
             </TouchableOpacity>
           </View>
 
+          <View style={styles.contentWrapper}>
           <ScrollView
             style={styles.scrollContent}
             contentContainerStyle={styles.scrollContentContainer}
@@ -333,6 +434,7 @@ export function QuotationLineForm({
               onChange={handleStockSelect}
               label="Ürün"
               required
+              parentVisible={visible}
             />
 
             {isLoadingPrice && (
@@ -368,51 +470,55 @@ export function QuotationLineForm({
                 style={[
                   styles.input,
                   { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                  styles.inputReadOnly,
                 ]}
                 value={unitPrice}
-                onChangeText={setUnitPrice}
+                editable={false}
                 placeholder="Birim fiyat"
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 1 (%)</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 1 (%) (0-100)</Text>
               <TextInput
                 style={[
                   styles.input,
                   { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
                 ]}
                 value={discountRate1}
-                onChangeText={setDiscountRate1}
+                onChangeText={handleDiscount1Change}
+                onBlur={() => setDiscountRate1(normalizeDiscountOnBlur(discountRate1))}
                 placeholder="0"
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 2 (%)</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 2 (%) (0-100)</Text>
               <TextInput
                 style={[
                   styles.input,
                   { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
                 ]}
                 value={discountRate2}
-                onChangeText={setDiscountRate2}
+                onChangeText={handleDiscount2Change}
+                onBlur={() => setDiscountRate2(normalizeDiscountOnBlur(discountRate2))}
                 placeholder="0"
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 3 (%)</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 3 (%) (0-100)</Text>
               <TextInput
                 style={[
                   styles.input,
                   { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
                 ]}
                 value={discountRate3}
-                onChangeText={setDiscountRate3}
+                onChangeText={handleDiscount3Change}
+                onBlur={() => setDiscountRate3(normalizeDiscountOnBlur(discountRate3))}
                 placeholder="0"
                 keyboardType="numeric"
               />
@@ -477,6 +583,7 @@ export function QuotationLineForm({
               </View>
             </View>
           </ScrollView>
+          </View>
 
           <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
             <TouchableOpacity
@@ -500,6 +607,13 @@ export function QuotationLineForm({
         </View>
       </View>
     </Modal>
+    <RelatedStocksSelectDialog
+      visible={relatedStocksDialogVisible}
+      relations={pendingStockForRelated?.parentRelations ?? []}
+      onClose={handleRelatedStocksClose}
+      onConfirm={handleRelatedStocksConfirm}
+    />
+  </>
   );
 }
 
@@ -513,9 +627,13 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
+    height: "90%",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "90%",
+  },
+  contentWrapper: {
+    flex: 1,
+    minHeight: 200,
   },
   modalHeader: {
     flexDirection: "row",
@@ -551,7 +669,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContentContainer: {
+    flexGrow: 1,
     padding: 20,
+    paddingBottom: 24,
   },
   loadingContainer: {
     flexDirection: "row",
@@ -578,6 +698,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 15,
+  },
+  inputReadOnly: {
+    opacity: 0.9,
   },
   textArea: {
     borderWidth: 1,

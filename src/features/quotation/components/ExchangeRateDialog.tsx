@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useEffect } from "react";
+import React, { useCallback, useState, useEffect, useMemo } from "react";
 import {
   View,
   StyleSheet,
@@ -6,11 +6,13 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { useToastStore } from "../../../store/toast";
 import type { QuotationExchangeRateFormState, CurrencyOptionDto, ExchangeRateDto } from "../types";
 
 interface ExchangeRateDialogProps {
@@ -18,6 +20,8 @@ interface ExchangeRateDialogProps {
   exchangeRates: QuotationExchangeRateFormState[];
   currencyOptions?: CurrencyOptionDto[];
   erpExchangeRates?: ExchangeRateDto[];
+  isLoadingErpRates?: boolean;
+  currencyInUse?: string;
   onClose: () => void;
   onSave: (rates: QuotationExchangeRateFormState[]) => void;
   offerDate?: string;
@@ -27,7 +31,9 @@ export function ExchangeRateDialog({
   visible,
   exchangeRates: initialRates,
   currencyOptions,
-  erpExchangeRates,
+  erpExchangeRates = [],
+  isLoadingErpRates = false,
+  currencyInUse,
   onClose,
   onSave,
   offerDate,
@@ -35,38 +41,80 @@ export function ExchangeRateDialog({
   const { t } = useTranslation();
   const { colors } = useUIStore();
   const insets = useSafeAreaInsets();
+  const showToast = useToastStore((s) => s.showToast);
 
   const [rates, setRates] = useState<QuotationExchangeRateFormState[]>([]);
 
+  const today = useMemo(
+    () => offerDate || new Date().toISOString().split("T")[0],
+    [offerDate]
+  );
+
   useEffect(() => {
-    if (visible) {
-      setRates(initialRates.length > 0 ? [...initialRates] : []);
+    if (!visible) return;
+    if (erpExchangeRates.length === 0 && isLoadingErpRates) return;
+    if (erpExchangeRates.length === 0) {
+      setRates([]);
+      return;
     }
-  }, [visible, initialRates]);
-
-  const handleAddRate = useCallback(() => {
-    const newRate: QuotationExchangeRateFormState = {
-      id: `temp-${Date.now()}`,
-      currency: "",
-      exchangeRate: 0,
-      exchangeRateDate: offerDate || new Date().toISOString().split("T")[0],
-      isOfficial: true,
-    };
-    setRates((prev) => [...prev, newRate]);
-  }, [offerDate]);
-
-  const handleRemoveRate = useCallback((id: string) => {
-    setRates((prev) => prev.filter((rate) => rate.id !== id));
-  }, []);
+    const merged = erpExchangeRates.map((erp) => {
+      const match = initialRates.find(
+        (r) => r.currency === String(erp.dovizTipi) || r.dovizTipi === erp.dovizTipi
+      );
+      return {
+        id: `erp-${erp.dovizTipi}`,
+        currency: String(erp.dovizTipi),
+        dovizTipi: erp.dovizTipi,
+        exchangeRate: match?.exchangeRate ?? erp.kurDegeri ?? 0,
+        exchangeRateDate: match?.exchangeRateDate ?? erp.tarih ?? today,
+        isOfficial: match?.isOfficial ?? true,
+      };
+    });
+    setRates(merged);
+  }, [visible, initialRates, erpExchangeRates, today, isLoadingErpRates]);
 
   const handleRateChange = useCallback(
     (id: string, field: keyof QuotationExchangeRateFormState, value: string | number | boolean) => {
+      const rate = rates.find((r) => r.id === id);
+      if (rate && currencyInUse != null && rate.currency === currencyInUse) {
+        showToast("warning", t("quotation.exchangeRate.inUseCannotEdit", "Kullanımda olan kur değiştirilemez."));
+        return;
+      }
       setRates((prev) =>
-        prev.map((rate) => (rate.id === id ? { ...rate, [field]: value } : rate))
+        prev.map((r) => {
+          if (r.id !== id) return r;
+          const next = { ...r, [field]: value };
+          if (field === "exchangeRate") {
+            next.isOfficial = false;
+          }
+          return next;
+        })
       );
     },
-    []
+    [rates, currencyInUse, showToast, t]
   );
+
+  const handleApplyErpRate = useCallback(
+    (id: string, erpRate: number) => {
+      const rate = rates.find((r) => r.id === id);
+      if (rate && currencyInUse != null && rate.currency === currencyInUse) {
+        showToast("warning", t("quotation.exchangeRate.inUseCannotEdit", "Kullanımda olan kur değiştirilemez."));
+        return;
+      }
+      setRates((prev) =>
+        prev.map((r) =>
+          r.id === id ? { ...r, exchangeRate: erpRate, isOfficial: true } : r
+        )
+      );
+    },
+    [rates, currencyInUse, showToast, t]
+  );
+
+  const handleFocusInUseField = useCallback(() => {
+    if (currencyInUse != null) {
+      showToast("warning", t("quotation.exchangeRate.inUseCannotEdit", "Kullanımda olan kur değiştirilemez."));
+    }
+  }, [currencyInUse, showToast, t]);
 
   const handleSave = useCallback(() => {
     onSave(rates);
@@ -75,21 +123,20 @@ export function ExchangeRateDialog({
 
   const getCurrencyName = useCallback(
     (code: string) => {
-      return currencyOptions?.find((c) => c.code === code)?.dovizIsmi || code;
+      const fromOptions = currencyOptions?.find((c) => c.code === code)?.dovizIsmi;
+      if (fromOptions) return fromOptions;
+      const fromErp = erpExchangeRates.find((r) => String(r.dovizTipi) === code)?.dovizIsmi;
+      return fromErp ?? code;
     },
-    [currencyOptions]
+    [currencyOptions, erpExchangeRates]
   );
 
   const getErpRate = useCallback(
     (currencyCode: string) => {
-      if (!currencyCode || !currencyOptions || !erpExchangeRates) return undefined;
-
-      const currency = currencyOptions.find((c) => c.code === currencyCode);
-      if (!currency) return undefined;
-
-      return erpExchangeRates.find((r) => r.dovizTipi === currency.dovizTipi)?.kurDegeri;
+      if (!currencyCode || !erpExchangeRates.length) return undefined;
+      return erpExchangeRates.find((r) => String(r.dovizTipi) === currencyCode)?.kurDegeri;
     },
-    [currencyOptions, erpExchangeRates]
+    [erpExchangeRates]
   );
 
   return (
@@ -109,134 +156,147 @@ export function ExchangeRateDialog({
         >
           <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Döviz Kurları</Text>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={[styles.closeButtonText, { color: colors.text }]}>✕</Text>
-            </TouchableOpacity>
+            <View style={styles.headerRow}>
+              <View style={[styles.dollarIcon, { backgroundColor: "#10B981" }]}>
+                <Text style={styles.dollarIconText}>$</Text>
+              </View>
+              <View style={styles.headerTitles}>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>Döviz Kurları</Text>
+                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                  Güncel kur değerlerini yönetin
+                </Text>
+              </View>
+              <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+                <Text style={[styles.closeButtonText, { color: colors.text }]}>✕</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
+          <View style={styles.contentWrapper}>
+          {visible && isLoadingErpRates && rates.length === 0 ? (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color={colors.accent} />
+              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                Kurlar yükleniyor...
+              </Text>
+            </View>
+          ) : (
           <ScrollView
             style={styles.scrollContent}
             contentContainerStyle={styles.scrollContentContainer}
             showsVerticalScrollIndicator={false}
           >
-            {rates.map((rate) => {
-              const erpRate = getErpRate(rate.currency);
-
-              return (
-                <View
-                  key={rate.id}
-                  style={[
-                    styles.rateCard,
-                    { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-                  ]}
-                >
-                  <View style={styles.rateCardHeader}>
-                    <Text style={[styles.rateCardTitle, { color: colors.text }]}>
-                      {getCurrencyName(rate.currency) || "Para Birimi Seçiniz"}
+                {rates.length === 0 ? (
+              <View style={styles.emptyContainer}>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                  {isLoadingErpRates
+                    ? "Kurlar yükleniyor..."
+                    : "Kur listesi boş. Teklif tarihi seçili mi kontrol edin veya daha sonra tekrar deneyin."}
+                </Text>
+              </View>
+            ) : (
+              <>
+                <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
+                  <Text style={[styles.tableHeaderCell, styles.cellPara, { color: colors.textSecondary }]}>
+                    PARA BIRIMI
+                  </Text>
+                  <Text style={[styles.tableHeaderCell, styles.cellKur, { color: colors.textSecondary }]}>
+                    KUR
+                  </Text>
+                  <Text style={[styles.tableHeaderCell, styles.cellDurum, { color: colors.textSecondary }]}>
+                    DURUM
+                  </Text>
+                  <View style={styles.cellIslem}>
+                    <Text style={[styles.tableHeaderCellText, { color: colors.textSecondary }]}>
+                      İŞLEMLER
                     </Text>
-                    <TouchableOpacity
-                      style={[styles.removeButton, { backgroundColor: colors.error }]}
-                      onPress={() => handleRemoveRate(rate.id)}
-                    >
-                      <Text style={styles.removeButtonText}>✕</Text>
-                    </TouchableOpacity>
                   </View>
+                </View>
+                {rates.map((rate) => {
+                  const erpRate = getErpRate(rate.currency);
+                  const isInUse = currencyInUse != null && rate.currency === currencyInUse;
+                  const isCustom = !rate.isOfficial;
 
-                  <View style={styles.fieldContainer}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Para Birimi</Text>
-                    <View style={styles.currencyButtons}>
-                      {currencyOptions?.map((option) => (
-                        <TouchableOpacity
-                          key={option.code}
+                  return (
+                    <View
+                      key={rate.id}
+                      style={[styles.tableRow, { borderBottomColor: colors.border }]}
+                    >
+                      <View style={[styles.tableCell, styles.cellPara]}>
+                        <Text style={[styles.cellText, { color: colors.text }]} numberOfLines={1}>
+                          {getCurrencyName(rate.currency)}
+                        </Text>
+                      </View>
+                      <View style={[styles.tableCell, styles.cellKur]}>
+                        <TextInput
                           style={[
-                            styles.currencyButton,
+                            styles.tableInput,
                             {
-                              backgroundColor:
-                                rate.currency === option.code
-                                  ? colors.accent
-                                  : colors.backgroundSecondary,
+                              backgroundColor: colors.backgroundSecondary,
                               borderColor: colors.border,
+                              color: colors.text,
+                              opacity: isInUse ? 0.7 : 1,
                             },
                           ]}
-                          onPress={() => handleRateChange(rate.id, "currency", option.code)}
+                          value={
+                            rate.exchangeRate != null && rate.exchangeRate !== 0
+                              ? String(rate.exchangeRate)
+                              : ""
+                          }
+                          onChangeText={(text) =>
+                            handleRateChange(rate.id, "exchangeRate", parseFloat(text.replace(",", ".")) || 0)
+                          }
+                          onFocus={isInUse ? handleFocusInUseField : undefined}
+                          placeholder="0.0000"
+                          keyboardType="decimal-pad"
+                          editable={!isInUse}
+                        />
+                      </View>
+                      <View style={[styles.tableCell, styles.cellDurum]}>
+                        <View
+                          style={[
+                            styles.statusPill,
+                            { backgroundColor: isCustom ? colors.accent + "25" : "#10B98120" },
+                          ]}
                         >
                           <Text
                             style={[
-                              styles.currencyButtonText,
-                              {
-                                color: rate.currency === option.code ? "#FFFFFF" : colors.text,
-                              },
+                              styles.statusPillText,
+                              { color: isCustom ? colors.accent : "#10B981" },
                             ]}
                           >
-                            {option.dovizIsmi}
+                            {isCustom ? "Özel" : "Resmi"}
                           </Text>
-                        </TouchableOpacity>
-                      ))}
+                        </View>
+                      </View>
+                      <View style={[styles.tableCell, styles.cellIslem]}>
+                        {!isInUse && erpRate !== undefined ? (
+                          <TouchableOpacity
+                            style={[styles.editButton, { borderColor: colors.border }]}
+                            onPress={() => handleApplyErpRate(rate.id, erpRate)}
+                          >
+                            <Text style={[styles.editButtonText, { color: colors.text }]}>✎</Text>
+                          </TouchableOpacity>
+                        ) : isInUse ? (
+                          <View style={[styles.editButton, styles.editButtonDisabled, { borderColor: colors.border }]}>
+                            <Text style={[styles.editButtonText, { color: colors.textSecondary }]}>✎</Text>
+                          </View>
+                        ) : null}
+                      </View>
                     </View>
-                  </View>
-
-                  {erpRate !== undefined && (
-                    <View style={[styles.erpRateInfo, { backgroundColor: colors.accent + "15" }]}>
-                      <Text style={[styles.erpRateText, { color: colors.accent }]}>
-                        ERP Kur: {erpRate.toFixed(4)}
-                      </Text>
-                      <TouchableOpacity
-                        style={[styles.useErpButton, { backgroundColor: colors.accent }]}
-                        onPress={() => handleRateChange(rate.id, "exchangeRate", erpRate)}
-                      >
-                        <Text style={styles.useErpButtonText}>Kullan</Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
-
-                  <View style={styles.fieldContainer}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Kur</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: colors.backgroundSecondary,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        },
-                      ]}
-                      value={rate.exchangeRate ? String(rate.exchangeRate) : ""}
-                      onChangeText={(text) =>
-                        handleRateChange(rate.id, "exchangeRate", parseFloat(text) || 0)
-                      }
-                      placeholder="Kur değeri"
-                      keyboardType="numeric"
-                    />
-                  </View>
-
-                  <View style={styles.fieldContainer}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>Tarih</Text>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        {
-                          backgroundColor: colors.backgroundSecondary,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        },
-                      ]}
-                      value={rate.exchangeRateDate}
-                      onChangeText={(text) => handleRateChange(rate.id, "exchangeRateDate", text)}
-                      placeholder="YYYY-MM-DD"
-                    />
-                  </View>
+                  );
+                })}
+                <View style={[styles.infoBox, { backgroundColor: "#3B82F620" }]}>
+                  <Text style={styles.infoBoxIcon}>$</Text>
+                  <Text style={[styles.infoBoxText, { color: colors.text }]}>
+                    Burada yapılan değişiklikler sadece bu teklif için geçerlidir ve genel sistem kurlarını etkilemez. Değiştirilen kurlar "Özel" olarak işaretlenir.
+                  </Text>
                 </View>
-              );
-            })}
-
-            <TouchableOpacity
-              style={[styles.addButton, { backgroundColor: colors.accent }]}
-              onPress={handleAddRate}
-            >
-              <Text style={styles.addButtonText}>+ Kur Ekle</Text>
-            </TouchableOpacity>
+              </>
+            )}
           </ScrollView>
+          )}
+          </View>
 
           <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
             <TouchableOpacity
@@ -249,7 +309,7 @@ export function ExchangeRateDialog({
               style={[styles.saveButton, { backgroundColor: colors.accent }]}
               onPress={handleSave}
             >
-              <Text style={styles.saveButtonText}>Kaydet</Text>
+              <Text style={styles.saveButtonText}>Kaydet ve Uygula</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -268,14 +328,15 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalContent: {
+    height: "90%",
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: "90%",
+  },
+  contentWrapper: {
+    flex: 1,
+    minHeight: 120,
   },
   modalHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 16,
@@ -289,11 +350,34 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
   },
+  headerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginTop: 8,
+  },
+  dollarIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  dollarIconText: {
+    color: "#FFFFFF",
+    fontSize: 18,
+    fontWeight: "700",
+  },
+  headerTitles: {
+    flex: 1,
+  },
   modalTitle: {
     fontSize: 18,
     fontWeight: "600",
-    flex: 1,
-    textAlign: "center",
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    marginTop: 2,
   },
   closeButton: {
     padding: 4,
@@ -302,103 +386,130 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "300",
   },
+  loadingContainer: {
+    flex: 1,
+    paddingVertical: 40,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+  },
+  emptyContainer: {
+    flex: 1,
+    paddingVertical: 32,
+    paddingHorizontal: 20,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyText: {
+    fontSize: 14,
+    textAlign: "center",
+  },
   scrollContent: {
     flex: 1,
   },
   scrollContentContainer: {
+    flexGrow: 1,
     padding: 20,
   },
-  rateCard: {
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 12,
-  },
-  rateCardHeader: {
+  tableHeader: {
     flexDirection: "row",
-    justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
   },
-  rateCardTitle: {
-    fontSize: 16,
+  tableHeaderCell: {
+    fontSize: 12,
     fontWeight: "600",
-    flex: 1,
+    textTransform: "uppercase",
   },
-  removeButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
+  tableHeaderCellText: {
+    fontSize: 12,
+    fontWeight: "600",
+    textTransform: "uppercase",
+  },
+  cellPara: {
+    flex: 1.4,
+    paddingRight: 8,
+  },
+  cellKur: {
+    flex: 1,
+    paddingRight: 8,
+  },
+  cellDurum: {
+    flex: 0.9,
+    paddingRight: 8,
+  },
+  cellIslem: {
+    flex: 0.5,
+    alignItems: "flex-end",
+  },
+  tableRow: {
+    flexDirection: "row",
     alignItems: "center",
+    paddingVertical: 12,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+  },
+  tableCell: {
     justifyContent: "center",
   },
-  removeButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  fieldContainer: {
-    marginBottom: 12,
-  },
-  label: {
+  cellText: {
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: 6,
   },
-  currencyButtons: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  currencyButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+  tableInput: {
     borderWidth: 1,
-  },
-  currencyButtonText: {
-    fontSize: 13,
-    fontWeight: "500",
-  },
-  erpRateInfo: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    padding: 12,
     borderRadius: 8,
-    marginBottom: 12,
-  },
-  erpRateText: {
+    paddingHorizontal: 10,
+    paddingVertical: 8,
     fontSize: 14,
-    fontWeight: "500",
+    minWidth: 0,
   },
-  useErpButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 6,
+  statusPill: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    alignSelf: "flex-start",
   },
-  useErpButtonText: {
-    color: "#FFFFFF",
+  statusPillText: {
     fontSize: 12,
     fontWeight: "600",
   },
-  input: {
+  editButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
-  },
-  addButton: {
-    paddingVertical: 14,
-    borderRadius: 10,
     alignItems: "center",
-    marginTop: 8,
+    justifyContent: "center",
   },
-  addButtonText: {
-    color: "#FFFFFF",
+  editButtonDisabled: {
+    opacity: 0.5,
+  },
+  editButtonText: {
     fontSize: 16,
-    fontWeight: "600",
+  },
+  infoBox: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    padding: 14,
+    borderRadius: 10,
+    marginTop: 20,
+    gap: 10,
+  },
+  infoBoxIcon: {
+    fontSize: 18,
+    color: "#3B82F6",
+    fontWeight: "700",
+  },
+  infoBoxText: {
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 20,
   },
   modalFooter: {
     flexDirection: "row",

@@ -11,9 +11,10 @@ interface UseExchangeRateParams {
 export function useExchangeRate(params?: UseExchangeRateParams) {
   const stableParams = useMemo(() => {
     if (!params) return undefined;
+    const tarih = params.tarih || new Date().toISOString().split("T")[0];
     return {
-      tarih: params.tarih || undefined,
-      fiyatTipi: params.fiyatTipi || undefined,
+      tarih,
+      fiyatTipi: params.fiyatTipi ?? 1,
     };
   }, [params?.tarih, params?.fiyatTipi]);
 
@@ -21,5 +22,6 @@ export function useExchangeRate(params?: UseExchangeRateParams) {
     queryKey: ["exchangeRate", stableParams],
     queryFn: () => quotationApi.getExchangeRate(stableParams),
     staleTime: 5 * 60 * 1000,
+    enabled: !!stableParams,
   });
 }

@@ -13,8 +13,8 @@ export function useAvailableDocumentSerialTypes(
     queryFn: () =>
       quotationApi.getDocumentSerialTypes({
         customerTypeId: customerTypeId ?? undefined,
-        representativeId: salesRepId,
-        documentType: ruleType,
+        salesRepId,
+        ruleType,
       }),
     enabled:
       customerTypeId !== null &&

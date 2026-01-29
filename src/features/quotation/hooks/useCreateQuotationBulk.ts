@@ -13,11 +13,15 @@ export function useCreateQuotationBulk() {
     mutationFn: (data) => quotationApi.createBulk(data),
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ["quotation", "list"] });
-      showToast("success", "Teklif Başarıyla Oluşturuldu");
+      showToast("success", "Teklif Başarıyla Oluşturuldu. Teklif onay sürecine gönderildi.");
       router.push(`/(tabs)/sales/quotations/${data.id}`);
     },
     onError: (error) => {
-      showToast("error", error.message || "Teklif oluşturulurken bir hata oluştu", 10000);
+      showToast(
+        "error",
+        "Teklif Oluşturulamadı: " + (error.message || "Teklif oluşturulurken bir hata oluştu."),
+        10000
+      );
     },
   });
 }

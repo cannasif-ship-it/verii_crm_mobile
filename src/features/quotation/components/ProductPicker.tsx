@@ -1,4 +1,4 @@
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo, useEffect } from "react";
 import {
   View,
   TouchableOpacity,
@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { VoiceSearchButton } from "./VoiceSearchButton";
 import { useStocks } from "../../stocks/hooks";
 import type { StockGetDto, PagedFilter } from "../../stocks/types";
 
@@ -22,6 +23,7 @@ interface ProductPickerProps {
   disabled?: boolean;
   label?: string;
   required?: boolean;
+  parentVisible?: boolean;
 }
 
 export function ProductPicker({
@@ -31,6 +33,7 @@ export function ProductPicker({
   disabled = false,
   label,
   required = false,
+  parentVisible = true,
 }: ProductPickerProps): React.ReactElement {
   const { t } = useTranslation();
   const { colors } = useUIStore();
@@ -38,6 +41,13 @@ export function ProductPicker({
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
+
+  useEffect(() => {
+    if (!parentVisible) {
+      setIsOpen(false);
+      setSearchText("");
+    }
+  }, [parentVisible]);
 
   const filters: PagedFilter[] | undefined = useMemo(() => {
     if (searchText.trim().length >= 2) {
@@ -184,7 +194,7 @@ export function ProductPicker({
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.searchContainer, { backgroundColor: colors.backgroundSecondary }]}>
+            <View style={[styles.searchRow, { backgroundColor: colors.backgroundSecondary }]}>
               <TextInput
                 style={[styles.searchInput, { color: colors.text }]}
                 placeholder="Ürün adı veya kodu ile ara..."
@@ -193,6 +203,7 @@ export function ProductPicker({
                 onChangeText={setSearchText}
                 autoFocus
               />
+              <VoiceSearchButton onResult={setSearchText} />
             </View>
 
             {isLoading && stocks.length === 0 ? (
@@ -316,13 +327,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "300",
   },
-  searchContainer: {
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0, 0, 0, 0.1)",
+    gap: 8,
   },
   searchInput: {
+    flex: 1,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,

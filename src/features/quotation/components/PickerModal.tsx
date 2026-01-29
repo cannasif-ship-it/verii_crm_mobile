@@ -11,6 +11,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { VoiceSearchButton } from "./VoiceSearchButton";
 
 interface PickerOption {
   id: number | string;
@@ -114,7 +115,7 @@ export function PickerModal({
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.searchContainer, { backgroundColor: colors.backgroundSecondary }]}>
+          <View style={[styles.searchRow, { backgroundColor: colors.backgroundSecondary }]}>
             <TextInput
               style={[styles.searchInput, { color: colors.text }]}
               placeholder={searchPlaceholder}
@@ -123,6 +124,7 @@ export function PickerModal({
               onChangeText={setSearchText}
               autoFocus
             />
+            <VoiceSearchButton onResult={setSearchText} />
           </View>
 
           {isLoading ? (
@@ -192,13 +194,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "300",
   },
-  searchContainer: {
+  searchRow: {
+    flexDirection: "row",
+    alignItems: "center",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: "rgba(0, 0, 0, 0.1)",
+    gap: 8,
   },
   searchInput: {
+    flex: 1,
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 12,
