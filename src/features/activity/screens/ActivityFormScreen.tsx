@@ -138,10 +138,12 @@ export function ActivityFormScreen(): React.ReactElement {
       if (existingActivity.contact) {
         setSelectedContact({
           id: existingActivity.contact.id,
-          fullName: existingActivity.contact.fullName,
-          firstName: existingActivity.contact.firstName,
-          lastName: existingActivity.contact.lastName,
-        } as ContactDto);
+          fullName: existingActivity.contact.fullName ?? "",
+          customerId: 0,
+          titleId: 0,
+          createdDate: "",
+          isDeleted: false,
+        } as unknown as ContactDto);
       }
     }
   }, [existingActivity, reset]);
@@ -399,16 +401,16 @@ export function ActivityFormScreen(): React.ReactElement {
 
           <CustomerPicker
             label={t("activity.customer")}
-            value={watchCustomerId}
+            value={watchCustomerId ?? undefined}
             customerName={selectedCustomer?.name}
             onChange={handleCustomerChange}
           />
 
           <ContactPicker
             label={t("activity.contact")}
-            value={watch("contactId")}
-            contactName={selectedContact?.fullName || (selectedContact?.firstName ? `${selectedContact.firstName} ${selectedContact.lastName || ""}`.trim() : undefined)}
-            customerId={watchCustomerId}
+            value={watch("contactId") ?? undefined}
+            contactName={selectedContact?.fullName}
+            customerId={watchCustomerId ?? undefined}
             onChange={handleContactChange}
           />
 

@@ -767,7 +767,7 @@ export function QuotationDetailScreen(): React.ReactElement {
         <PickerModal
           visible={paymentTypeModalVisible}
           options={paymentTypes?.map((p) => ({ id: p.id, name: p.name })) ?? []}
-          selectedValue={watch("quotation.paymentTypeId")}
+          selectedValue={watch("quotation.paymentTypeId") ?? undefined}
           onSelect={(o) => {
             setValue("quotation.paymentTypeId", o.id as number);
             setPaymentTypeModalVisible(false);
@@ -810,7 +810,7 @@ export function QuotationDetailScreen(): React.ReactElement {
           <PickerModal
             visible={shippingAddressModalVisible}
             options={shippingAddresses.map((a) => ({ id: a.id, name: a.address ?? "" }))}
-            selectedValue={watch("quotation.shippingAddressId")}
+            selectedValue={watch("quotation.shippingAddressId") ?? undefined}
             onSelect={(o) => {
               setValue("quotation.shippingAddressId", o.id as number);
               setShippingAddressModalVisible(false);

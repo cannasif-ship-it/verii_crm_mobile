@@ -49,7 +49,7 @@ export const GRADIENT = {
 };
 
 export type ThemeMode = "light" | "dark";
-export type ThemeColors = typeof COLORS.light;
+export type ThemeColors = (typeof COLORS)[ThemeMode];
 
 export function getSystemTheme(): ThemeMode {
   return Appearance.getColorScheme() === "dark" ? "dark" : "light";

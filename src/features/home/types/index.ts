@@ -1,4 +1,6 @@
-export type { User } from "../../auth/types";
+import type { User } from "../../auth/types";
+
+export type { User };
 
 export interface Module {
   id: string;

@@ -9,13 +9,16 @@ interface ScreenHeaderProps {
   title: string;
   showBackButton?: boolean;
   rightElement?: React.ReactNode;
+  rightContent?: React.ReactNode;
 }
 
 export function ScreenHeader({
   title,
   showBackButton = true,
   rightElement,
+  rightContent,
 }: ScreenHeaderProps): React.ReactElement {
+  const right = rightElement ?? rightContent;
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { colors } = useUIStore();
@@ -41,8 +44,8 @@ export function ScreenHeader({
 
         <Text style={styles.title}>{title}</Text>
 
-        {rightElement ? (
-          <View style={styles.rightContainer}>{rightElement}</View>
+        {right ? (
+          <View style={styles.rightContainer}>{right}</View>
         ) : (
           <View style={styles.placeholder} />
         )}

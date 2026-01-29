@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { useForm, Controller } from "react-hook-form";
+import { useForm, Controller, type Resolver } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { router } from "expo-router";
 import {
@@ -64,7 +64,7 @@ export function LoginForm(): React.ReactElement {
     setValue,
     formState: { errors },
   } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(loginSchema) as Resolver<LoginFormData>,
     defaultValues: {
       branchId: "",
       email: "",
@@ -254,7 +254,7 @@ export function LoginForm(): React.ReactElement {
       )}
 
       <TouchableOpacity
-        onPress={handleSubmit(onSubmit)}
+        onPress={handleSubmit((data: LoginFormData) => onSubmit(data))}
         disabled={isButtonDisabled}
         activeOpacity={0.9}
       >

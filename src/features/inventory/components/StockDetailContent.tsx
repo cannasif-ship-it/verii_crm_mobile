@@ -1,7 +1,7 @@
 import React, { useMemo, useCallback } from "react";
 import { View, StyleSheet, ScrollView, FlatList, Image } from "react-native";
 import { Text } from "../../../components/ui/text";
-import type { StockGetDto, StockRelationDto } from "../types";
+import type { StockGetDto, StockRelationDto, StockImageDto } from "../types";
 
 function DetailRow({
   label,
@@ -38,7 +38,7 @@ export function StockDetailContent({
   t,
 }: StockDetailContentProps): React.ReactElement {
   const primaryImage = useMemo(() => {
-    return stock?.stockImages?.find((img) => img.isPrimary) || stock?.stockImages?.[0];
+    return stock?.stockImages?.find((img: StockImageDto) => img.isPrimary) || stock?.stockImages?.[0];
   }, [stock?.stockImages]);
 
   const hasBasicInfo = stock?.erpStockCode || stock?.unit || stock?.ureticiKodu;
@@ -46,7 +46,7 @@ export function StockDetailContent({
   const hasRelations = relations && relations.length > 0;
 
   const renderImage = useCallback(
-    ({ item }: { item: { filePath: string; altText?: string } }) => {
+    ({ item }: { item: StockImageDto }) => {
       return (
         <View style={styles.imageContainer}>
           <Image source={{ uri: item.filePath }} style={styles.image} resizeMode="cover" />
@@ -135,7 +135,7 @@ export function StockDetailContent({
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t("stock.images")}
           </Text>
-          <FlatList
+          <FlatList<StockImageDto>
             data={stock.stockImages}
             renderItem={renderImage}
             keyExtractor={(item) => String(item.id)}

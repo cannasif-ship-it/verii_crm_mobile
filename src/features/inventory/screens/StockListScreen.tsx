@@ -10,7 +10,7 @@ import { CustomRefreshControl } from "../../../components/CustomRefreshControl";
 import { useUIStore } from "../../../store/ui";
 import { useStocks } from "../hooks";
 import { SearchInput, StockCard } from "../components";
-import type { StockGetDto, PagedFilter } from "../types";
+import type { StockGetDto, PagedFilter, PagedResponse } from "../types";
 
 export function StockListScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -47,7 +47,7 @@ export function StockListScreen(): React.ReactElement {
   const stocks = useMemo(() => {
     return (
       data?.pages
-        .flatMap((page) => page.items ?? [])
+        .flatMap((page: PagedResponse<StockGetDto>) => page.items ?? [])
         .filter((item): item is StockGetDto => item != null) || []
     );
   }, [data]);

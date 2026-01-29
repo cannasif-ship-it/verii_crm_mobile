@@ -14,6 +14,7 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useStock, useStockRelations } from "../hooks";
 import { StockDetailContent } from "../components";
+import type { PagedResponse, StockRelationDto } from "../types";
 
 export function StockDetailScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -27,11 +28,11 @@ export function StockDetailScreen(): React.ReactElement {
   const { data: stock, isLoading, isError, refetch } = useStock(stockId);
   const { data: relationsData } = useStockRelations({ stockId });
 
-  const relations = React.useMemo(() => {
+  const relations = React.useMemo((): StockRelationDto[] => {
     return (
-      relationsData?.pages
-        .flatMap((page) => page.items ?? [])
-        .filter((item) => item != null) || []
+      (relationsData?.pages ?? [])
+        .flatMap((page: PagedResponse<StockRelationDto>) => page.items ?? [])
+        .filter((item: StockRelationDto | null | undefined): item is StockRelationDto => item != null)
     );
   }, [relationsData]);
 

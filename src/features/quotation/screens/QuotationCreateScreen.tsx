@@ -90,15 +90,6 @@ export function QuotationCreateScreen(): React.ReactElement {
   const [offerDateModalOpen, setOfferDateModalOpen] = useState(false);
   const [tempDeliveryDate, setTempDeliveryDate] = useState(new Date());
   const [tempOfferDate, setTempOfferDate] = useState(new Date());
-
-  useEffect(() => {
-    if (deliveryDateModalOpen) {
-      const initial = watchedDeliveryDate
-        ? new Date(watchedDeliveryDate + "T12:00:00")
-        : new Date();
-      setTempDeliveryDate(initial);
-    }
-  }, [deliveryDateModalOpen, watchedDeliveryDate]);
   const [lineFormVisible, setLineFormVisible] = useState(false);
   const [editingLine, setEditingLine] = useState<QuotationLineFormState | null>(null);
   const [exchangeRateDialogVisible, setExchangeRateDialogVisible] = useState(false);
@@ -138,8 +129,17 @@ export function QuotationCreateScreen(): React.ReactElement {
   const watchedOfferDate = watch("quotation.offerDate");
   const watchedDeliveryDate = watch("quotation.deliveryDate");
 
-  const { data: customer } = useCustomer(watchedCustomerId);
-  const { data: shippingAddresses } = useCustomerShippingAddresses(watchedCustomerId);
+  useEffect(() => {
+    if (deliveryDateModalOpen) {
+      const initial = watchedDeliveryDate
+        ? new Date(watchedDeliveryDate + "T12:00:00")
+        : new Date();
+      setTempDeliveryDate(initial);
+    }
+  }, [deliveryDateModalOpen, watchedDeliveryDate]);
+
+  const { data: customer } = useCustomer(watchedCustomerId ?? undefined);
+  const { data: shippingAddresses } = useCustomerShippingAddresses(watchedCustomerId ?? undefined);
   const { data: erpCustomers } = useErpCustomers(watchedErpCustomerCode || undefined);
   const exchangeRateParamsOnce = useMemo(
     () => ({
@@ -263,7 +263,7 @@ export function QuotationCreateScreen(): React.ReactElement {
       }
       const oldRate = findExchangeRateByCurrency(oldCurrency, exchangeRates, erpRatesForQuotation);
       const newRate = findExchangeRateByCurrency(newCurrency, exchangeRates, erpRatesForQuotation);
-      if (oldRate == null || newRate <= 0) {
+      if (oldRate == null || newRate == null || newRate <= 0) {
         setValue("quotation.currency", newCurrency);
         setLines((prev) => prev);
         return;
@@ -542,10 +542,7 @@ export function QuotationCreateScreen(): React.ReactElement {
       });
 
       createQuotation.mutate({
-        quotation: {
-          ...formData.quotation,
-          quotationId: 0,
-        },
+        quotation: formData.quotation,
         lines: cleanedLines,
         exchangeRates: cleanedExchangeRates.length > 0 ? cleanedExchangeRates : undefined,
       });
@@ -1045,7 +1042,11 @@ export function QuotationCreateScreen(): React.ReactElement {
               : undefined
           }
           currency={watchedCurrency || ""}
-          currencyOptions={currencyOptions}
+          currencyOptions={currencyOptions?.map((c) => ({
+            code: c.code,
+            dovizTipi: c.dovizTipi,
+            dovizIsmi: c.dovizIsmi ?? c.code,
+          }))}
           pricingRules={pricingRules}
           userDiscountLimits={userDiscountLimits}
           exchangeRates={effectiveRatesForLines}
@@ -1077,7 +1078,7 @@ export function QuotationCreateScreen(): React.ReactElement {
           options={
             paymentTypes?.map((pt) => ({ id: pt.id, name: pt.name })) || []
           }
-          selectedValue={watch("quotation.paymentTypeId")}
+          selectedValue={watch("quotation.paymentTypeId") ?? undefined}
           onSelect={(option) => {
             setValue("quotation.paymentTypeId", option.id as number);
             setPaymentTypeModalVisible(false);
@@ -1124,9 +1125,9 @@ export function QuotationCreateScreen(): React.ReactElement {
             visible={shippingAddressModalVisible}
             options={shippingAddresses.map((addr) => ({
               id: addr.id,
-              name: addr.addressText || "",
+              name: addr.address || "",
             }))}
-            selectedValue={watch("quotation.shippingAddressId")}
+            selectedValue={watch("quotation.shippingAddressId") ?? undefined}
             onSelect={(option) => {
               setValue("quotation.shippingAddressId", option.id as number);
               setShippingAddressModalVisible(false);

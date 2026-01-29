@@ -26,7 +26,7 @@ export function useUpdateTitle() {
   const { t } = useTranslation();
   const showToast = useToastStore((state) => state.showToast);
 
-  return useMutation<TitleDto, Error, { id: number; data: UpdateTitleDto }>({
+  return useMutation<TitleDto, Error, { id: number; data: UpdateTitleDto }, { previousData: TitleDto | undefined }>({
     mutationFn: ({ id, data }) => titleApi.update(id, data),
     onMutate: async ({ id, data }) => {
       await queryClient.cancelQueries({ queryKey: ["title", "detail", id] });
@@ -58,7 +58,7 @@ export function useDeleteTitle() {
   const { t } = useTranslation();
   const showToast = useToastStore((state) => state.showToast);
 
-  return useMutation<void, Error, number>({
+  return useMutation<void, Error, number, { previousData: InfiniteData<PagedResponse<TitleDto>> | undefined }>({
     mutationFn: titleApi.delete,
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: ["title", "list"] });
