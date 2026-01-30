@@ -165,6 +165,7 @@ export interface QuotationLineFormState {
   approvalStatus?: number;
   isEditing: boolean;
   relatedLines?: QuotationLineFormState[];
+  relationQuantity?: number;
 }
 
 export interface QuotationExchangeRateFormState {
@@ -207,6 +208,11 @@ export interface UserDiscountLimitDto {
   createdBy?: number | null;
   updatedBy?: number | null;
   deletedBy?: number | null;
+}
+
+export interface PriceOfProductRequestDto {
+  productCode: string;
+  groupCode: string;
 }
 
 export interface PriceOfProductDto {
