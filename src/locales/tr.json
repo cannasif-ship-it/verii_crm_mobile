@@ -467,6 +467,8 @@
     "relatedStocks": "Bağlı stoklar",
     "sendForApproval": "Onaya Gönder",
     "sendForApprovalConfirm": "Teklif onay sürecine gönderilsin mi?",
+    "approveButton": "Onayla",
+    "rejectButton": "Reddet",
     "fixErrors": "Lütfen hataları düzeltin:",
     "select": "Seçiniz",
     "saving": "Kaydediliyor...",

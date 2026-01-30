@@ -467,6 +467,8 @@
     "relatedStocks": "Related stocks",
     "sendForApproval": "Send for Approval",
     "sendForApprovalConfirm": "Send this quotation to the approval flow?",
+    "approveButton": "Approve",
+    "rejectButton": "Reject",
     "fixErrors": "Please fix the following:",
     "select": "Select",
     "saving": "Saving...",
