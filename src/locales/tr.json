@@ -496,7 +496,18 @@
     "searchAddress": "Adres ara...",
     "currencyChangeTitle": "Kur Değişikliği",
     "currencyChangeMessage": "Para birimi değişikliği tüm satırları etkiler. Devam?",
-    "pleaseSelectCustomerRepCurrency": "Müşteri, temsilci ve para birimi seçin."
+    "pleaseSelectCustomerRepCurrency": "Müşteri, temsilci ve para birimi seçin.",
+    "selectProduct": "Ürün seçin",
+    "relatedStocksSummary": "Bağlı Stoklar",
+    "discountAmount1": "Tutar 1",
+    "discountAmount2": "Tutar 2",
+    "discountAmount3": "Tutar 3",
+    "calculationSummary": "Hesaplama Özeti",
+    "relatedStocksSelectTitle": "Bağlı Stokları Seçin",
+    "relatedStocksSelectDesc": "Ana stok ile birlikte eklemek istediğiniz bağlı stokları seçin. Zorunlu stoklar otomatik seçilidir.",
+    "mandatory": "Zorunlu",
+    "optional": "Opsiyonel",
+    "apply": "Uygula"
   },
   "common": {
     "next": "Sonraki"

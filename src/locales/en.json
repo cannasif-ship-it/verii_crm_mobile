@@ -496,7 +496,18 @@
     "searchAddress": "Search address...",
     "currencyChangeTitle": "Currency Change",
     "currencyChangeMessage": "Changing currency will affect all lines. Continue?",
-    "pleaseSelectCustomerRepCurrency": "Please select customer, representative, and currency."
+    "pleaseSelectCustomerRepCurrency": "Please select customer, representative, and currency.",
+    "selectProduct": "Select product",
+    "relatedStocksSummary": "Related Stocks",
+    "discountAmount1": "Amount 1",
+    "discountAmount2": "Amount 2",
+    "discountAmount3": "Amount 3",
+    "calculationSummary": "Calculation Summary",
+    "relatedStocksSelectTitle": "Select Related Stocks",
+    "relatedStocksSelectDesc": "Select the related stocks to add with the main stock. Mandatory stocks are selected by default.",
+    "mandatory": "Mandatory",
+    "optional": "Optional",
+    "apply": "Apply"
   },
   "common": {
     "next": "Next"
