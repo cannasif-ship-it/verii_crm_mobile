@@ -10,10 +10,12 @@ import { OfferType } from "../types";
 
 interface OfferTypePickerProps {
   control: Control<CreateQuotationSchema>;
+  disabled?: boolean;
 }
 
 export function OfferTypePicker({
   control,
+  disabled = false,
 }: OfferTypePickerProps): React.ReactElement {
   const { t } = useTranslation();
   const { colors } = useUIStore();
@@ -50,7 +52,9 @@ export function OfferTypePicker({
                 borderColor: error ? colors.error : colors.border,
               },
             ]}
-            onPress={() => setModalVisible(true)}
+            onPress={() => !disabled && setModalVisible(true)}
+            disabled={disabled}
+            activeOpacity={disabled ? 1 : undefined}
           >
             <Text
               style={[

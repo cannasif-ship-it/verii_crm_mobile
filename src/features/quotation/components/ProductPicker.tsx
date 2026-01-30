@@ -12,6 +12,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
+import type { ThemeColors } from "../../../constants/theme";
 import { useUIStore } from "../../../store/ui";
 import { VoiceSearchButton } from "./VoiceSearchButton";
 import { useStocks, useStock, useStockRelations, useStockRelationsAsRelated } from "../../stocks/hooks";
@@ -48,7 +49,7 @@ function StockListItem({
 }: {
   item: StockGetDto;
   isSelected: boolean;
-  colors: ReturnType<typeof useUIStore>["colors"];
+  colors: ThemeColors;
   onSelect: () => void;
   onShowRelationDetail: (stock: StockGetDto, relations: StockRelationDto[]) => void;
   modalOpen: boolean;
