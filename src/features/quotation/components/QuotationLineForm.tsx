@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -12,8 +12,8 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
-import { ProductPicker } from "./ProductPicker";
-import { RelatedStocksSelectDialog } from "./RelatedStocksSelectDialog";
+import { ProductPicker, type ProductPickerRef } from "./ProductPicker";
+import type { StockRelationDto } from "../../stocks/types";
 import { quotationApi } from "../api";
 import { stockApi } from "../../stocks/api";
 import { useStock } from "../../stocks/hooks";
@@ -32,6 +32,10 @@ interface QuotationLineFormProps {
   onClose: () => void;
   onSave: (line: QuotationLineFormState) => void;
   onAddWithRelatedStocks?: (stock: StockGetDto, relatedStockIds: number[]) => void;
+  onRequestRelatedStocksSelection?: (stock: StockGetDto & { parentRelations: StockRelationDto[] }) => void;
+  onCancelRelatedSelection?: () => void;
+  onApplyRelatedSelection?: (stock: StockGetDto & { parentRelations: StockRelationDto[] }, selectedIds: number[]) => void;
+  pendingRelatedStock?: (StockGetDto & { parentRelations: StockRelationDto[] }) | null;
   disableRelatedStocks?: boolean;
   currency: string;
   currencyOptions?: Array<{ code: string; dovizTipi: number; dovizIsmi: string }>;
@@ -46,6 +50,10 @@ export function QuotationLineForm({
   onClose,
   onSave,
   onAddWithRelatedStocks,
+  onRequestRelatedStocksSelection,
+  onCancelRelatedSelection,
+  onApplyRelatedSelection,
+  pendingRelatedStock = null,
   disableRelatedStocks = false,
   currency,
   currencyOptions,
@@ -58,8 +66,6 @@ export function QuotationLineForm({
   const insets = useSafeAreaInsets();
 
   const [selectedStock, setSelectedStock] = useState<StockGetDto | undefined>();
-  const [pendingStockForRelated, setPendingStockForRelated] = useState<StockGetDto | null>(null);
-  const [relatedStocksDialogVisible, setRelatedStocksDialogVisible] = useState(false);
   const [quantity, setQuantity] = useState<string>("1");
   const [unitPrice, setUnitPrice] = useState<string>("0");
   const [discountRate1, setDiscountRate1] = useState<string>("0");
@@ -70,6 +76,8 @@ export function QuotationLineForm({
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<number>(0);
   const [approvalMessage, setApprovalMessage] = useState<string>("");
+  const [relatedLinesDisplay, setRelatedLinesDisplay] = useState<QuotationLineFormState[]>([]);
+  const productPickerRef = useRef<ProductPickerRef>(null);
 
   const currentLine: QuotationLineFormState = useMemo(() => {
     const qty = parseFloat(quantity) || 0;
@@ -100,6 +108,9 @@ export function QuotationLineForm({
       description: description || null,
       isEditing: false,
       approvalStatus,
+      relatedStockId: line?.relatedStockId ?? selectedStock?.id ?? null,
+      relatedProductKey: line?.relatedProductKey ?? (selectedStock ? `main-${selectedStock.id}` : undefined),
+      isMainRelatedProduct: line?.isMainRelatedProduct ?? true,
     };
 
     return calculateLineTotals(baseLine);
@@ -126,15 +137,41 @@ export function QuotationLineForm({
       setVatRate(String(line.vatRate));
       setDescription(line.description || "");
       setApprovalStatus(line.approvalStatus || 0);
+      setRelatedLinesDisplay(line.relatedLines ?? []);
+      if (line.productCode || line.productName) {
+        setSelectedStock({
+          id: line.productId ?? 0,
+          erpStockCode: line.productCode || "",
+          stockName: line.productName || "",
+          branchCode: 0,
+          grupKodu: line.groupCode ?? undefined,
+        } as StockGetDto);
+      }
     } else if (!visible) {
       resetForm();
     }
   }, [line, visible]);
 
+  const displayedRelatedLines = useMemo((): QuotationLineFormState[] => {
+    if (relatedLinesDisplay.length === 0) return [];
+    const mainQty = parseFloat(quantity) || 0;
+    return relatedLinesDisplay.map((rel) =>
+      calculateLineTotals({
+        ...rel,
+        quantity: (rel.relationQuantity ?? 1) * mainQty,
+      })
+    );
+  }, [relatedLinesDisplay, quantity]);
+
+  const lineToSave: QuotationLineFormState = useMemo(() => {
+    if (displayedRelatedLines.length > 0) {
+      return { ...currentLine, relatedLines: displayedRelatedLines };
+    }
+    return currentLine;
+  }, [currentLine, displayedRelatedLines]);
+
   const resetForm = useCallback(() => {
     setSelectedStock(undefined);
-    setPendingStockForRelated(null);
-    setRelatedStocksDialogVisible(false);
     setQuantity("1");
     setUnitPrice("0");
     setDiscountRate1("0");
@@ -144,14 +181,15 @@ export function QuotationLineForm({
     setDescription("");
     setApprovalStatus(0);
     setApprovalMessage("");
+    setRelatedLinesDisplay([]);
   }, []);
 
   const { data: stockData } = useStock(selectedStock?.id);
 
   const handleStockSelect = useCallback(
-    async (stock: StockGetDto | undefined) => {
+    async (stock: StockGetDto | undefined): Promise<boolean> => {
       let stockToUse: StockGetDto | undefined = stock;
-      if (stock && onAddWithRelatedStocks) {
+      if (stock && (onAddWithRelatedStocks || onRequestRelatedStocksSelection)) {
         try {
           const fullStock = await stockApi.getById(stock.id);
           let relations = fullStock.parentRelations ?? [];
@@ -159,10 +197,9 @@ export function QuotationLineForm({
             const relationsRes = await stockApi.getRelations(stock.id, { pageNumber: 1, pageSize: 100 });
             relations = relationsRes?.items ?? [];
           }
-          if (relations.length > 0 && !disableRelatedStocks) {
-            setPendingStockForRelated({ ...fullStock, parentRelations: relations });
-            setRelatedStocksDialogVisible(true);
-            return;
+          if (relations.length > 0 && !disableRelatedStocks && onRequestRelatedStocksSelection) {
+            onRequestRelatedStocksSelection({ ...fullStock, parentRelations: relations });
+            return false;
           }
           setSelectedStock(fullStock);
           stockToUse = fullStock;
@@ -177,7 +214,7 @@ export function QuotationLineForm({
 
       if (!stockToUse) {
         setUnitPrice("0");
-        return;
+        return true;
       }
 
       setIsLoadingPrice(true);
@@ -244,26 +281,10 @@ export function QuotationLineForm({
       } finally {
         setIsLoadingPrice(false);
       }
+      return true;
     },
-    [currency, exchangeRates, currencyOptions, pricingRules, quantity, disableRelatedStocks, onAddWithRelatedStocks]
+    [currency, exchangeRates, currencyOptions, pricingRules, quantity, disableRelatedStocks, onAddWithRelatedStocks, onRequestRelatedStocksSelection]
   );
-
-  const handleRelatedStocksConfirm = useCallback(
-    (selectedStockIds: number[]) => {
-      if (pendingStockForRelated && onAddWithRelatedStocks) {
-        onAddWithRelatedStocks(pendingStockForRelated, selectedStockIds);
-        setRelatedStocksDialogVisible(false);
-        setPendingStockForRelated(null);
-        onClose();
-      }
-    },
-    [pendingStockForRelated, onAddWithRelatedStocks, onClose]
-  );
-
-  const handleRelatedStocksClose = useCallback(() => {
-    setRelatedStocksDialogVisible(false);
-    setPendingStockForRelated(null);
-  }, []);
 
   useEffect(() => {
     if (selectedStock && pricingRules && selectedStock.erpStockCode) {
@@ -334,14 +355,15 @@ export function QuotationLineForm({
   }, [selectedStock, userDiscountLimits, discountRate1, discountRate2, discountRate3]);
 
   const handleSave = useCallback(() => {
-    if (!selectedStock) {
+    const canSave = selectedStock || (line?.productCode && lineToSave.productCode);
+    if (!canSave) {
       return;
     }
 
-    onSave(currentLine);
+    onSave(lineToSave);
     resetForm();
     onClose();
-  }, [selectedStock, currentLine, onSave, onClose, resetForm]);
+  }, [selectedStock, line?.productCode, lineToSave, onSave, onClose, resetForm]);
 
   const handleCancel = useCallback(() => {
     resetForm();
@@ -429,12 +451,25 @@ export function QuotationLineForm({
             showsVerticalScrollIndicator={false}
           >
             <ProductPicker
+              ref={productPickerRef}
               value={selectedStock?.erpStockCode}
               productName={selectedStock?.stockName}
               onChange={handleStockSelect}
               label="Ürün"
               required
               parentVisible={visible}
+              relatedStocksSelection={
+                pendingRelatedStock && onCancelRelatedSelection && onApplyRelatedSelection
+                  ? {
+                      stock: pendingRelatedStock,
+                      onCancel: onCancelRelatedSelection,
+                      onApply: (selectedIds) => {
+                        onApplyRelatedSelection(pendingRelatedStock, selectedIds);
+                        productPickerRef.current?.close();
+                      },
+                    }
+                  : undefined
+              }
             />
 
             {isLoadingPrice && (
@@ -562,7 +597,7 @@ export function QuotationLineForm({
             )}
 
             <View style={[styles.summaryCard, { backgroundColor: colors.backgroundSecondary }]}>
-              <Text style={[styles.summaryTitle, { color: colors.text }]}>Hesaplama Özeti</Text>
+              <Text style={[styles.summaryTitle, { color: colors.text }]}>{t("quotation.calculationSummary")}</Text>
               <View style={styles.summaryRow}>
                 <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Ara Toplam:</Text>
                 <Text style={[styles.summaryValue, { color: colors.text }]}>
@@ -582,6 +617,31 @@ export function QuotationLineForm({
                 </Text>
               </View>
             </View>
+
+            {displayedRelatedLines.length > 0 && (
+              <View style={[styles.relatedSummaryCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
+                <Text style={[styles.relatedSummaryTitle, { color: colors.text }]}>{t("quotation.relatedStocksSummary")}</Text>
+                {displayedRelatedLines.map((rel) => (
+                  <View key={rel.id} style={[styles.relatedSummaryRow, { borderBottomColor: colors.border }]}>
+                    <Text style={[styles.relatedSummaryCode, { color: colors.text }]} numberOfLines={1}>{rel.productCode}</Text>
+                    <View style={styles.relatedSummaryGrid}>
+                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discount1")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>% {rel.discountRate1.toFixed(1)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discountAmount1")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>{rel.discountAmount1.toFixed(2)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discount2")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>% {rel.discountRate2.toFixed(1)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discountAmount2")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>{rel.discountAmount2.toFixed(2)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discount3")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>% {rel.discountRate3.toFixed(1)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discountAmount3")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>{rel.discountAmount3.toFixed(2)}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
           </ScrollView>
           </View>
 
@@ -596,10 +656,10 @@ export function QuotationLineForm({
               style={[
                 styles.saveButton,
                 { backgroundColor: colors.accent },
-                !selectedStock && styles.saveButtonDisabled,
+                !(selectedStock || (line?.productCode && lineToSave.productCode)) && styles.saveButtonDisabled,
               ]}
               onPress={handleSave}
-              disabled={!selectedStock}
+              disabled={!(selectedStock || (line?.productCode && lineToSave.productCode))}
             >
               <Text style={styles.saveButtonText}>Kaydet</Text>
             </TouchableOpacity>
@@ -607,12 +667,6 @@ export function QuotationLineForm({
         </View>
       </View>
     </Modal>
-    <RelatedStocksSelectDialog
-      visible={relatedStocksDialogVisible}
-      relations={pendingStockForRelated?.parentRelations ?? []}
-      onClose={handleRelatedStocksClose}
-      onConfirm={handleRelatedStocksConfirm}
-    />
   </>
   );
 }
@@ -747,6 +801,40 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 14,
     fontWeight: "500",
+  },
+  relatedSummaryCard: {
+    padding: 16,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginTop: 16,
+  },
+  relatedSummaryTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 12,
+  },
+  relatedSummaryRow: {
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+  },
+  relatedSummaryCode: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 8,
+  },
+  relatedSummaryGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  relatedSummaryLabel: {
+    fontSize: 12,
+    width: "30%",
+  },
+  relatedSummaryValue: {
+    fontSize: 12,
+    fontWeight: "500",
+    width: "65%",
   },
   modalFooter: {
     flexDirection: "row",
