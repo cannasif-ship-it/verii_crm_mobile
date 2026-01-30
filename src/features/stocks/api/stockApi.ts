@@ -77,6 +77,40 @@ export const stockApi = {
     return response.data.data;
   },
 
+  getRelationsAsRelatedStock: async (
+    relatedStockId: number,
+    params: PagedParams = {}
+  ): Promise<PagedResponse<StockRelationDto>> => {
+    const queryParams = { ...buildQueryParams(params), asRelated: "true" };
+    const response = await apiClient.get<PagedApiResponse<StockRelationDto>>(
+      `/api/Stock/${relatedStockId}/relations`,
+      { params: queryParams }
+    );
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || "Stok ilişkileri alınamadı"
+      );
+    }
+
+    const raw = response.data.data;
+    const items = Array.isArray(raw)
+      ? raw
+      : (raw && Array.isArray((raw as PagedResponse<StockRelationDto>).items)
+          ? (raw as PagedResponse<StockRelationDto>).items
+          : []);
+
+    return {
+      items,
+      totalCount: items.length,
+      pageNumber: 1,
+      pageSize: params.pageSize ?? 100,
+      totalPages: 1,
+      hasPreviousPage: false,
+      hasNextPage: false,
+    };
+  },
+
   createRelation: async (data: StockRelationCreateDto): Promise<StockRelationDto> => {
     const response = await apiClient.post<ApiResponse<StockRelationDto>>(
       `/api/Stock/${data.stockId}/relations`,
