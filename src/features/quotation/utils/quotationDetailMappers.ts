@@ -3,9 +3,12 @@ import type {
   QuotationDetailGetDto,
   QuotationLineDetailGetDto,
   QuotationExchangeRateDetailGetDto,
+  QuotationExchangeRateUpdateDto,
   QuotationLineFormState,
   QuotationExchangeRateFormState,
   CurrencyOptionDto,
+  CreateQuotationLineDto,
+  QuotationLineUpdateDto,
 } from "../types";
 import { calculateLineTotals } from "./calculations";
 
@@ -158,4 +161,96 @@ export function mapDetailRatesToFormState(
       dovizTipi,
     };
   });
+}
+
+function parseRateId(formId: string): number {
+  const match = formId.match(/^rate-(\d+)$/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+export function mapExchangeRateFormStateToUpdateDtos(
+  rates: QuotationExchangeRateFormState[],
+  quotationId: number,
+  quotationOfferNo: string | null
+): QuotationExchangeRateUpdateDto[] {
+  return rates.map((r) => ({
+    id: parseRateId(r.id),
+    quotationId,
+    quotationOfferNo,
+    currency: r.currency,
+    exchangeRate: r.exchangeRate,
+    exchangeRateDate: r.exchangeRateDate,
+    isOfficial: r.isOfficial ?? false,
+  }));
+}
+
+export function parseLineId(formLineId: string): number {
+  const match = String(formLineId).match(/^line-(\d+)/);
+  return match ? parseInt(match[1], 10) : 0;
+}
+
+export function mapQuotationLineFormStateToCreateDto(
+  line: QuotationLineFormState,
+  quotationId: number
+): CreateQuotationLineDto {
+  return {
+    quotationId,
+    productId: line.productId ?? null,
+    productCode: line.productCode,
+    productName: line.productName,
+    groupCode: line.groupCode ?? null,
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    discountRate1: line.discountRate1,
+    discountAmount1: line.discountAmount1,
+    discountRate2: line.discountRate2,
+    discountAmount2: line.discountAmount2,
+    discountRate3: line.discountRate3,
+    discountAmount3: line.discountAmount3,
+    vatRate: line.vatRate,
+    vatAmount: line.vatAmount,
+    lineTotal: line.lineTotal,
+    lineGrandTotal: line.lineGrandTotal,
+    description: line.description ?? null,
+    pricingRuleHeaderId: line.pricingRuleHeaderId ?? null,
+    relatedStockId: line.relatedStockId ?? null,
+    relatedProductKey: line.relatedProductKey ?? null,
+    isMainRelatedProduct: line.isMainRelatedProduct ?? false,
+    approvalStatus: line.approvalStatus ?? 0,
+  };
+}
+
+export function mapQuotationLineFormStateToUpdateDto(
+  line: QuotationLineFormState,
+  quotationId: number
+): QuotationLineUpdateDto | null {
+  const id = parseLineId(line.id);
+  if (id <= 0) return null;
+  return {
+    id,
+    quotationId,
+    productId: line.productId ?? null,
+    productCode: line.productCode,
+    productName: line.productName,
+    groupCode: line.groupCode ?? null,
+    quantity: line.quantity,
+    unitPrice: line.unitPrice,
+    discountRate1: line.discountRate1,
+    discountAmount1: line.discountAmount1,
+    discountRate2: line.discountRate2,
+    discountAmount2: line.discountAmount2,
+    discountRate3: line.discountRate3,
+    discountAmount3: line.discountAmount3,
+    vatRate: line.vatRate,
+    vatAmount: line.vatAmount,
+    lineTotal: line.lineTotal,
+    lineGrandTotal: line.lineGrandTotal,
+    description: line.description ?? null,
+    pricingRuleHeaderId: line.pricingRuleHeaderId ?? null,
+    relatedStockId: line.relatedStockId ?? null,
+    relatedProductKey: line.relatedProductKey ?? null,
+    isMainRelatedProduct: line.isMainRelatedProduct ?? false,
+    approvalStatus: line.approvalStatus ?? 0,
+    createdAt: null,
+  };
 }
