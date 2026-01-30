@@ -46,6 +46,16 @@ export interface QuotationExchangeRateGetDto {
   rate: number;
 }
 
+export interface QuotationExchangeRateUpdateDto {
+  id: number;
+  quotationId: number;
+  quotationOfferNo: string | null;
+  currency: string;
+  exchangeRate: number;
+  exchangeRateDate: string;
+  isOfficial: boolean;
+}
+
 export interface QuotationGetDto {
   id: number;
   potentialCustomerId?: number | null;
@@ -123,6 +133,34 @@ export interface CreateQuotationLineDto {
   relatedProductKey?: string | null;
   isMainRelatedProduct?: boolean;
   approvalStatus?: number;
+}
+
+export interface QuotationLineUpdateDto {
+  id: number;
+  quotationId: number;
+  productId?: number | null;
+  productCode: string;
+  productName: string;
+  groupCode?: string | null;
+  quantity: number;
+  unitPrice: number;
+  discountRate1: number;
+  discountAmount1: number;
+  discountRate2: number;
+  discountAmount2: number;
+  discountRate3: number;
+  discountAmount3: number;
+  vatRate: number;
+  vatAmount: number;
+  lineTotal: number;
+  lineGrandTotal: number;
+  description?: string | null;
+  pricingRuleHeaderId?: number | null;
+  relatedStockId?: number | null;
+  relatedProductKey?: string | null;
+  isMainRelatedProduct?: boolean;
+  approvalStatus?: number;
+  createdAt?: string | null;
 }
 
 export interface QuotationExchangeRateCreateDto {
@@ -297,6 +335,11 @@ export type ApprovalStatus = 0 | 1;
 
 export type DetailApprovalStatus = 0 | 1 | 2 | 3;
 
+export const APPROVAL_HAVENOT_STARTED: DetailApprovalStatus = 0;
+export const APPROVAL_WAITING: DetailApprovalStatus = 1;
+export const APPROVAL_APPROVED: DetailApprovalStatus = 2;
+export const APPROVAL_REJECTED: DetailApprovalStatus = 3;
+
 export interface QuotationDetailGetDto {
   id: number;
   year: string | null;
@@ -340,6 +383,7 @@ export interface QuotationDetailGetDto {
   currency: string;
   createdBy: string | null;
   updatedBy: string | null;
+  approvalActionId?: number | null;
 }
 
 export interface QuotationLineDetailGetDto {
@@ -390,6 +434,7 @@ export interface QuotationExchangeRateDetailGetDto {
 export type QuotationDetailResponse = ApiResponse<QuotationDetailGetDto>;
 export type QuotationLineDetailListResponse = ApiResponse<QuotationLineDetailGetDto[]>;
 export type QuotationExchangeRateDetailListResponse = ApiResponse<QuotationExchangeRateDetailGetDto[]>;
+export type QuotationExchangeRateUpdateResponse = ApiResponse<boolean>;
 
 export type WaitingApprovalsResponse = ApiResponse<ApprovalActionGetDto[]>;
 export type ApproveResponse = ApiResponse<boolean>;
