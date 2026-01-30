@@ -56,6 +56,7 @@ import type {
   QuotationExchangeRateFormState,
   StockGetDto,
 } from "../types";
+import type { StockRelationDto } from "../../stocks/types";
 import { calculateLineTotals, calculateTotals } from "../utils";
 import type { ExchangeRateDto } from "../types";
 
@@ -98,6 +99,9 @@ export function QuotationCreateScreen(): React.ReactElement {
   const [shippingAddressModalVisible, setShippingAddressModalVisible] = useState(false);
   const [customerSelectDialogOpen, setCustomerSelectDialogOpen] = useState(false);
   const [representativeModalVisible, setRepresentativeModalVisible] = useState(false);
+  const [pendingStockForRelated, setPendingStockForRelated] = useState<
+    (StockGetDto & { parentRelations: StockRelationDto[] }) | null
+  >(null);
 
   const schema = useMemo(() => createQuotationSchema(), []);
 
@@ -332,6 +336,13 @@ export function QuotationCreateScreen(): React.ReactElement {
         setLines((prev) => {
           const mainNewQty = savedLine.quantity;
           const mainOldQty = editingLine.quantity;
+          const hasRelated = (savedLine.relatedLines?.length ?? 0) > 0;
+          if (hasRelated && savedLine.relatedLines) {
+            const others = prev.filter(
+              (l) => l.id !== editingLine.id && l.relatedProductKey !== editingLine.relatedProductKey
+            );
+            return [savedLine, ...savedLine.relatedLines, ...others];
+          }
           if (
             editingLine.relatedProductKey &&
             mainOldQty > 0 &&
@@ -351,7 +362,10 @@ export function QuotationCreateScreen(): React.ReactElement {
           return prev.map((line) => (line.id === editingLine.id ? savedLine : line));
         });
       } else {
-        setLines((prev) => [...prev, savedLine]);
+        const toAdd = savedLine.relatedLines?.length
+          ? [savedLine, ...savedLine.relatedLines]
+          : [savedLine];
+        setLines((prev) => [...prev, ...toAdd]);
       }
       setEditingLine(null);
       setLineFormVisible(false);
@@ -439,6 +453,8 @@ export function QuotationCreateScreen(): React.ReactElement {
         vatAmount: 0,
         lineTotal: 0,
         lineGrandTotal: 0,
+        relatedStockId: stock.id,
+        relatedProductKey: `main-${stock.id}`,
         isMainRelatedProduct: true,
         isEditing: false,
       });
@@ -453,6 +469,7 @@ export function QuotationCreateScreen(): React.ReactElement {
               : 0;
           return calculateLineTotals({
             id: `temp-${Date.now()}-${relation.id}`,
+            productId: relation.relatedStockId,
             productCode: relation.relatedStockCode!,
             productName: relStock?.stockName ?? relation.relatedStockName ?? "",
             quantity: relation.quantity,
@@ -467,14 +484,15 @@ export function QuotationCreateScreen(): React.ReactElement {
             vatAmount: 0,
             lineTotal: 0,
             lineGrandTotal: 0,
-            relatedStockId: relation.relatedStockId,
+            relatedStockId: stock.id,
             relatedProductKey: `main-${stock.id}`,
             isMainRelatedProduct: false,
             isEditing: false,
+            relationQuantity: relation.quantity,
           });
         });
         mainLine.relatedLines = relatedLines;
-        setLines((prev) => [...prev, mainLine, ...relatedLines]);
+        setEditingLine(mainLine);
       } else {
         setLines((prev) => [...prev, mainLine]);
       }
@@ -518,7 +536,7 @@ export function QuotationCreateScreen(): React.ReactElement {
       }
 
       const cleanedLines = lines.map((line) => {
-        const { id, isEditing, relatedLines, ...rest } = line;
+        const { id, isEditing, relatedLines, relationQuantity, ...rest } = line;
         return {
           ...rest,
           quotationId: 0,
@@ -805,7 +823,7 @@ export function QuotationCreateScreen(): React.ReactElement {
               </Text>
             ) : (
               <FlatList
-                data={lines.filter((line) => !line.relatedProductKey)}
+                data={lines.filter((line) => !line.relatedProductKey || line.isMainRelatedProduct === true)}
                 keyExtractor={(item) => item.id}
                 scrollEnabled={false}
                 renderItem={({ item: line }) => (
@@ -822,34 +840,138 @@ export function QuotationCreateScreen(): React.ReactElement {
                     >
                       <View style={styles.lineCardHeader}>
                         <View style={styles.lineCardContent}>
-                          <Text style={[styles.lineProductName, { color: colors.text }]} numberOfLines={1}>
-                            {line.productName || "Ürün seçilmedi"}
-                          </Text>
-                          <Text style={[styles.lineProductCode, { color: colors.textSecondary }]}>
-                            {line.productCode}
-                          </Text>
-                          <View style={styles.lineDetails}>
-                            <Text style={[styles.lineDetailText, { color: colors.textSecondary }]}>
-                              Miktar: {line.quantity} {line.groupCode ? `(${line.groupCode})` : ""}
+                          <View style={styles.lineCardTitleRow}>
+                            <Text style={[styles.lineProductName, { color: colors.text }]} numberOfLines={2}>
+                              {line.productName || t("quotation.productNotSelected")}
                             </Text>
-                            <Text style={[styles.lineDetailText, { color: colors.textSecondary }]}>
-                              Birim Fiyat: {line.unitPrice.toFixed(2)}
-                            </Text>
-                            {(line.discountRate1 > 0 ||
-                              line.discountRate2 > 0 ||
-                              line.discountRate3 > 0) && (
-                              <Text style={[styles.lineDetailText, { color: colors.textSecondary }]}>
-                                İndirim: %{line.discountRate1} / %{line.discountRate2} / %{line.discountRate3}
+                            <View style={[styles.mainBadge, { backgroundColor: colors.activeBackground }]}>
+                              <Text style={[styles.mainBadgeText, { color: colors.accent }]}>
+                                {t("quotation.main")}
                               </Text>
-                            )}
-                            <Text style={[styles.lineTotal, { color: colors.accent }]}>
-                              Toplam: {line.lineGrandTotal.toFixed(2)}
+                            </View>
+                          </View>
+                          {line.productCode ? (
+                            <Text style={[styles.lineProductCode, { color: colors.textMuted }]}>
+                              {line.productCode}
+                            </Text>
+                          ) : null}
+                          <View style={styles.lineDetailRows}>
+                            <View style={styles.lineDetailRow}>
+                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                {t("quotation.quantity")}:
+                              </Text>
+                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                {line.quantity.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </Text>
+                            </View>
+                            <View style={styles.lineDetailRow}>
+                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                {t("quotation.unitPrice")}:
+                              </Text>
+                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                {line.unitPrice.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </Text>
+                            </View>
+                            <View style={styles.lineDetailRow}>
+                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                {t("quotation.discount1")}:
+                              </Text>
+                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                {line.discountRate1.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                                % · {line.discountAmount1.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </Text>
+                            </View>
+                            <View style={styles.lineDetailRow}>
+                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                {t("quotation.discount2")}:
+                              </Text>
+                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                {line.discountRate2.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                                % · {line.discountAmount2.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </Text>
+                            </View>
+                            <View style={styles.lineDetailRow}>
+                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                {t("quotation.discount3")}:
+                              </Text>
+                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                {line.discountRate3.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                                % · {line.discountAmount3.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </Text>
+                            </View>
+                            <View style={styles.lineDetailRow}>
+                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                {t("quotation.lineTotal")}:
+                              </Text>
+                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                {line.lineTotal.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </Text>
+                            </View>
+                            <View style={styles.lineDetailRow}>
+                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                {t("quotation.vatRate")}:
+                              </Text>
+                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                {line.vatRate.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}%
+                              </Text>
+                            </View>
+                            <View style={styles.lineDetailRow}>
+                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                {t("quotation.vatAmount")}:
+                              </Text>
+                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                {line.vatAmount.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </Text>
+                            </View>
+                          </View>
+                          <View style={[styles.lineGrandTotalRow, { borderTopColor: colors.border }]}>
+                            <Text style={[styles.lineGrandTotalLabel, { color: colors.text }]}>
+                              {t("quotation.lineGrandTotalLabel")}:
+                            </Text>
+                            <Text style={[styles.lineGrandTotalValue, { color: colors.accent }]}>
+                              {line.lineGrandTotal.toLocaleString("tr-TR", {
+                                minimumFractionDigits: 2,
+                                maximumFractionDigits: 2,
+                              })}
                             </Text>
                           </View>
                           {line.approvalStatus === 1 && (
                             <View style={[styles.approvalBadge, { backgroundColor: colors.warning + "20" }]}>
                               <Text style={[styles.approvalBadgeText, { color: colors.warning }]}>
-                                ⚠️ Onay Gerekli
+                                ⚠️ {t("quotation.approvalRequired")}
                               </Text>
                             </View>
                           )}
@@ -870,9 +992,9 @@ export function QuotationCreateScreen(): React.ReactElement {
                         </View>
                       </View>
                       {line.relatedLines && line.relatedLines.length > 0 && (
-                        <View style={styles.relatedLinesContainer}>
+                        <View style={[styles.relatedLinesContainer, { borderTopColor: colors.border }]}>
                           <Text style={[styles.relatedLinesTitle, { color: colors.textMuted }]}>
-                            İlgili Stoklar:
+                            {t("quotation.relatedStocks")}
                           </Text>
                           {line.relatedLines.map((relatedLine) => (
                             <View
@@ -882,9 +1004,127 @@ export function QuotationCreateScreen(): React.ReactElement {
                                 { backgroundColor: colors.card, borderColor: colors.border },
                               ]}
                             >
-                              <Text style={[styles.relatedLineText, { color: colors.textSecondary }]}>
-                                {relatedLine.productName} - Miktar: {relatedLine.quantity}
+                              <Text style={[styles.relatedLineProductName, { color: colors.text }]} numberOfLines={2}>
+                                {relatedLine.productName}
                               </Text>
+                              {relatedLine.productCode ? (
+                                <Text style={[styles.relatedLineProductCode, { color: colors.textMuted }]}>
+                                  {relatedLine.productCode}
+                                </Text>
+                              ) : null}
+                              <View style={styles.relatedLineDetailRows}>
+                                <View style={styles.lineDetailRow}>
+                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                    {t("quotation.quantity")}:
+                                  </Text>
+                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                    {relatedLine.quantity.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </Text>
+                                </View>
+                                <View style={styles.lineDetailRow}>
+                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                    {t("quotation.unitPrice")}:
+                                  </Text>
+                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                    {relatedLine.unitPrice.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </Text>
+                                </View>
+                                <View style={styles.lineDetailRow}>
+                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                    {t("quotation.discount1")}:
+                                  </Text>
+                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                    {relatedLine.discountRate1.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                    % · {relatedLine.discountAmount1.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </Text>
+                                </View>
+                                <View style={styles.lineDetailRow}>
+                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                    {t("quotation.discount2")}:
+                                  </Text>
+                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                    {relatedLine.discountRate2.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                    % · {relatedLine.discountAmount2.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </Text>
+                                </View>
+                                <View style={styles.lineDetailRow}>
+                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                    {t("quotation.discount3")}:
+                                  </Text>
+                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                    {relatedLine.discountRate3.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                    % · {relatedLine.discountAmount3.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </Text>
+                                </View>
+                                <View style={styles.lineDetailRow}>
+                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                    {t("quotation.lineTotal")}:
+                                  </Text>
+                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                    {relatedLine.lineTotal.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </Text>
+                                </View>
+                                <View style={styles.lineDetailRow}>
+                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                    {t("quotation.vatRate")}:
+                                  </Text>
+                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                    {relatedLine.vatRate.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}%
+                                  </Text>
+                                </View>
+                                <View style={styles.lineDetailRow}>
+                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
+                                    {t("quotation.vatAmount")}:
+                                  </Text>
+                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
+                                    {relatedLine.vatAmount.toLocaleString("tr-TR", {
+                                      minimumFractionDigits: 2,
+                                      maximumFractionDigits: 2,
+                                    })}
+                                  </Text>
+                                </View>
+                              </View>
+                              <View style={[styles.lineGrandTotalRow, { borderTopColor: colors.border }]}>
+                                <Text style={[styles.lineGrandTotalLabel, { color: colors.text }]}>
+                                  {t("quotation.lineGrandTotalLabel")}:
+                                </Text>
+                                <Text style={[styles.lineGrandTotalValue, { color: colors.accent }]}>
+                                  {relatedLine.lineGrandTotal.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </Text>
+                              </View>
                             </View>
                           ))}
                         </View>
@@ -1041,6 +1281,23 @@ export function QuotationCreateScreen(): React.ReactElement {
                 }
               : undefined
           }
+          onRequestRelatedStocksSelection={
+            !editingLine
+              ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }) => {
+                  setPendingStockForRelated(stock);
+                }
+              : undefined
+          }
+          onCancelRelatedSelection={!editingLine ? () => setPendingStockForRelated(null) : undefined}
+          onApplyRelatedSelection={
+            !editingLine
+              ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }, selectedIds: number[]) => {
+                  handleProductSelectWithRelatedStocks(stock, selectedIds);
+                  setPendingStockForRelated(null);
+                }
+              : undefined
+          }
+          pendingRelatedStock={pendingStockForRelated}
           currency={watchedCurrency || ""}
           currencyOptions={currencyOptions?.map((c) => ({
             code: c.code,
@@ -1137,6 +1394,7 @@ export function QuotationCreateScreen(): React.ReactElement {
             searchPlaceholder="Adres ara..."
           />
         )}
+
       </KeyboardAvoidingView>
     </>
   );
@@ -1264,25 +1522,62 @@ const styles = StyleSheet.create({
     flex: 1,
     marginRight: 12,
   },
-  lineProductName: {
-    fontSize: 16,
-    fontWeight: "600",
+  lineCardTitleRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    justifyContent: "space-between",
+    gap: 10,
     marginBottom: 4,
   },
-  lineProductCode: {
-    fontSize: 13,
-    marginBottom: 8,
-  },
-  lineDetails: {
-    gap: 4,
-  },
-  lineDetailText: {
-    fontSize: 13,
-  },
-  lineTotal: {
+  lineProductName: {
     fontSize: 15,
     fontWeight: "600",
-    marginTop: 4,
+    flex: 1,
+  },
+  mainBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  mainBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+  },
+  lineProductCode: {
+    fontSize: 12,
+    marginBottom: 8,
+  },
+  lineDetailRows: {
+    marginBottom: 4,
+  },
+  lineDetailRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 4,
+  },
+  lineDetailLabel: {
+    fontSize: 13,
+  },
+  lineDetailValue: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
+  lineGrandTotalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 8,
+    paddingTop: 8,
+    borderTopWidth: 1,
+  },
+  lineGrandTotalLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  lineGrandTotalValue: {
+    fontSize: 14,
+    fontWeight: "700",
   },
   approvalBadge: {
     paddingHorizontal: 8,
@@ -1331,13 +1626,25 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   relatedLineCard: {
-    padding: 8,
-    borderRadius: 6,
+    padding: 14,
+    borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 6,
+    marginBottom: 10,
+    marginLeft: 16,
+    borderLeftWidth: 3,
+    borderLeftColor: "rgba(236, 72, 153, 0.4)",
   },
-  relatedLineText: {
+  relatedLineProductName: {
+    fontSize: 14,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  relatedLineProductCode: {
     fontSize: 12,
+    marginBottom: 8,
+  },
+  relatedLineDetailRows: {
+    marginBottom: 4,
   },
   currencyHeader: {
     flexDirection: "row",
