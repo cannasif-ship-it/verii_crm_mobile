@@ -25,6 +25,7 @@ interface ExchangeRateDialogProps {
   onClose: () => void;
   onSave: (rates: QuotationExchangeRateFormState[]) => void;
   offerDate?: string;
+  useQuotationRatesAsPrimary?: boolean;
 }
 
 export function ExchangeRateDialog({
@@ -37,6 +38,7 @@ export function ExchangeRateDialog({
   onClose,
   onSave,
   offerDate,
+  useQuotationRatesAsPrimary = false,
 }: ExchangeRateDialogProps): React.ReactElement {
   const { t } = useTranslation();
   const { colors } = useUIStore();
@@ -52,6 +54,10 @@ export function ExchangeRateDialog({
 
   useEffect(() => {
     if (!visible) return;
+    if (useQuotationRatesAsPrimary) {
+      setRates([...initialRates]);
+      return;
+    }
     if (erpExchangeRates.length === 0 && isLoadingErpRates) return;
     if (erpExchangeRates.length === 0) {
       setRates([]);
@@ -71,7 +77,7 @@ export function ExchangeRateDialog({
       };
     });
     setRates(merged);
-  }, [visible, initialRates, erpExchangeRates, today, isLoadingErpRates]);
+  }, [visible, initialRates, erpExchangeRates, today, isLoadingErpRates, useQuotationRatesAsPrimary]);
 
   const handleRateChange = useCallback(
     (id: string, field: keyof QuotationExchangeRateFormState, value: string | number | boolean) => {
