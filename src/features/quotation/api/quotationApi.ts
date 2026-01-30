@@ -25,7 +25,11 @@ import type {
   QuotationDetailGetDto,
   QuotationLineDetailGetDto,
   QuotationExchangeRateDetailGetDto,
+  QuotationExchangeRateUpdateDto,
+  QuotationExchangeRateUpdateResponse,
   QuotationBulkCreateDto,
+  CreateQuotationLineDto,
+  QuotationLineUpdateDto,
   PricingRuleLineGetDto,
   UserDiscountLimitDto,
   PriceOfProductDto,
@@ -178,6 +182,67 @@ export const quotationApi = {
     return response.data.data ?? [];
   },
 
+  updateExchangeRateInQuotation: async (
+    body: QuotationExchangeRateUpdateDto[]
+  ): Promise<boolean> => {
+    const response = await apiClient.put<QuotationExchangeRateUpdateResponse>(
+      "/api/QuotationExchangeRate/update-exchange-rate-in-quotation",
+      body
+    );
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message ||
+          response.data.exceptionMessage ||
+          "Döviz kurları güncellenemedi"
+      );
+    }
+    return response.data.data ?? false;
+  },
+
+  deleteQuotationLine: async (lineId: number): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<unknown>>(
+      `/api/QuotationLine/${lineId}`
+    );
+    const data = response.data as { success?: boolean; message?: string };
+    if (data.success === false) {
+      throw new Error(data.message || "Satır silinemedi");
+    }
+  },
+
+  createQuotationLines: async (
+    body: CreateQuotationLineDto[]
+  ): Promise<QuotationLineDetailGetDto[]> => {
+    const response = await apiClient.post<QuotationLineDetailListResponse>(
+      "/api/QuotationLine/create-multiple",
+      body
+    );
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message ||
+          response.data.exceptionMessage ||
+          "Teklif satırları eklenemedi"
+      );
+    }
+    return response.data.data ?? [];
+  },
+
+  updateQuotationLines: async (
+    body: QuotationLineUpdateDto[]
+  ): Promise<QuotationLineDetailGetDto[]> => {
+    const response = await apiClient.put<QuotationLineDetailListResponse>(
+      "/api/QuotationLine/update-multiple",
+      body
+    );
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message ||
+          response.data.exceptionMessage ||
+          "Teklif satırları güncellenemedi"
+      );
+    }
+    return response.data.data ?? [];
+  },
+
   getList: async (params: PagedParams = {}): Promise<PagedResponse<QuotationGetDto>> => {
     const queryParams = buildQueryParams(params);
     const response = await apiClient.get<QuotationListResponse>("/api/quotation", {
@@ -241,7 +306,7 @@ export const quotationApi = {
 
   updateBulk: async (id: number, data: QuotationBulkCreateDto): Promise<QuotationGetDto> => {
     const response = await apiClient.put<QuotationBulkCreateResponse>(
-      `/api/Quotation/${id}/bulk`,
+      `/api/quotation/bulk-quotation/${id}`,
       data
     );
 
