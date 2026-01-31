@@ -28,6 +28,30 @@ export function SalesMenuScreen(): React.ReactElement {
     router.push("/(tabs)/sales/quotations/create");
   }, [router]);
 
+  const handleDemandListPress = useCallback(() => {
+    router.push("/(tabs)/sales/demands");
+  }, [router]);
+
+  const handleCreateDemandPress = useCallback(() => {
+    router.push("/(tabs)/sales/demands/create");
+  }, [router]);
+
+  const handleDemandWaitingApprovalsPress = useCallback(() => {
+    router.push("/(tabs)/sales/demands/waiting-approvals");
+  }, [router]);
+
+  const handleOrderListPress = useCallback(() => {
+    router.push("/(tabs)/sales/orders");
+  }, [router]);
+
+  const handleCreateOrderPress = useCallback(() => {
+    router.push("/(tabs)/sales/orders/create");
+  }, [router]);
+
+  const handleOrderWaitingApprovalsPress = useCallback(() => {
+    router.push("/(tabs)/sales/orders/waiting-approvals");
+  }, [router]);
+
   return (
     <>
       <StatusBar style="light" />
@@ -55,6 +79,42 @@ export function SalesMenuScreen(): React.ReactElement {
             description={t("sales.waitingApprovalsDesc")}
             icon="⏳"
             onPress={handleWaitingApprovalsPress}
+          />
+          <MenuCard
+            title={t("sales.createDemand")}
+            description={t("sales.createDemandDesc")}
+            icon="➕"
+            onPress={handleCreateDemandPress}
+          />
+          <MenuCard
+            title={t("sales.demandList")}
+            description={t("sales.demandListDesc")}
+            icon="📋"
+            onPress={handleDemandListPress}
+          />
+          <MenuCard
+            title={t("sales.demandWaitingApprovals")}
+            description={t("sales.demandWaitingApprovalsDesc")}
+            icon="⏳"
+            onPress={handleDemandWaitingApprovalsPress}
+          />
+          <MenuCard
+            title={t("sales.createOrder")}
+            description={t("sales.createOrderDesc")}
+            icon="➕"
+            onPress={handleCreateOrderPress}
+          />
+          <MenuCard
+            title={t("sales.orderList")}
+            description={t("sales.orderListDesc")}
+            icon="📋"
+            onPress={handleOrderListPress}
+          />
+          <MenuCard
+            title={t("sales.orderWaitingApprovals")}
+            description={t("sales.orderWaitingApprovalsDesc")}
+            icon="⏳"
+            onPress={handleOrderWaitingApprovalsPress}
           />
         </ScrollView>
       </View>
