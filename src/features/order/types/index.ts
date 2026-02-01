@@ -431,10 +431,40 @@ export interface OrderExchangeRateDetailGetDto {
   isDeleted: boolean;
 }
 
+export interface ApprovalActionDetailDto {
+  userId: number;
+  userFullName: string | null;
+  userEmail: string | null;
+  status: number;
+  statusName: string;
+  actionDate: string | null;
+  rejectedReason: string | null;
+}
+
+export interface ApprovalFlowStepReportDto {
+  stepOrder: number;
+  stepName: string;
+  stepStatus: string;
+  actions: ApprovalActionDetailDto[];
+}
+
+export interface OrderApprovalFlowReportDto {
+  orderId: number;
+  orderOfferNo: string | null;
+  hasApprovalRequest: boolean;
+  overallStatus: number | null;
+  overallStatusName: string | null;
+  currentStep: number;
+  flowDescription: string | null;
+  rejectedReason: string | null;
+  steps: ApprovalFlowStepReportDto[];
+}
+
 export type OrderDetailResponse = ApiResponse<OrderDetailGetDto>;
 export type OrderLineDetailListResponse = ApiResponse<OrderLineDetailGetDto[]>;
 export type OrderExchangeRateDetailListResponse = ApiResponse<OrderExchangeRateDetailGetDto[]>;
 export type OrderExchangeRateUpdateResponse = ApiResponse<boolean>;
+export type OrderApprovalFlowReportResponse = ApiResponse<OrderApprovalFlowReportDto>;
 
 export type WaitingApprovalsResponse = ApiResponse<ApprovalActionGetDto[]>;
 export type ApproveResponse = ApiResponse<boolean>;

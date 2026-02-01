@@ -27,6 +27,8 @@ import type {
   OrderExchangeRateDetailGetDto,
   OrderExchangeRateUpdateDto,
   OrderExchangeRateUpdateResponse,
+  OrderApprovalFlowReportDto,
+  OrderApprovalFlowReportResponse,
   OrderBulkCreateDto,
   CreateOrderLineDto,
   OrderLineUpdateDto,
@@ -130,6 +132,24 @@ export const orderApi = {
     }
 
     return response.data.data ?? false;
+  },
+
+  getApprovalFlowReport: async (orderId: number): Promise<OrderApprovalFlowReportDto> => {
+    const response = await apiClient.get<OrderApprovalFlowReportResponse>(
+      `/api/Order/${orderId}/approval-flow-report`
+    );
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message ||
+          response.data.exceptionMessage ||
+          "Onay akışı raporu alınamadı"
+      );
+    }
+    const data = response.data.data;
+    if (!data) {
+      throw new Error("Onay akışı raporu alınamadı");
+    }
+    return data;
   },
 
   getById: async (id: number): Promise<OrderDetailGetDto> => {
