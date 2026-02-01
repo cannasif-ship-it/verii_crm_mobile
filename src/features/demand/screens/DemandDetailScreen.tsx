@@ -52,6 +52,7 @@ import {
   DocumentSerialTypePicker,
   OfferTypePicker,
   DemandLineForm,
+  DemandApprovalFlowTab,
   ProductPicker,
   RejectModal,
 } from "../components";
@@ -146,6 +147,7 @@ export function DemandDetailScreen(): React.ReactElement {
   const [selectedApprovalForReject, setSelectedApprovalForReject] = useState<ApprovalActionGetDto | null>(null);
   const [deleteLineDialogVisible, setDeleteLineDialogVisible] = useState(false);
   const [deleteLineId, setDeleteLineId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<"detail" | "approval">("detail");
 
   const schema = useMemo(() => createDemandSchema(), []);
 
@@ -731,6 +733,35 @@ export function DemandDetailScreen(): React.ReactElement {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScreenHeader title={pageTitle} showBackButton />
+        <View style={[styles.tabBar, { backgroundColor: colors.header }]}>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === "detail" && styles.tabActive,
+              activeTab === "detail" && { borderBottomColor: colors.accent },
+            ]}
+            onPress={() => setActiveTab("detail")}
+          >
+            <Text style={[styles.tabText, activeTab === "detail" && { color: colors.accent }]}>
+              {t("common.tabDetail")}
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === "approval" && styles.tabActive,
+              activeTab === "approval" && { borderBottomColor: colors.accent },
+            ]}
+            onPress={() => setActiveTab("approval")}
+          >
+            <Text style={[styles.tabText, activeTab === "approval" && { color: colors.accent }]}>
+              {t("common.tabApprovalFlow")}
+            </Text>
+          </TouchableOpacity>
+        </View>
+        {activeTab === "approval" && demandId != null ? (
+          <DemandApprovalFlowTab demandId={demandId} />
+        ) : (
         <ScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
@@ -1152,6 +1183,7 @@ export function DemandDetailScreen(): React.ReactElement {
             )}
           </View>
         </ScrollView>
+        )}
 
         <DemandLineForm
           visible={lineFormVisible}
@@ -1411,6 +1443,10 @@ export function DemandDetailScreen(): React.ReactElement {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  tabBar: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.2)" },
+  tab: { flex: 1, paddingVertical: 12, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: "transparent" },
+  tabActive: {},
+  tabText: { fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.8)" },
   content: { flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   contentContainer: { padding: 20 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },

@@ -2,6 +2,7 @@ export { ApprovalRow } from "./ApprovalRow";
 export { RejectModal } from "./RejectModal";
 export { DemandRow } from "./DemandRow";
 export { DemandDetailLineRow } from "./DemandDetailLineRow";
+export { DemandApprovalFlowTab } from "./DemandApprovalFlowTab";
 export { ProductPicker } from "./ProductPicker";
 export { DemandLineForm } from "./DemandLineForm";
 export { ExchangeRateDialog } from "./ExchangeRateDialog";

@@ -27,6 +27,8 @@ import type {
   DemandExchangeRateDetailGetDto,
   DemandExchangeRateUpdateDto,
   DemandExchangeRateUpdateResponse,
+  DemandApprovalFlowReportDto,
+  DemandApprovalFlowReportResponse,
   DemandBulkCreateDto,
   CreateDemandLineDto,
   DemandLineUpdateDto,
@@ -130,6 +132,24 @@ export const demandApi = {
     }
 
     return response.data.data ?? false;
+  },
+
+  getApprovalFlowReport: async (demandId: number): Promise<DemandApprovalFlowReportDto> => {
+    const response = await apiClient.get<DemandApprovalFlowReportResponse>(
+      `/api/Demand/${demandId}/approval-flow-report`
+    );
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message ||
+          response.data.exceptionMessage ||
+          "Onay akışı raporu alınamadı"
+      );
+    }
+    const data = response.data.data;
+    if (!data) {
+      throw new Error("Onay akışı raporu alınamadı");
+    }
+    return data;
   },
 
   getById: async (id: number): Promise<DemandDetailGetDto> => {

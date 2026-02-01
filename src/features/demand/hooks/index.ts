@@ -3,6 +3,7 @@ export { useApproveAction } from "./useApproveAction";
 export { useRejectAction } from "./useRejectAction";
 export { useDemandList } from "./useDemandList";
 export { useDemandDetail } from "./useDemandDetail";
+export { useDemandApprovalFlowReport } from "./useDemandApprovalFlowReport";
 export { useCreateRevisionOfDemand } from "./useCreateRevisionOfDemand";
 export { useCreateDemandBulk } from "./useCreateDemandBulk";
 export { useUpdateDemandBulk } from "./useUpdateDemandBulk";
