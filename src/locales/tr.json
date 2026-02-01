@@ -521,7 +521,13 @@
     "relatedStocksSelectDesc": "Ana stok ile birlikte eklemek istediğiniz bağlı stokları seçin. Zorunlu stoklar otomatik seçilidir.",
     "mandatory": "Zorunlu",
     "optional": "Opsiyonel",
-    "apply": "Uygula"
+    "apply": "Uygula",
+    "approvalFlow": {
+      "notStarted": "Henüz onay süreci başlatılmamış",
+      "flowDescription": "Akış Açıklaması",
+      "overallStatus": "Genel Durum",
+      "rejectedReason": "Red Nedeni"
+    }
   },
   "demand": {
     "list": "Talep Listesi",
@@ -633,6 +639,12 @@
     "mandatory": "Zorunlu",
     "optional": "Opsiyonel",
     "apply": "Uygula",
+    "approvalFlow": {
+      "notStarted": "Henüz onay süreci başlatılmamış",
+      "flowDescription": "Akış Açıklaması",
+      "overallStatus": "Genel Durum",
+      "rejectedReason": "Red Nedeni"
+    },
     "deleteLineTitle": "Satırı silmek istediğinize emin misiniz?",
     "deleteLineMessage": "Bu işlem geri alınamaz.",
     "deleteRelatedGroupTitle": "Bu satır grubunu silmek istediğinize emin misiniz?",
@@ -762,12 +774,20 @@
     "mandatory": "Zorunlu",
     "optional": "Opsiyonel",
     "apply": "Uygula",
+    "approvalFlow": {
+      "notStarted": "Henüz onay süreci başlatılmamış",
+      "flowDescription": "Akış Açıklaması",
+      "overallStatus": "Genel Durum",
+      "rejectedReason": "Red Nedeni"
+    },
     "deleteLineTitle": "Satırı silmek istediğinize emin misiniz?",
     "deleteLineMessage": "Bu işlem geri alınamaz.",
     "deleteRelatedGroupTitle": "Bu satır grubunu silmek istediğinize emin misiniz?",
     "deleteRelatedGroupMessage": "{{count}} bağlı satır da silinecektir."
   },
   "common": {
-    "next": "Sonraki"
+    "next": "Sonraki",
+    "tabDetail": "Detay",
+    "tabApprovalFlow": "Onay Akışı"
   }
 }
