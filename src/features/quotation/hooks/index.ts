@@ -3,6 +3,7 @@ export { useApproveAction } from "./useApproveAction";
 export { useRejectAction } from "./useRejectAction";
 export { useQuotationList } from "./useQuotationList";
 export { useQuotationDetail } from "./useQuotationDetail";
+export { useQuotationApprovalFlowReport } from "./useQuotationApprovalFlowReport";
 export { useCreateRevisionOfQuotation } from "./useCreateRevisionOfQuotation";
 export { useCreateQuotationBulk } from "./useCreateQuotationBulk";
 export { useUpdateQuotationBulk } from "./useUpdateQuotationBulk";

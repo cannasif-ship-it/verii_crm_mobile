@@ -431,10 +431,40 @@ export interface QuotationExchangeRateDetailGetDto {
   isDeleted: boolean;
 }
 
+export interface ApprovalActionDetailDto {
+  userId: number;
+  userFullName: string | null;
+  userEmail: string | null;
+  status: number;
+  statusName: string;
+  actionDate: string | null;
+  rejectedReason: string | null;
+}
+
+export interface ApprovalFlowStepReportDto {
+  stepOrder: number;
+  stepName: string;
+  stepStatus: string;
+  actions: ApprovalActionDetailDto[];
+}
+
+export interface QuotationApprovalFlowReportDto {
+  quotationId: number;
+  quotationOfferNo: string | null;
+  hasApprovalRequest: boolean;
+  overallStatus: number | null;
+  overallStatusName: string | null;
+  currentStep: number;
+  flowDescription: string | null;
+  rejectedReason: string | null;
+  steps: ApprovalFlowStepReportDto[];
+}
+
 export type QuotationDetailResponse = ApiResponse<QuotationDetailGetDto>;
 export type QuotationLineDetailListResponse = ApiResponse<QuotationLineDetailGetDto[]>;
 export type QuotationExchangeRateDetailListResponse = ApiResponse<QuotationExchangeRateDetailGetDto[]>;
 export type QuotationExchangeRateUpdateResponse = ApiResponse<boolean>;
+export type QuotationApprovalFlowReportResponse = ApiResponse<QuotationApprovalFlowReportDto>;
 
 export type WaitingApprovalsResponse = ApiResponse<ApprovalActionGetDto[]>;
 export type ApproveResponse = ApiResponse<boolean>;

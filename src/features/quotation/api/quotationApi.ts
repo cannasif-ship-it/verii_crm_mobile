@@ -27,6 +27,8 @@ import type {
   QuotationExchangeRateDetailGetDto,
   QuotationExchangeRateUpdateDto,
   QuotationExchangeRateUpdateResponse,
+  QuotationApprovalFlowReportDto,
+  QuotationApprovalFlowReportResponse,
   QuotationBulkCreateDto,
   CreateQuotationLineDto,
   QuotationLineUpdateDto,
@@ -130,6 +132,24 @@ export const quotationApi = {
     }
 
     return response.data.data ?? false;
+  },
+
+  getApprovalFlowReport: async (quotationId: number): Promise<QuotationApprovalFlowReportDto> => {
+    const response = await apiClient.get<QuotationApprovalFlowReportResponse>(
+      `/api/Quotation/${quotationId}/approval-flow-report`
+    );
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message ||
+          response.data.exceptionMessage ||
+          "Onay akışı raporu alınamadı"
+      );
+    }
+    const data = response.data.data;
+    if (!data) {
+      throw new Error("Onay akışı raporu alınamadı");
+    }
+    return data;
   },
 
   getById: async (id: number): Promise<QuotationDetailGetDto> => {

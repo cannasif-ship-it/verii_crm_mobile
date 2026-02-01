@@ -2,6 +2,7 @@ export { ApprovalRow } from "./ApprovalRow";
 export { RejectModal } from "./RejectModal";
 export { QuotationRow } from "./QuotationRow";
 export { QuotationDetailLineRow } from "./QuotationDetailLineRow";
+export { QuotationApprovalFlowTab } from "./QuotationApprovalFlowTab";
 export { ProductPicker } from "./ProductPicker";
 export { QuotationLineForm } from "./QuotationLineForm";
 export { ExchangeRateDialog } from "./ExchangeRateDialog";
