@@ -56,6 +56,7 @@ import {
   ProductPicker,
   RejectModal,
 } from "../components";
+import { ReportTab, DocumentRuleType } from "../../quotation";
 import { createDemandSchema, type CreateDemandSchema } from "../schemas";
 import type { CustomerDto } from "../../customer/types";
 import type {
@@ -147,7 +148,7 @@ export function DemandDetailScreen(): React.ReactElement {
   const [selectedApprovalForReject, setSelectedApprovalForReject] = useState<ApprovalActionGetDto | null>(null);
   const [deleteLineDialogVisible, setDeleteLineDialogVisible] = useState(false);
   const [deleteLineId, setDeleteLineId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"detail" | "approval">("detail");
+  const [activeTab, setActiveTab] = useState<"detail" | "approval" | "report">("detail");
 
   const schema = useMemo(() => createDemandSchema(), []);
 
@@ -758,9 +759,23 @@ export function DemandDetailScreen(): React.ReactElement {
               {t("common.tabApprovalFlow")}
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === "report" && styles.tabActive,
+              activeTab === "report" && { borderBottomColor: colors.accent },
+            ]}
+            onPress={() => setActiveTab("report")}
+          >
+            <Text style={[styles.tabText, activeTab === "report" && { color: colors.accent }]}>
+              {t("common.tabReport")}
+            </Text>
+          </TouchableOpacity>
         </View>
         {activeTab === "approval" && demandId != null ? (
           <DemandApprovalFlowTab demandId={demandId} />
+        ) : activeTab === "report" && demandId != null ? (
+          <ReportTab entityId={demandId} ruleType={DocumentRuleType.Demand} />
         ) : (
         <ScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}
