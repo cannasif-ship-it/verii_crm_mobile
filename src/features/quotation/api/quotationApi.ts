@@ -43,8 +43,12 @@ import type {
   UserDto,
   PagedParams,
   PagedResponse,
+  ReportTemplateGetDto,
+  GenerateReportPdfRequest,
 } from "../types";
 import type { ApiResponse } from "../../auth/types";
+
+export interface ReportTemplateListResponse extends ApiResponse<PagedResponse<ReportTemplateGetDto>> {}
 
 function normalizeKurDto(item: unknown): ExchangeRateDto {
   const o = item && typeof item === "object" ? item as Record<string, unknown> : {};
@@ -524,6 +528,28 @@ export const quotationApi = {
 
     const paged = response.data.data;
     return (paged && "items" in paged ? paged.items : []) || [];
+  },
+
+  getReportTemplates: async (): Promise<ReportTemplateGetDto[]> => {
+    const response = await apiClient.get<ReportTemplateListResponse>("/api/ReportTemplate");
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || "Rapor şablonları alınamadı"
+      );
+    }
+    const paged = response.data.data;
+    return (paged && "items" in paged ? paged.items : []) ?? [];
+  },
+
+  generateReportPdf: async (
+    body: GenerateReportPdfRequest
+  ): Promise<ArrayBuffer> => {
+    const response = await apiClient.post<ArrayBuffer>(
+      "/api/ReportTemplate/generate-pdf",
+      body,
+      { responseType: "arraybuffer" }
+    );
+    return response.data;
   },
 };
 

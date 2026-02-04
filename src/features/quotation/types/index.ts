@@ -314,6 +314,28 @@ export interface UserDto {
   createdDate: string;
 }
 
+export const DocumentRuleType = {
+  Demand: 0,
+  Quotation: 1,
+  Order: 2,
+} as const;
+
+export type DocumentRuleTypeValue = (typeof DocumentRuleType)[keyof typeof DocumentRuleType];
+
+export interface ReportTemplateGetDto {
+  id: number;
+  ruleType: DocumentRuleTypeValue;
+  title: string;
+  default?: boolean;
+  isActive: boolean;
+  templateData?: string | null;
+}
+
+export interface GenerateReportPdfRequest {
+  templateId: number;
+  entityId: number;
+}
+
 export const PricingRuleType = {
   Quotation: 2,
 } as const;

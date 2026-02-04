@@ -22,3 +22,5 @@ export { useUpdateExchangeRateInQuotation } from "./useUpdateExchangeRateInQuota
 export { useDeleteQuotationLine } from "./useDeleteQuotationLine";
 export { useCreateQuotationLines } from "./useCreateQuotationLines";
 export { useUpdateQuotationLines } from "./useUpdateQuotationLines";
+export { useReportTemplateList } from "./useReportTemplateList";
+export { useGenerateReportPdf } from "./useGenerateReportPdf";
