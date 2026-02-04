@@ -53,6 +53,7 @@ import {
   OfferTypePicker,
   QuotationLineForm,
   QuotationApprovalFlowTab,
+  QuotationReportTab,
   ProductPicker,
   RejectModal,
 } from "../components";
@@ -147,7 +148,7 @@ export function QuotationDetailScreen(): React.ReactElement {
   const [selectedApprovalForReject, setSelectedApprovalForReject] = useState<ApprovalActionGetDto | null>(null);
   const [deleteLineDialogVisible, setDeleteLineDialogVisible] = useState(false);
   const [deleteLineId, setDeleteLineId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<"detail" | "approval">("detail");
+  const [activeTab, setActiveTab] = useState<"detail" | "approval" | "report">("detail");
 
   const schema = useMemo(() => createQuotationSchema(), []);
 
@@ -758,9 +759,23 @@ export function QuotationDetailScreen(): React.ReactElement {
               {t("common.tabApprovalFlow")}
             </Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.tab,
+              activeTab === "report" && styles.tabActive,
+              activeTab === "report" && { borderBottomColor: colors.accent },
+            ]}
+            onPress={() => setActiveTab("report")}
+          >
+            <Text style={[styles.tabText, activeTab === "report" && { color: colors.accent }]}>
+              {t("common.tabReport")}
+            </Text>
+          </TouchableOpacity>
         </View>
         {activeTab === "approval" && quotationId != null ? (
           <QuotationApprovalFlowTab quotationId={quotationId} />
+        ) : activeTab === "report" && quotationId != null ? (
+          <QuotationReportTab quotationId={quotationId} />
         ) : (
         <ScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}

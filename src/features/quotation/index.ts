@@ -4,3 +4,4 @@ export * from "./screens";
 export * from "./types";
 export * from "./schemas";
 export * from "./utils";
+export { ReportTab } from "./components";
