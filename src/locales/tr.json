@@ -1,4 +1,20 @@
 {
+  "report": {
+    "template": "Rapor Şablonu",
+    "selectTemplate": "Şablon seçin",
+    "searchTemplate": "Şablon ara...",
+    "generatePdf": "PDF Oluştur",
+    "selectTemplateFirst": "Lütfen önce bir rapor şablonu seçin.",
+    "generated": "Rapor oluşturuldu.",
+    "generatedOpenManually": "Rapor oluşturuldu. Dosyayı paylaşım menüsünden açabilirsiniz.",
+    "generateError": "PDF oluşturulamadı.",
+    "saveError": "PDF kaydedilemedi.",
+    "shareTitle": "Raporu Paylaş",
+    "share": "Paylaş",
+    "preview": "PDF Önizleme",
+    "shareNotAvailable": "Paylaşım bu cihazda kullanılamıyor.",
+    "noTemplates": "Bu belge için rapor şablonu bulunamadı."
+  },
   "common": {
     "loading": "Yükleniyor...",
     "refreshing": "Yenileniyor...",
@@ -20,7 +36,11 @@
     "back": "Geri",
     "close": "Kapat",
     "networkError": "Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.",
-    "unknownError": "Beklenmeyen bir hata oluştu"
+    "unknownError": "Beklenmeyen bir hata oluştu",
+    "next": "Sonraki",
+    "tabDetail": "Detay",
+    "tabApprovalFlow": "Onay Akışı",
+    "tabReport": "Rapor"
   },
   "home": {
     "greeting": "Merhaba",
@@ -784,10 +804,5 @@
     "deleteLineMessage": "Bu işlem geri alınamaz.",
     "deleteRelatedGroupTitle": "Bu satır grubunu silmek istediğinize emin misiniz?",
     "deleteRelatedGroupMessage": "{{count}} bağlı satır da silinecektir."
-  },
-  "common": {
-    "next": "Sonraki",
-    "tabDetail": "Detay",
-    "tabApprovalFlow": "Onay Akışı"
   }
 }

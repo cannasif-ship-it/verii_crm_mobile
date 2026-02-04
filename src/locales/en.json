@@ -1,4 +1,20 @@
 {
+  "report": {
+    "template": "Report Template",
+    "selectTemplate": "Select template",
+    "searchTemplate": "Search template...",
+    "generatePdf": "Generate PDF",
+    "selectTemplateFirst": "Please select a report template first.",
+    "generated": "Report generated.",
+    "generatedOpenManually": "Report generated. You can open it from the share menu.",
+    "generateError": "Failed to generate PDF.",
+    "saveError": "Failed to save PDF.",
+    "shareTitle": "Share Report",
+    "share": "Share",
+    "preview": "PDF Preview",
+    "shareNotAvailable": "Sharing is not available on this device.",
+    "noTemplates": "No report templates found for this document."
+  },
   "common": {
     "loading": "Loading...",
     "refreshing": "Refreshing...",
@@ -20,7 +36,11 @@
     "back": "Back",
     "close": "Close",
     "networkError": "Connection error. Please check your internet connection.",
-    "unknownError": "An unexpected error occurred"
+    "unknownError": "An unexpected error occurred",
+    "next": "Next",
+    "tabDetail": "Detail",
+    "tabApprovalFlow": "Approval Flow",
+    "tabReport": "Report"
   },
   "home": {
     "greeting": "Hello",
@@ -784,10 +804,5 @@
     "deleteLineMessage": "This action cannot be undone.",
     "deleteRelatedGroupTitle": "Are you sure you want to delete this line group?",
     "deleteRelatedGroupMessage": "{{count}} related lines will also be deleted."
-  },
-  "common": {
-    "next": "Next",
-    "tabDetail": "Detail",
-    "tabApprovalFlow": "Approval Flow"
   }
 }
