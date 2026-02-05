@@ -1,11 +1,11 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Text } from "../ui/text";
-import { useUIStore } from "../../store/ui";
-// HugeIcons - Geri butonu için modern ikon
-import { ArrowLeft02Icon } from "hugeicons-react-native";
+import { useUIStore } from "../../store/ui"; // Store
+// İkonlar
+import { ArrowLeft02Icon, Menu01Icon } from "hugeicons-react-native";
 
 interface ScreenHeaderProps {
   title: string;
@@ -23,14 +23,28 @@ export function ScreenHeader({
   const right = rightElement ?? rightContent;
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  // Store'dan renkleri alıyoruz ama CRM tasarımı için override edeceğiz
-  const { colors } = useUIStore(); 
+  
+  // Store'dan renkleri ve Sidebar açma fonksiyonunu çekiyoruz
+  const { colors, themeMode, openSidebar } = useUIStore();
 
-  const handleBack = (): void => {
+  const handleBack = () => {
     if (router.canGoBack()) {
       router.back();
     }
   };
+
+  const handleMenuPress = () => {
+    // Eğer önceki adımlardaki Custom Sidebar'ı kullanıyorsan:
+    openSidebar();
+    
+    // Eğer standart React Navigation Drawer kullanıyorsan bunu aç:
+    // navigation.dispatch(DrawerActions.toggleDrawer());
+  };
+
+  // Buton arka plan rengi (Tema moduna göre hafif transparan)
+  const buttonBgColor = themeMode === "dark" 
+    ? "rgba(255, 255, 255, 0.1)" 
+    : "rgba(0, 0, 0, 0.05)";
 
   return (
     <View 
@@ -38,32 +52,38 @@ export function ScreenHeader({
         styles.container, 
         { 
           paddingTop: insets.top,
-          // BottomNav ile aynı koyu tema rengi
-          backgroundColor: "#140a1e", 
+          backgroundColor: colors.card, // Temaya göre arka plan (Koyu veya Beyaz)
+          borderBottomColor: colors.border, // Temaya göre çizgi rengi
         }
       ]}
     >
       <View style={styles.content}>
-        {/* SOL TARA (GERİ BUTONU) */}
-        {showBackButton ? (
-          <TouchableOpacity
-            onPress={handleBack}
-            style={styles.backButton}
-            activeOpacity={0.7}
-          >
-            {/* Metin oku yerine HugeIcon kullandık */}
-            <ArrowLeft02Icon size={24} color="#FFFFFF" strokeWidth={2} />
-          </TouchableOpacity>
-        ) : (
-          <View style={styles.placeholder} />
-        )}
+        {/* SOL BUTON: Geri Dön veya Menüyü Aç */}
+        <TouchableOpacity
+          onPress={showBackButton ? handleBack : handleMenuPress}
+          style={[
+            styles.backButton, 
+            { 
+              backgroundColor: buttonBgColor,
+              borderColor: colors.border 
+            }
+          ]}
+          activeOpacity={0.7}
+        >
+          {showBackButton ? (
+            <ArrowLeft02Icon size={24} color={colors.text} strokeWidth={2} />
+          ) : (
+            <Menu01Icon size={24} color={colors.text} strokeWidth={2} />
+          )}
+        </TouchableOpacity>
 
-        {/* ORTA (BAŞLIK) */}
-        <Text style={styles.title} numberOfLines={1}>
+        <Text 
+          style={[styles.title, { color: colors.text }]} 
+          numberOfLines={1}
+        >
           {title}
         </Text>
 
-        {/* SAĞ TARAF (OPSİYONEL İÇERİK) */}
         {right ? (
           <View style={styles.rightContainer}>{right}</View>
         ) : (
@@ -77,14 +97,13 @@ export function ScreenHeader({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    // Header'ın altını içerikten ayırmak için çok hafif çizgi ve gölge
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)",
+    // Gölge ayarları (Light modda daha belirgin olması için korunabilir)
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4, // Android gölgesi
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
     zIndex: 10,
   },
   content: {
@@ -92,32 +111,25 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingVertical: 12, // Dikey boşluğu biraz optimize ettim
-    height: 60, // Standart bir header yüksekliği
+    paddingVertical: 12,
+    height: 60,
   },
   backButton: {
     width: 40,
     height: 40,
-    borderRadius: 12, // Tam yuvarlak yerine hafif kare (Squircle) daha modern durur
-    backgroundColor: "rgba(255, 255, 255, 0.08)", // Cam efekti
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    // Butona hafif border ekledik
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
   },
   title: {
     fontSize: 18,
     fontWeight: "600",
-    color: "#FFFFFF",
     flex: 1,
     textAlign: "center",
-    marginHorizontal: 10, // Başlık uzunsa butonlara yapışmasın
+    marginHorizontal: 10,
   },
-  placeholder: {
-    width: 40,
-    height: 40,
-  },
+  placeholder: { width: 40, height: 40 },
   rightContainer: {
     minWidth: 40,
     minHeight: 40,

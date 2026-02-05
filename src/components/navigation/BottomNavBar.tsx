@@ -6,6 +6,8 @@ import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "../ui/text";
 import { useUIStore } from "../../store/ui";
+// Tema renklerini import ediyoruz
+import { GRADIENT } from "../../constants/theme"; 
 
 // HugeIcons Importları
 import { 
@@ -38,6 +40,8 @@ export function BottomNavBar(): React.ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
+  
+  // Store'dan gelen dinamik renkler
   const { colors } = useUIStore(); 
 
   useEffect(() => {
@@ -51,15 +55,12 @@ export function BottomNavBar(): React.ReactElement {
     return pathname === route || pathname.startsWith(route.replace("/(tabs)", ""));
   };
 
-  const handlePress = (route: string, isHome: boolean): void => {
-    const isCurrentlyActive = isActive(route);
-    if (isCurrentlyActive) return;
+  const handlePress = (route: string): void => {
+    // Eğer zaten o sayfadaysak işlem yapma (Performans için)
+    if (isActive(route)) return;
     
-    if (isHome) {
-      router.replace(route as never);
-    } else {
-      router.push(route as never);
-    }
+    // HIZLI GEÇİŞ İÇİN: 'push' veya 'replace' yerine 'navigate' kullanıyoruz.
+    router.navigate(route as never);
   };
 
   return (
@@ -69,8 +70,10 @@ export function BottomNavBar(): React.ReactElement {
           styles.container,
           {
             paddingBottom: Platform.OS === 'ios' ? insets.bottom : Math.max(insets.bottom, 10),
-            backgroundColor: "#140a1e", 
-            borderTopColor: "rgba(255, 255, 255, 0.1)",
+            // DİNAMİK: Navbar arka plan rengi
+            backgroundColor: colors.navBar, 
+            // DİNAMİK: Üst çizgi rengi
+            borderTopColor: colors.navBarBorder,
           },
         ]}
       >
@@ -84,21 +87,31 @@ export function BottomNavBar(): React.ReactElement {
             if (isHome) {
               return (
                 <View key={item.key} style={styles.centerButtonContainer}>
-                  {/* Glow Efekti */}
-                  <View style={styles.glowEffect} />
+                  {/* Glow Efekti - Rengi temanın accent rengine bağladık */}
+                  <View 
+                    style={[
+                      styles.glowEffect, 
+                      { backgroundColor: colors.accent } 
+                    ]} 
+                  />
                   
                   <TouchableOpacity
-                    style={styles.scanButton}
-                    onPress={() => handlePress(item.route, true)}
-                    activeOpacity={0.8}
+                    style={[
+                      styles.scanButton,
+                      {
+                        // KRİTİK: Kesik (Cut-out) efekti için border rengi navbar ile aynı olmalı
+                        borderColor: colors.navBar 
+                      }
+                    ]}
+                    onPress={() => handlePress(item.route)}
+                    activeOpacity={0.9} // Basma hassasiyeti
                   >
                     <LinearGradient
-                      colors={["#fb923c", "#db2777"]} 
+                      colors={[...GRADIENT.primary]} 
                       start={{ x: 0, y: 0 }}
                       end={{ x: 1, y: 1 }}
                       style={styles.scanButtonInner}
                     >
-                      {/* DÜZELTME: variant="solid" kaldırıldı. strokeWidth artırıldı. */}
                       <IconComponent 
                         size={30} 
                         color="#FFFFFF" 
@@ -115,27 +128,25 @@ export function BottomNavBar(): React.ReactElement {
               <TouchableOpacity
                 key={item.key}
                 style={styles.navItem}
-                onPress={() => handlePress(item.route, isHome)}
+                onPress={() => handlePress(item.route)}
                 activeOpacity={0.7}
               >
-                <View
-                  style={[
-                    styles.iconContainer,
-                    active && { backgroundColor: "rgba(251, 146, 60, 0.1)" },
-                  ]}
-                >
-                  {/* DÜZELTME: variant="solid" yerine renk ve kalınlık değişimi */}
+                {/* Arkadaki kutu kaldırıldı, sadece ikon var */}
+                <View style={styles.iconContainer}>
                   <IconComponent 
                     size={24} 
-                    color={active ? "#fb923c" : "#9ca3af"} // Aktifse Turuncu, değilse Gri
-                    strokeWidth={active ? 2.5 : 1.5} // Aktifse Kalın, değilse ince
+                    // İkon rengi: Aktifse Pembe, Pasifse Gri
+                    color={active ? colors.accent : colors.textMuted}
+                    // Çizgi kalınlığı: Aktifse kalın, Pasifse ince
+                    strokeWidth={active ? 2.5 : 1.5}
                   />
                 </View>
                 <Text
                   style={[
                     styles.label,
-                    { color: "#9ca3af" },
-                    active && { color: "#fb923c", fontWeight: "600" },
+                    { color: colors.textMuted },
+                    // Yazı rengi: Aktifse Pembe
+                    active && { color: colors.accent, fontWeight: "600" },
                   ]}
                 >
                   {t(`nav.${item.key}`)}
@@ -161,8 +172,8 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: -10 },
-    shadowOpacity: 0.3,
-    shadowRadius: 20,
+    shadowOpacity: 0.1,
+    shadowRadius: 15,
     elevation: 20,
   },
   navBar: {
@@ -184,7 +195,6 @@ const styles = StyleSheet.create({
     height: 32,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
     marginBottom: 2,
   },
   label: {
@@ -192,13 +202,13 @@ const styles = StyleSheet.create({
     fontWeight: "500",
     marginTop: 2,
   },
-  // ORTA BUTON
+  // ORTA BUTON STİLLERİ
   centerButtonContainer: {
     width: 70,
     height: 70,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -40,
+    marginTop: -40, // Floating (Yüzme) ayarı
     position: 'relative',
   },
   glowEffect: {
@@ -206,8 +216,7 @@ const styles = StyleSheet.create({
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#db2777',
-    opacity: 0.5,
+    opacity: 0.4,
     transform: [{ scale: 1.2 }],
   },
   scanButton: {
@@ -216,8 +225,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    borderWidth: 5,
-    borderColor: "#140a1e",
+    borderWidth: 5, // Cut-out kalınlığı
     elevation: 10,
     shadowColor: "#fb923c",
     shadowOffset: { width: 0, height: 5 },

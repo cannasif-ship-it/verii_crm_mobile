@@ -16,7 +16,10 @@ module.exports = function (api) {
           },
         },
       ],
-      'react-native-worklets/plugin',
+      // 'react-native-worklets/plugin',  <-- BU SATIRI SİLDİK, HATA BURADAYDI.
+      
+      // Reanimated plugin'i HER ZAMAN listenin en sonunda olmalıdır.
+      'react-native-reanimated/plugin',
     ],
   };
 };

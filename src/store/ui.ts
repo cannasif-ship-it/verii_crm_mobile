@@ -7,9 +7,13 @@ interface UIState {
   isLoading: boolean;
   themeMode: ThemeMode;
   colors: ThemeColors;
+  isSidebarOpen: boolean;
   setIsLoading: (value: boolean) => void;
   setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+  openSidebar: () => void;
+  closeSidebar: () => void;
+  toggleSidebar: () => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -18,6 +22,7 @@ export const useUIStore = create<UIState>()(
       isLoading: false,
       themeMode: getSystemTheme(),
       colors: COLORS[getSystemTheme()],
+      isSidebarOpen: false,
       setIsLoading: (value: boolean) => set({ isLoading: value }),
       setThemeMode: (mode: ThemeMode) =>
         set({ themeMode: mode, colors: COLORS[mode] }),
@@ -26,6 +31,9 @@ export const useUIStore = create<UIState>()(
         const newMode = currentMode === "light" ? "dark" : "light";
         set({ themeMode: newMode, colors: COLORS[newMode] });
       },
+      openSidebar: () => set({ isSidebarOpen: true }),
+      closeSidebar: () => set({ isSidebarOpen: false }),
+      toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
     }),
     {
       name: "ui-storage",
