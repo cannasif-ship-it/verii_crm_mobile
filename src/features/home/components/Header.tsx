@@ -2,6 +2,7 @@ import React from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
+import { Menu01Icon, Settings01Icon } from "hugeicons-react-native";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
@@ -15,7 +16,7 @@ interface HeaderProps {
 
 export function Header({ user, onSettingsPress }: HeaderProps): React.ReactElement {
   const { t } = useTranslation();
-  const { colors } = useUIStore();
+  const { colors, openSidebar } = useUIStore();
   const branch = useAuthStore((state) => state.branch);
 
   const getInitials = (name: string): string => {
@@ -30,6 +31,14 @@ export function Header({ user, onSettingsPress }: HeaderProps): React.ReactEleme
   return (
     <View style={[styles.container, { backgroundColor: colors.header }]}>
       <View style={styles.left}>
+        <TouchableOpacity 
+          onPress={openSidebar} 
+          style={styles.menuButton}
+          activeOpacity={0.7}
+        >
+          <Menu01Icon size={24} color="#FFFFFF" />
+        </TouchableOpacity>
+
         <LinearGradient
           colors={[...GRADIENT.primary]}
           start={{ x: 0, y: 0 }}
@@ -54,7 +63,7 @@ export function Header({ user, onSettingsPress }: HeaderProps): React.ReactEleme
         onPress={onSettingsPress}
         activeOpacity={0.7}
       >
-        <Text style={styles.settingsIcon}>⚙️</Text>
+        <Settings01Icon size={20} color="#FFFFFF" />
       </TouchableOpacity>
     </View>
   );
@@ -71,6 +80,10 @@ const styles = StyleSheet.create({
   left: {
     flexDirection: "row",
     alignItems: "center",
+  },
+  menuButton: {
+    marginRight: 12,
+    padding: 4,
   },
   avatar: {
     width: 44,

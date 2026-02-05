@@ -4,17 +4,43 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import type { ActivityItem as ActivityItemType } from "../types";
 
+// HugeIcons Importları
+import { 
+  PackageIcon,          // receiving
+  ClipboardIcon,        // inventory
+  ArrowDataTransferHorizontalIcon,   // transfer
+  TruckIcon,            // shipping
+  Location01Icon,       // putaway
+  HandPointingDown01Icon,   // picking
+  CheckmarkCircle02Icon // fallback
+} from "hugeicons-react-native";
+
 interface ActivityItemProps {
   item: ActivityItemType;
 }
 
-const TYPE_ICONS: Record<string, string> = {
-  receiving: "📦",
-  inventory: "📋",
-  transfer: "🔄",
-  shipping: "🚚",
-  putaway: "📍",
-  picking: "✋",
+// Tip eşleşmeleri için ikon haritası
+const getIcon = (type: string) => {
+  switch (type) {
+    case 'receiving': return PackageIcon;
+    case 'inventory': return ClipboardIcon;
+    case 'transfer': return ArrowDataTransferHorizontalIcon;
+    case 'shipping': return TruckIcon;
+    case 'putaway': return Location01Icon;
+    case 'picking': return HandPointingDown01Icon;
+    default: return CheckmarkCircle02Icon;
+  }
+};
+
+// İkon renkleri
+const getIconColor = (type: string) => {
+  switch (type) {
+    case 'receiving': return "#3B82F6"; // Mavi
+    case 'shipping': return "#F59E0B";  // Turuncu
+    case 'inventory': return "#8B5CF6"; // Mor
+    case 'transfer': return "#10B981";  // Yeşil
+    default: return "#6B7280";          // Gri
+  }
 };
 
 function formatTime(timestamp: string): string {
@@ -25,28 +51,33 @@ function formatTime(timestamp: string): string {
 export function ActivityItem({ item }: ActivityItemProps): React.ReactElement {
   const { colors, themeMode } = useUIStore();
 
-  const containerBackground =
-    themeMode === "dark" ? "rgba(20, 10, 30, 0.7)" : "#FFFFFF";
+  const containerBackground = colors.card;
+  const iconContainerBackground = themeMode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#F3F4F6";
 
-  const iconContainerBackground =
-    themeMode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#F9FAFB";
+  const IconComponent = getIcon(item.type);
+  const iconColor = getIconColor(item.type);
 
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: containerBackground, borderColor: colors.cardBorder },
+        { 
+          backgroundColor: containerBackground, 
+          borderColor: colors.border 
+        },
       ]}
     >
       <View style={[styles.iconContainer, { backgroundColor: iconContainerBackground }]}>
-        <Text style={styles.icon}>{TYPE_ICONS[item.type]}</Text>
+        <IconComponent size={20} color={iconColor}  />
       </View>
+      
       <View style={styles.content}>
         <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
         <Text style={[styles.description, { color: colors.textSecondary }]}>
           {item.description}
         </Text>
       </View>
+      
       <View style={styles.meta}>
         <Text style={[styles.time, { color: colors.textMuted }]}>
           {formatTime(item.timestamp)}
@@ -75,7 +106,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingVertical: 12,
     paddingHorizontal: 16,
-    borderRadius: 12,
+    borderRadius: 16, // Daha yuvarlak köşeler
     marginBottom: 8,
     borderWidth: 1,
   },
@@ -85,17 +116,14 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     alignItems: "center",
     justifyContent: "center",
-    marginRight: 12,
-  },
-  icon: {
-    fontSize: 18,
+    marginRight: 14,
   },
   content: {
     flex: 1,
   },
   title: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
     marginBottom: 2,
   },
   description: {
@@ -106,7 +134,8 @@ const styles = StyleSheet.create({
   },
   time: {
     fontSize: 11,
-    marginBottom: 4,
+    marginBottom: 6,
+    fontWeight: "500",
   },
   statusDot: {
     width: 8,

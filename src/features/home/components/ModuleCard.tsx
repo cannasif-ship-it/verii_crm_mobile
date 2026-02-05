@@ -1,63 +1,68 @@
 import React from "react";
-import { View, StyleSheet, TouchableOpacity } from "react-native";
-import { useTranslation } from "react-i18next";
+import { TouchableOpacity, StyleSheet, View } from "react-native";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
-import type { Module } from "../types";
+import { SvgProps } from "react-native-svg";
 
 interface ModuleCardProps {
-  module: Module;
-  onPress: (route: string) => void;
+  title: string;
+  description: string;
+  // İkonu bileşen olarak alıyoruz
+  icon: React.FC<SvgProps & { size?: number; color?: string; variant?: "solid" | "stroke" | "duotone" }>;
+  color: string;
+  onPress: () => void;
 }
 
-export function ModuleCard({ module, onPress }: ModuleCardProps): React.ReactElement {
-  const { t } = useTranslation();
+export function ModuleCard({ title, description, icon: Icon, color, onPress }: ModuleCardProps) {
   const { colors, themeMode } = useUIStore();
 
-  const cardBackgroundColor =
-    themeMode === "dark" ? "rgba(20, 10, 30, 0.7)" : "#FFFFFF";
-
-  const iconBackgroundColor =
-    themeMode === "dark" ? `${module.color}25` : `${module.color}15`;
+  // İkon arka plan rengi (Opaklık ayarlı)
+  const iconBgColor = themeMode === "dark" ? `${color}25` : `${color}15`;
 
   return (
     <TouchableOpacity
       style={[
         styles.card,
         {
-          backgroundColor: cardBackgroundColor,
-          borderColor: colors.cardBorder,
+          backgroundColor: colors.card,
+          borderColor: colors.border, // cardBorder yerine border kullanıyoruz
           shadowColor: themeMode === "dark" ? "#000" : "#000",
-        },
+        }
       ]}
-      onPress={() => onPress(module.route)}
+      onPress={onPress}
       activeOpacity={0.7}
     >
-      <View style={[styles.iconContainer, { backgroundColor: iconBackgroundColor }]}>
-        <Text style={styles.icon}>{module.icon}</Text>
+      <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
+        {/* İkonu burada render ediyoruz */}
+        <Icon size={28} color={color} variant="solid" />
       </View>
-      <Text style={[styles.title, { color: colors.text }]}>
-        {t(`modules.${module.key}`)}
-      </Text>
-      <Text style={[styles.description, { color: colors.textSecondary }]}>
-        {t(`modules.${module.key}Desc`)}
-      </Text>
+
+      <View style={styles.content}>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {title}
+        </Text>
+        <Text style={[styles.description, { color: colors.textSecondary }]} numberOfLines={2}>
+          {description}
+        </Text>
+      </View>
     </TouchableOpacity>
   );
 }
 
 const styles = StyleSheet.create({
   card: {
-    flex: 1,
+    width: "48%", // Grid yapısı için genişlik
     borderRadius: 16,
     padding: 16,
-    margin: 6,
+    marginBottom: 12,
     minHeight: 140,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 4,
     borderWidth: 1,
+    // Hafif gölge
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+    justifyContent: "space-between",
   },
   iconContainer: {
     width: 48,
@@ -67,12 +72,13 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
-  icon: {
-    fontSize: 24,
+  content: {
+    flex: 1,
+    justifyContent: "flex-end",
   },
   title: {
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     marginBottom: 4,
   },
   description: {
