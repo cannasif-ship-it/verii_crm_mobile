@@ -1,19 +1,17 @@
-/** @type {import('tailwindcss').Config} */
+/** NativeWind (React Native) – tek stil sistemi; Tailwind web kullanılmıyor */
 module.exports = {
-  darkMode: process.env.DARK_MODE ? process.env.DARK_MODE : 'class',
-  content: [
-    './app/**/*.{html,js,jsx,ts,tsx,mdx}',
-    './components/**/*.{html,js,jsx,ts,tsx,mdx}',
-    './utils/**/*.{html,js,jsx,ts,tsx,mdx}',
-    './*.{html,js,jsx,ts,tsx,mdx}',
-    './src/**/*.{html,js,jsx,ts,tsx,mdx}',
-  ],
-  presets: [require('nativewind/preset')],
-  important: 'html',
+  darkMode: process.env.DARK_MODE ? process.env.DARK_MODE : "class",
+  content: ["./src/**/*.{js,jsx,ts,tsx}", "./global.css"],
+  presets: [require("nativewind/preset")],
+  important: true,
   safelist: [
     {
       pattern:
         /(bg|border|text|stroke|fill)-(primary|secondary|tertiary|error|success|warning|info|typography|outline|background|indicator)-(0|50|100|200|300|400|500|600|700|800|900|950|white|gray|black|error|warning|muted|success|info|light|dark|primary)/,
+    },
+    {
+      pattern:
+        /(bg|border|text)-app-(header|headerDark|background|backgroundDark|backgroundSecondary|backgroundSecondaryDark|card|cardDark|cardBorder|cardBorderDark|text|textDark|textSecondary|textSecondaryDark|textMuted|textMutedDark|accent|accentSecondary|border|borderDark|error|success|warning|navBar|navBarDark)/,
     },
   ],
   theme: {
@@ -172,6 +170,33 @@ module.exports = {
           primary: 'rgb(var(--color-indicator-primary)/<alpha-value>)',
           info: 'rgb(var(--color-indicator-info)/<alpha-value>)',
           error: 'rgb(var(--color-indicator-error)/<alpha-value>)',
+        },
+        app: {
+          header: '#1E293B',
+          headerDark: '#0f0518',
+          background: '#f8f9fc',
+          backgroundDark: '#0c0516',
+          backgroundSecondary: '#F9FAFB',
+          backgroundSecondaryDark: '#0f0518',
+          card: '#FFFFFF',
+          cardDark: 'rgba(20, 10, 30, 0.7)',
+          cardBorder: '#F3F4F6',
+          cardBorderDark: 'rgba(255, 255, 255, 0.1)',
+          text: '#111827',
+          textDark: '#FFFFFF',
+          textSecondary: '#6B7280',
+          textSecondaryDark: '#94A3B8',
+          textMuted: '#9CA3AF',
+          textMutedDark: '#64748B',
+          accent: '#ec4899',
+          accentSecondary: '#f97316',
+          border: '#E5E7EB',
+          borderDark: 'rgba(255, 255, 255, 0.1)',
+          error: '#EF4444',
+          success: '#10B981',
+          warning: '#F59E0B',
+          navBar: '#FFFFFF',
+          navBarDark: '#1a0b2e',
         },
       },
       fontFamily: {
