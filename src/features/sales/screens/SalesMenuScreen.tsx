@@ -52,6 +52,10 @@ export function SalesMenuScreen(): React.ReactElement {
     router.push("/(tabs)/sales/orders/waiting-approvals");
   }, [router]);
 
+  const handleSalesKpiPress = useCallback(() => {
+    router.push("/(tabs)/sales/sales-kpi");
+  }, [router]);
+
   return (
     <>
       <StatusBar style="light" />
@@ -115,6 +119,12 @@ export function SalesMenuScreen(): React.ReactElement {
             description={t("sales.orderWaitingApprovalsDesc")}
             icon="⏳"
             onPress={handleOrderWaitingApprovalsPress}
+          />
+          <MenuCard
+            title={t("salesman360.title")}
+            description={t("salesman360.subtitle")}
+            icon="📊"
+            onPress={handleSalesKpiPress}
           />
         </ScrollView>
       </View>

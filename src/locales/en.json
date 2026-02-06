@@ -871,5 +871,57 @@
       "Rejected": "Rejected",
       "Completed": "Completed"
     }
+  },
+  "salesman360": {
+    "title": "Sales KPI",
+    "subtitle": "Sales representative summary",
+    "notFound": "User not found",
+    "error": "An error occurred while loading the summary",
+    "retry": "Retry",
+    "tabs": {
+      "overview": "Overview",
+      "analytics": "Analytics"
+    },
+    "kpi": {
+      "totalDemands": "Total Demands",
+      "totalQuotations": "Total Quotations",
+      "totalOrders": "Total Orders",
+      "totalActivities": "Total Activities",
+      "totalDemandAmount": "Total Demand Amount",
+      "totalQuotationAmount": "Total Quotation Amount",
+      "totalOrderAmount": "Total Order Amount"
+    },
+    "currencyFilter": {
+      "label": "Currency",
+      "all": "All"
+    },
+    "currencyTotals": {
+      "title": "Totals by currency",
+      "currency": "Currency",
+      "demandAmount": "Demand amount",
+      "quotationAmount": "Quotation amount",
+      "orderAmount": "Order amount"
+    },
+    "analytics": {
+      "last12MonthsOrderAmount": "Last 12 Months Order Amount",
+      "openQuotationAmount": "Open Quotation Amount",
+      "openOrderAmount": "Open Order Amount",
+      "activityCount": "Activity Count",
+      "lastActivityDate": "Last Activity Date",
+      "error": "Failed to load analytics data",
+      "allCurrencies": "All currencies",
+      "selectedCurrency": "Selected"
+    },
+    "analyticsCharts": {
+      "distributionTitle": "Transaction Distribution",
+      "monthlyTrendTitle": "Monthly Trend",
+      "amountComparisonTitle": "Amount Comparison",
+      "demand": "Demand",
+      "quotation": "Quotation",
+      "order": "Order",
+      "last12MonthsOrderAmount": "Last 12 Months Order Amount",
+      "openQuotationAmount": "Open Quotation Amount",
+      "openOrderAmount": "Open Order Amount"
+    }
   }
 }
