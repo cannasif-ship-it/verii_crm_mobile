@@ -833,6 +833,17 @@
       "openQuotations": "Open Quotations",
       "openOrders": "Open Orders"
     },
+    "currencyFilter": {
+      "label": "Currency",
+      "all": "All"
+    },
+    "currencyTotals": {
+      "title": "Totals by currency",
+      "currency": "Currency",
+      "demandAmount": "Demand amount",
+      "quotationAmount": "Quotation amount",
+      "orderAmount": "Order amount"
+    },
     "analytics": {
       "last12MonthsOrderAmount": "Last 12 Months Order Amount",
       "openQuotationAmount": "Open Quotation Amount",

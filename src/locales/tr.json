@@ -835,6 +835,17 @@
       "openQuotations": "Açık Teklifler",
       "openOrders": "Açık Siparişler"
     },
+    "currencyFilter": {
+      "label": "Para birimi",
+      "all": "Tümü"
+    },
+    "currencyTotals": {
+      "title": "Para birimine göre toplamlar",
+      "currency": "Para birimi",
+      "demandAmount": "Talep tutarı",
+      "quotationAmount": "Teklif tutarı",
+      "orderAmount": "Sipariş tutarı"
+    },
     "analytics": {
       "last12MonthsOrderAmount": "Son 12 Ay Sipariş Tutarı",
       "openQuotationAmount": "Açık Teklif Tutarı",
