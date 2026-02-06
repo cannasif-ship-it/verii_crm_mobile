@@ -263,12 +263,13 @@ export function CustomerFormScreen(): React.ReactElement {
           <Controller
             control={control}
             name="customerCode"
-            render={({ field: { onChange, value } }) => (
+            render={({ field: { value } }) => (
               <FormField
                 label={t("customer.customerCode")}
                 value={value || ""}
-                onChangeText={onChange}
+                onChangeText={() => {}}
                 maxLength={100}
+                editable={false}
               />
             )}
           />

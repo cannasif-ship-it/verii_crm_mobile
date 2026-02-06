@@ -14,7 +14,8 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
   const { colors } = useUIStore();
   const { t } = useTranslation();
 
-  const getStatusColor = (status: string): string => {
+  const getStatusColor = (status?: string | null): string => {
+    if (status == null || typeof status !== "string") return colors.textMuted;
     const statusLower = status.toLowerCase().replace(/\s+/g, "");
     switch (statusLower) {
       case "completed":
@@ -33,7 +34,8 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
     }
   };
 
-  const getStatusText = (status: string): string => {
+  const getStatusText = (status?: string | null): string => {
+    if (status == null || typeof status !== "string") return "";
     const statusLower = status.toLowerCase().replace(/\s+/g, "");
     switch (statusLower) {
       case "completed":
@@ -65,8 +67,8 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
     }
   };
 
-  const getActivityTypeIcon = (activityType?: string): string => {
-    if (!activityType) return "📋";
+  const getActivityTypeIcon = (activityType?: string | null): string => {
+    if (activityType == null || typeof activityType !== "string") return "📋";
     const typeLower = activityType.toLowerCase().replace(/\s+/g, "");
     switch (typeLower) {
       case "call":
