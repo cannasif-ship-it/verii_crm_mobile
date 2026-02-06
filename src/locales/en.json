@@ -46,10 +46,16 @@
   "home": {
     "greeting": "Hello",
     "branch": "Branch",
+    "appName": "Verii CRM",
+    "tagline": "Focus on your business, we handle the rest.",
+    "quickAccess": "Quick access",
     "modules": "Modules",
     "recentActivity": "Recent Activity",
     "noActivity": "No activity yet",
-    "viewAll": "View All"
+    "viewAll": "View All",
+    "todayReceiving": "Today In",
+    "todayShipping": "Today Out",
+    "pendingTasks": "Pending"
   },
   "modules": {
     "customers": "Customers",

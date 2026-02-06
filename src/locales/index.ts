@@ -25,8 +25,11 @@ i18n.use(initReactI18next).init({
 
 export async function initLanguage(): Promise<void> {
   const savedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-  if (savedLanguage && (savedLanguage === "tr" || savedLanguage === "en")) {
+  if (savedLanguage === "tr" || savedLanguage === "en") {
     i18n.changeLanguage(savedLanguage);
+  } else {
+    i18n.changeLanguage("tr");
+    await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, "tr");
   }
 }
 

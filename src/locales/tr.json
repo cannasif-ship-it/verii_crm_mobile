@@ -46,10 +46,16 @@
   "home": {
     "greeting": "Merhaba",
     "branch": "Şube",
+    "appName": "Verii CRM",
+    "tagline": "İşinize odaklanın, geri kalanı bize bırakın.",
+    "quickAccess": "Hızlı erişim",
     "modules": "Modüller",
     "recentActivity": "Son İşlemler",
     "noActivity": "Henüz işlem yok",
-    "viewAll": "Tümünü Gör"
+    "viewAll": "Tümünü Gör",
+    "todayReceiving": "Bugün Giriş",
+    "todayShipping": "Bugün Çıkış",
+    "pendingTasks": "Bekleyen"
   },
   "modules": {
     "customers": "Müşteri İşlemleri",
