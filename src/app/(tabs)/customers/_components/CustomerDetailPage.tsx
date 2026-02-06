@@ -109,6 +109,12 @@ function CustomerDetailPage(): React.ReactElement {
     }
   }, [router, customer]);
 
+  const handleCustomer360Press = useCallback(() => {
+    if (customerId) {
+      router.push(`/(tabs)/customers/360/${customerId}`);
+    }
+  }, [router, customerId]);
+
   const handleDeletePress = useCallback(() => {
     Alert.alert(t("common.confirm"), t("customer.deleteConfirm"), [
       { text: t("common.cancel"), style: "cancel" },
@@ -264,6 +270,12 @@ function CustomerDetailPage(): React.ReactElement {
           rightElement={
             customer ? (
               <View style={styles.headerActions}>
+                <TouchableOpacity
+                  onPress={handleCustomer360Press}
+                  style={styles.headerButton}
+                >
+                  <Text style={styles.headerButtonText}>360</Text>
+                </TouchableOpacity>
                 <TouchableOpacity onPress={handleEditPress} style={styles.headerButton}>
                   <Text style={styles.headerButtonText}>✏️</Text>
                 </TouchableOpacity>
