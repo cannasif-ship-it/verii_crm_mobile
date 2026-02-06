@@ -16,10 +16,25 @@ import {
   useCustomer360AnalyticsSummary,
   useCustomer360AnalyticsCharts,
 } from "../hooks";
+import { CurrencyPicker } from "../components";
 import { Customer360OverviewTab } from "./Customer360OverviewTab";
 import { Customer360AnalyticsTab } from "./Customer360AnalyticsTab";
 
 type TabType = "overview" | "analytics";
+
+function collectCurrencyOptions(
+  summaryCurrencies: { currency: string }[],
+  chartsCurrencies: { currency?: string | null }[]
+): string[] {
+  const set = new Set<string>();
+  summaryCurrencies.forEach((r) => {
+    if (r.currency) set.add(r.currency);
+  });
+  chartsCurrencies.forEach((r) => {
+    if (r.currency) set.add(r.currency);
+  });
+  return Array.from(set).sort();
+}
 
 function isNotFoundError(error: Error | null): boolean {
   if (!error) return false;
@@ -33,6 +48,7 @@ export function Customer360Screen(): React.ReactElement {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors } = useUIStore();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
+  const [selectedCurrency, setSelectedCurrency] = useState<string>("ALL");
 
   const customerId = useMemo(() => {
     if (id == null || id === "") return undefined;
@@ -40,9 +56,20 @@ export function Customer360Screen(): React.ReactElement {
     return Number.isFinite(num) && num > 0 ? num : undefined;
   }, [id]);
 
-  const overviewQuery = useCustomer360Overview(customerId);
-  const summaryQuery = useCustomer360AnalyticsSummary(customerId);
-  const chartsQuery = useCustomer360AnalyticsCharts(customerId, 12);
+  const currencyParam = selectedCurrency === "ALL" ? null : selectedCurrency;
+  const overviewQuery = useCustomer360Overview(customerId, currencyParam);
+  const summaryQuery = useCustomer360AnalyticsSummary(customerId, currencyParam);
+  const chartsQuery = useCustomer360AnalyticsCharts(customerId, 12, currencyParam);
+
+  const currencyOptions = useMemo(() => {
+    const summary = summaryQuery.data?.totalsByCurrency ?? [];
+    const charts = chartsQuery.data?.amountComparisonByCurrency ?? [];
+    return collectCurrencyOptions(summary, charts);
+  }, [
+    summaryQuery.data?.totalsByCurrency,
+    chartsQuery.data?.amountComparisonByCurrency,
+  ]);
+  const isSingleCurrency = selectedCurrency !== "ALL";
 
   const invalidId = customerId == null;
   const notFound = overviewQuery.isError && isNotFoundError(overviewQuery.error);
@@ -87,6 +114,16 @@ export function Customer360Screen(): React.ReactElement {
               {subtitle}
             </Text>
           ) : null}
+          <View style={styles.currencySection}>
+            <CurrencyPicker
+              selectedCurrency={selectedCurrency}
+              currencyOptions={currencyOptions}
+              label={t("customer360.currencyFilter.label")}
+              allLabel={t("customer360.currencyFilter.all")}
+              colors={colors}
+              onSelect={setSelectedCurrency}
+            />
+          </View>
           <View style={[styles.tabBar, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <TouchableOpacity
               style={[
@@ -164,6 +201,7 @@ export function Customer360Screen(): React.ReactElement {
                 summary={summaryQuery.data}
                 charts={chartsQuery.data}
                 colors={colors}
+                isSingleCurrency={isSingleCurrency}
                 isSummaryLoading={summaryQuery.isLoading}
                 isChartsLoading={chartsQuery.isLoading}
                 summaryError={summaryQuery.isError ? summaryQuery.error ?? new Error(t("customer360.analytics.error")) : null}
@@ -189,6 +227,10 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 14,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  currencySection: {
     paddingHorizontal: 20,
     paddingTop: 12,
   },

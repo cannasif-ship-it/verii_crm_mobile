@@ -6,7 +6,25 @@ import type {
   Customer360AnalyticsChartsDto,
 } from "../types";
 
-const CUSTOMER_360_STALE_MS = 30 * 1000;
+const CUSTOMER_360_OVERVIEW_STALE_MS = 30 * 1000;
+const CUSTOMER_360_SUMMARY_STALE_MS = 30 * 1000;
+const CUSTOMER_360_CHARTS_STALE_MS = 45 * 1000;
+
+function buildConfig(currency: string | null): {
+  params?: { currency: string };
+  headers?: { "X-Currency": string; Currency: string };
+} {
+  if (currency == null || currency === "" || currency === "ALL") {
+    return {};
+  }
+  return {
+    params: { currency },
+    headers: {
+      "X-Currency": currency,
+      Currency: currency,
+    },
+  };
+}
 
 function getOverviewPath(customerId: number): string {
   return `/api/customers/${customerId}/overview`;
@@ -16,54 +34,67 @@ function getAnalyticsSummaryPath(customerId: number): string {
   return `/api/customers/${customerId}/analytics/summary`;
 }
 
-function getAnalyticsChartsPath(customerId: number, months: number): string {
+function getAnalyticsChartsPath(customerId: number): string {
   return `/api/customers/${customerId}/analytics/charts`;
 }
 
+function assertSuccess<T>(
+  response: { data: ApiResponse<T> & { data: T | null } },
+  fallbackMessage: string
+): T {
+  const body = response.data;
+  if (body.success !== true || body.data == null) {
+    const msg =
+      [body.message, body.exceptionMessage].filter(Boolean).join(" — ") ||
+      fallbackMessage;
+    throw new Error(msg);
+  }
+  return body.data;
+}
+
 export const customer360Api = {
-  getOverview: async (customerId: number): Promise<Customer360OverviewDto> => {
-    const response = await apiClient.get<ApiResponse<Customer360OverviewDto>>(
-      getOverviewPath(customerId)
-    );
-    if (!response.data.success) {
-      const msg =
-        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
-        "Özet yüklenemedi";
-      throw new Error(msg);
-    }
-    return response.data.data;
+  getOverview: async (
+    customerId: number,
+    currency: string | null
+  ): Promise<Customer360OverviewDto> => {
+    const config = buildConfig(currency);
+    const response = await apiClient.get<
+      ApiResponse<Customer360OverviewDto> & { data: Customer360OverviewDto | null }
+    >(getOverviewPath(customerId), config);
+    return assertSuccess(response, "Özet yüklenemedi");
   },
 
   getAnalyticsSummary: async (
-    customerId: number
+    customerId: number,
+    currency: string | null
   ): Promise<Customer360AnalyticsSummaryDto> => {
+    const config = buildConfig(currency);
     const response = await apiClient.get<
-      ApiResponse<Customer360AnalyticsSummaryDto>
-    >(getAnalyticsSummaryPath(customerId));
-    if (!response.data.success) {
-      const msg =
-        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
-        "Analitik özet yüklenemedi";
-      throw new Error(msg);
-    }
-    return response.data.data;
+      ApiResponse<Customer360AnalyticsSummaryDto> & {
+        data: Customer360AnalyticsSummaryDto | null;
+      }
+    >(getAnalyticsSummaryPath(customerId), config);
+    return assertSuccess(response, "Analitik özet yüklenemedi");
   },
 
   getAnalyticsCharts: async (
     customerId: number,
-    months: number = 12
+    months: number,
+    currency: string | null
   ): Promise<Customer360AnalyticsChartsDto> => {
+    const config = buildConfig(currency);
+    const params = { months, ...(config.params ?? {}) };
     const response = await apiClient.get<
-      ApiResponse<Customer360AnalyticsChartsDto>
-    >(getAnalyticsChartsPath(customerId, months), { params: { months } });
-    if (!response.data.success) {
-      const msg =
-        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
-        "Grafik verisi yüklenemedi";
-      throw new Error(msg);
-    }
-    return response.data.data;
+      ApiResponse<Customer360AnalyticsChartsDto> & {
+        data: Customer360AnalyticsChartsDto | null;
+      }
+    >(getAnalyticsChartsPath(customerId), { ...config, params });
+    return assertSuccess(response, "Grafik verisi yüklenemedi");
   },
 };
 
-export { CUSTOMER_360_STALE_MS };
+export {
+  CUSTOMER_360_OVERVIEW_STALE_MS,
+  CUSTOMER_360_SUMMARY_STALE_MS,
+  CUSTOMER_360_CHARTS_STALE_MS,
+};

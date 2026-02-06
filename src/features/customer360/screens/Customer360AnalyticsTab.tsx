@@ -4,6 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import {
   KpiCard,
+  CurrencyTotalsTable,
+  AmountComparisonTable,
   DistributionPieChart,
   MonthlyTrendLineChart,
   AmountComparisonBarChart,
@@ -11,12 +13,14 @@ import {
 import type {
   Customer360AnalyticsSummaryDto,
   Customer360AnalyticsChartsDto,
+  Customer360CurrencyAmountDto,
 } from "../types";
 
 interface Customer360AnalyticsTabProps {
   summary: Customer360AnalyticsSummaryDto | undefined;
   charts: Customer360AnalyticsChartsDto | undefined;
   colors: Record<string, string>;
+  isSingleCurrency: boolean;
   isSummaryLoading: boolean;
   isChartsLoading: boolean;
   summaryError: Error | null;
@@ -47,16 +51,22 @@ export function Customer360AnalyticsTab({
   summary,
   charts,
   colors,
+  isSingleCurrency,
   summaryError,
   chartsError,
 }: Customer360AnalyticsTabProps): React.ReactElement {
   const { t, i18n } = useTranslation();
   const locale = i18n.language === "tr" ? "tr-TR" : "en-US";
-
   const formatAmountCb = useCallback(
     (v: number) => formatAmount(v, locale),
     [locale]
   );
+
+  const noDataKey = t("common.noData");
+  const totalsByCurrency: Customer360CurrencyAmountDto[] =
+    summary?.totalsByCurrency ?? [];
+  const amountComparisonByCurrency =
+    charts?.amountComparisonByCurrency ?? [];
 
   if (summaryError) {
     return (
@@ -68,67 +78,90 @@ export function Customer360AnalyticsTab({
     );
   }
 
-  const last12 = summary?.last12MonthsOrderAmount ?? 0;
-  const openQuot = summary?.openQuotationAmount ?? 0;
-  const openOrd = summary?.openOrderAmount ?? 0;
-  const activityCount = summary?.activityCount ?? 0;
-  const lastActivityDate = formatDateOnly(
-    summary?.lastActivityDate,
-    locale
-  );
-
   return (
     <ScrollView
       style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-            {t("customer360.analytics.last12MonthsOrderAmount")}
-          </Text>
-          <Text style={[styles.summaryValue, { color: colors.text }]}>
-            {formatAmountCb(last12)}
-          </Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-            {t("customer360.analytics.openQuotationAmount")}
-          </Text>
-          <Text style={[styles.summaryValue, { color: colors.text }]}>
-            {formatAmountCb(openQuot)}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-            {t("customer360.analytics.openOrderAmount")}
-          </Text>
-          <Text style={[styles.summaryValue, { color: colors.text }]}>
-            {formatAmountCb(openOrd)}
-          </Text>
-        </View>
-        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-            {t("customer360.analytics.activityCount")}
-          </Text>
-          <Text style={[styles.summaryValue, { color: colors.text }]}>
-            {activityCount}
-          </Text>
-        </View>
-      </View>
-      <View style={styles.summaryRow}>
-        <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-          <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-            {t("customer360.analytics.lastActivityDate")}
-          </Text>
-          <Text style={[styles.summaryValue, { color: colors.text }]}>
-            {lastActivityDate}
-          </Text>
-        </View>
-      </View>
+      {isSingleCurrency ? (
+        <>
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
+                {t("customer360.analytics.last12MonthsOrderAmount")}
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {formatAmountCb(summary?.last12MonthsOrderAmount ?? 0)}
+              </Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
+                {t("customer360.analytics.openQuotationAmount")}
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {formatAmountCb(summary?.openQuotationAmount ?? 0)}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
+                {t("customer360.analytics.openOrderAmount")}
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {formatAmountCb(summary?.openOrderAmount ?? 0)}
+              </Text>
+            </View>
+            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
+                {t("customer360.analytics.activityCount")}
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {summary?.activityCount ?? 0}
+              </Text>
+            </View>
+          </View>
+          <View style={styles.summaryRow}>
+            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
+                {t("customer360.analytics.lastActivityDate")}
+              </Text>
+              <Text style={[styles.summaryValue, { color: colors.text }]}>
+                {formatDateOnly(summary?.lastActivityDate, locale)}
+              </Text>
+            </View>
+          </View>
+        </>
+      ) : (
+        totalsByCurrency.length > 0 && (
+          <CurrencyTotalsTable
+            items={totalsByCurrency}
+            colors={colors}
+            formatAmount={formatAmountCb}
+            title={t("customer360.currencyTotals.title")}
+            currencyLabel={t("customer360.currencyTotals.currency")}
+            demandAmountLabel={t("customer360.currencyTotals.demandAmount")}
+            quotationAmountLabel={t("customer360.currencyTotals.quotationAmount")}
+            orderAmountLabel={t("customer360.currencyTotals.orderAmount")}
+            noDataKey={noDataKey}
+          />
+        )
+      )}
+
+      {amountComparisonByCurrency.length > 0 ? (
+        <AmountComparisonTable
+          items={amountComparisonByCurrency}
+          colors={colors}
+          formatAmount={formatAmountCb}
+          title={t("customer360.analyticsCharts.amountComparisonTitle")}
+          currencyLabel={t("customer360.currencyTotals.currency")}
+          last12Label={t("customer360.analyticsCharts.last12MonthsOrderAmount")}
+          openQuotationLabel={t("customer360.analyticsCharts.openQuotationAmount")}
+          openOrderLabel={t("customer360.analyticsCharts.openOrderAmount")}
+          noDataKey={noDataKey}
+        />
+      ) : null}
 
       {chartsError ? (
         <View style={styles.chartError}>
@@ -142,9 +175,15 @@ export function Customer360AnalyticsTab({
             {t("customer360.analyticsCharts.distributionTitle")}
           </Text>
           <DistributionPieChart
-            data={charts?.distribution ?? { demandCount: 0, quotationCount: 0, orderCount: 0 }}
+            data={
+              charts?.distribution ?? {
+                demandCount: 0,
+                quotationCount: 0,
+                orderCount: 0,
+              }
+            }
             colors={colors}
-            noDataKey={t("common.noData")}
+            noDataKey={noDataKey}
             demandLabel={t("customer360.analyticsCharts.demand")}
             quotationLabel={t("customer360.analyticsCharts.quotation")}
             orderLabel={t("customer360.analyticsCharts.order")}
@@ -155,29 +194,33 @@ export function Customer360AnalyticsTab({
           <MonthlyTrendLineChart
             data={charts?.monthlyTrend ?? []}
             colors={colors}
-            noDataKey={t("common.noData")}
+            noDataKey={noDataKey}
             demandLabel={t("customer360.analyticsCharts.demand")}
             quotationLabel={t("customer360.analyticsCharts.quotation")}
             orderLabel={t("customer360.analyticsCharts.order")}
           />
-          <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t("customer360.analyticsCharts.amountComparisonTitle")}
-          </Text>
-          <AmountComparisonBarChart
-            data={
-              charts?.amountComparison ?? {
-                last12MonthsOrderAmount: 0,
-                openQuotationAmount: 0,
-                openOrderAmount: 0,
-              }
-            }
-            colors={colors}
-            noDataKey={t("common.noData")}
-            last12Label={t("customer360.analyticsCharts.last12MonthsOrderAmount")}
-            openQuotationLabel={t("customer360.analyticsCharts.openQuotationAmount")}
-            openOrderLabel={t("customer360.analyticsCharts.openOrderAmount")}
-            formatAmount={formatAmountCb}
-          />
+          {isSingleCurrency ? (
+            <>
+              <Text style={[styles.chartTitle, { color: colors.text }]}>
+                {t("customer360.analyticsCharts.amountComparisonTitle")}
+              </Text>
+              <AmountComparisonBarChart
+                data={
+                  charts?.amountComparison ?? {
+                    last12MonthsOrderAmount: 0,
+                    openQuotationAmount: 0,
+                    openOrderAmount: 0,
+                  }
+                }
+                colors={colors}
+                noDataKey={noDataKey}
+                last12Label={t("customer360.analyticsCharts.last12MonthsOrderAmount")}
+                openQuotationLabel={t("customer360.analyticsCharts.openQuotationAmount")}
+                openOrderLabel={t("customer360.analyticsCharts.openOrderAmount")}
+                formatAmount={formatAmountCb}
+              />
+            </>
+          ) : null}
         </>
       )}
     </ScrollView>

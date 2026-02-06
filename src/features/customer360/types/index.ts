@@ -43,12 +43,21 @@ export interface Customer360OverviewDto {
   timeline: Customer360TimelineItemDto[];
 }
 
+export interface Customer360CurrencyAmountDto {
+  currency: string;
+  demandAmount: number;
+  quotationAmount: number;
+  orderAmount: number;
+}
+
 export interface Customer360AnalyticsSummaryDto {
+  currency?: string | null;
   last12MonthsOrderAmount: number;
   openQuotationAmount: number;
   openOrderAmount: number;
   lastActivityDate?: string | null;
   activityCount: number;
+  totalsByCurrency?: Customer360CurrencyAmountDto[];
 }
 
 export interface Customer360MonthlyTrendItemDto {
@@ -65,6 +74,7 @@ export interface Customer360DistributionDto {
 }
 
 export interface Customer360AmountComparisonDto {
+  currency?: string | null;
   last12MonthsOrderAmount: number;
   openQuotationAmount: number;
   openOrderAmount: number;
@@ -74,4 +84,5 @@ export interface Customer360AnalyticsChartsDto {
   monthlyTrend: Customer360MonthlyTrendItemDto[];
   distribution: Customer360DistributionDto;
   amountComparison: Customer360AmountComparisonDto;
+  amountComparisonByCurrency?: Customer360AmountComparisonDto[];
 }
