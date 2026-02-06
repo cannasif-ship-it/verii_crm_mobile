@@ -48,7 +48,6 @@ import {
 import {
   ExchangeRateDialog,
   PickerModal,
-  CustomerSelectDialog,
   DocumentSerialTypePicker,
   OfferTypePicker,
   OrderLineForm,
@@ -56,9 +55,10 @@ import {
   ProductPicker,
   RejectModal,
 } from "../components";
+import { CustomerSelectDialog, type CustomerSelectionResult } from "../../customer";
+import type { CustomerDto } from "../../customer/types";
 import { ReportTab, DocumentRuleType } from "../../quotation";
 import { createOrderSchema, type CreateOrderSchema } from "../schemas";
-import type { CustomerDto } from "../../customer/types";
 import type {
   OrderLineFormState,
   OrderExchangeRateFormState,
@@ -293,16 +293,14 @@ export function OrderDetailScreen(): React.ReactElement {
   }, [lines.length, clearErrors]);
 
   const handleCustomerSelect = useCallback(
-    (result: { customerId?: number; erpCustomerCode?: string }) => {
-      if (result.customerId) {
-        setValue("order.potentialCustomerId", result.customerId);
-        setValue("order.erpCustomerCode", null);
-        setSelectedCustomer(undefined);
-      } else if (result.erpCustomerCode) {
-        setValue("order.erpCustomerCode", result.erpCustomerCode);
-        setValue("order.potentialCustomerId", null);
-        setSelectedCustomer(undefined);
-      }
+    (result: CustomerSelectionResult) => {
+      setValue("order.potentialCustomerId", result.customerId);
+      setValue("order.erpCustomerCode", result.erpCustomerCode ?? null);
+      setSelectedCustomer({
+        id: result.customerId,
+        name: result.customerName,
+        customerCode: result.erpCustomerCode,
+      } as CustomerDto);
     },
     [setValue]
   );

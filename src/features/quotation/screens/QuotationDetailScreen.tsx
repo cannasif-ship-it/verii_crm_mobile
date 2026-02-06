@@ -48,7 +48,6 @@ import {
 import {
   ExchangeRateDialog,
   PickerModal,
-  CustomerSelectDialog,
   DocumentSerialTypePicker,
   OfferTypePicker,
   QuotationLineForm,
@@ -57,8 +56,9 @@ import {
   ProductPicker,
   RejectModal,
 } from "../components";
-import { createQuotationSchema, type CreateQuotationSchema } from "../schemas";
+import { CustomerSelectDialog, type CustomerSelectionResult } from "../../customer";
 import type { CustomerDto } from "../../customer/types";
+import { createQuotationSchema, type CreateQuotationSchema } from "../schemas";
 import type {
   QuotationLineFormState,
   QuotationExchangeRateFormState,
@@ -293,16 +293,14 @@ export function QuotationDetailScreen(): React.ReactElement {
   }, [lines.length, clearErrors]);
 
   const handleCustomerSelect = useCallback(
-    (result: { customerId?: number; erpCustomerCode?: string }) => {
-      if (result.customerId) {
-        setValue("quotation.potentialCustomerId", result.customerId);
-        setValue("quotation.erpCustomerCode", null);
-        setSelectedCustomer(undefined);
-      } else if (result.erpCustomerCode) {
-        setValue("quotation.erpCustomerCode", result.erpCustomerCode);
-        setValue("quotation.potentialCustomerId", null);
-        setSelectedCustomer(undefined);
-      }
+    (result: CustomerSelectionResult) => {
+      setValue("quotation.potentialCustomerId", result.customerId);
+      setValue("quotation.erpCustomerCode", result.erpCustomerCode ?? null);
+      setSelectedCustomer({
+        id: result.customerId,
+        name: result.customerName,
+        customerCode: result.erpCustomerCode,
+      } as CustomerDto);
     },
     [setValue]
   );

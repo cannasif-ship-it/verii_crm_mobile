@@ -10,7 +10,6 @@ export { QuotationLineForm } from "./QuotationLineForm";
 export { ExchangeRateDialog } from "./ExchangeRateDialog";
 export { RelatedStocksSelectDialog } from "./RelatedStocksSelectDialog";
 export { PickerModal } from "./PickerModal";
-export { CustomerSelectDialog } from "./CustomerSelectDialog";
 export { DocumentSerialTypePicker } from "./DocumentSerialTypePicker";
 export { OfferTypePicker } from "./OfferTypePicker";
 export { VoiceSearchButton } from "./VoiceSearchButton";

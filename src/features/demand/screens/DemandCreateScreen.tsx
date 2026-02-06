@@ -44,13 +44,13 @@ import {
   DemandLineForm,
   ExchangeRateDialog,
   PickerModal,
-  CustomerSelectDialog,
   DocumentSerialTypePicker,
   OfferTypePicker,
   ProductPicker,
 } from "../components";
-import { createDemandSchema, type CreateDemandSchema } from "../schemas";
+import { CustomerSelectDialog, type CustomerSelectionResult } from "../../customer";
 import type { CustomerDto } from "../../customer/types";
+import { createDemandSchema, type CreateDemandSchema } from "../schemas";
 import type {
   DemandLineFormState,
   DemandExchangeRateFormState,
@@ -215,16 +215,14 @@ export function DemandCreateScreen(): React.ReactElement {
   const totals = useMemo(() => calculateTotals(lines), [lines]);
 
   const handleCustomerSelect = useCallback(
-    (result: { customerId?: number; erpCustomerCode?: string }) => {
-      if (result.customerId) {
-        setValue("demand.potentialCustomerId", result.customerId);
-        setValue("demand.erpCustomerCode", null);
-        setSelectedCustomer(undefined);
-      } else if (result.erpCustomerCode) {
-        setValue("demand.erpCustomerCode", result.erpCustomerCode);
-        setValue("demand.potentialCustomerId", null);
-        setSelectedCustomer(undefined);
-      }
+    (result: CustomerSelectionResult) => {
+      setValue("demand.potentialCustomerId", result.customerId);
+      setValue("demand.erpCustomerCode", result.erpCustomerCode ?? null);
+      setSelectedCustomer({
+        id: result.customerId,
+        name: result.customerName,
+        customerCode: result.erpCustomerCode,
+      } as CustomerDto);
     },
     [setValue]
   );
