@@ -1,145 +1,103 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View } from "react-native";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import type { ActivityItem as ActivityItemType } from "../types";
-
-// HugeIcons Importları
-import { 
-  PackageIcon,          // receiving
-  ClipboardIcon,        // inventory
-  ArrowDataTransferHorizontalIcon,   // transfer
-  TruckIcon,            // shipping
-  Location01Icon,       // putaway
-  HandPointingDown01Icon,   // picking
-  CheckmarkCircle02Icon // fallback
+import {
+  PackageIcon,
+  ClipboardIcon,
+  ArrowDataTransferHorizontalIcon,
+  TruckIcon,
+  Location01Icon,
+  HandPointingDown01Icon,
+  CheckmarkCircle02Icon,
 } from "hugeicons-react-native";
 
 interface ActivityItemProps {
   item: ActivityItemType;
 }
 
-// Tip eşleşmeleri için ikon haritası
 const getIcon = (type: string) => {
   switch (type) {
-    case 'receiving': return PackageIcon;
-    case 'inventory': return ClipboardIcon;
-    case 'transfer': return ArrowDataTransferHorizontalIcon;
-    case 'shipping': return TruckIcon;
-    case 'putaway': return Location01Icon;
-    case 'picking': return HandPointingDown01Icon;
-    default: return CheckmarkCircle02Icon;
+    case "receiving":
+      return PackageIcon;
+    case "inventory":
+      return ClipboardIcon;
+    case "transfer":
+      return ArrowDataTransferHorizontalIcon;
+    case "shipping":
+      return TruckIcon;
+    case "putaway":
+      return Location01Icon;
+    case "picking":
+      return HandPointingDown01Icon;
+    default:
+      return CheckmarkCircle02Icon;
   }
 };
 
-// İkon renkleri
-const getIconColor = (type: string) => {
+const getIconColor = (type: string): string => {
   switch (type) {
-    case 'receiving': return "#3B82F6"; // Mavi
-    case 'shipping': return "#F59E0B";  // Turuncu
-    case 'inventory': return "#8B5CF6"; // Mor
-    case 'transfer': return "#10B981";  // Yeşil
-    default: return "#6B7280";          // Gri
+    case "receiving":
+      return "#3B82F6";
+    case "shipping":
+      return "#F59E0B";
+    case "inventory":
+      return "#8B5CF6";
+    case "transfer":
+      return "#10B981";
+    default:
+      return "#6B7280";
   }
 };
 
 function formatTime(timestamp: string): string {
   const date = new Date(timestamp);
-  return date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" });
+  return date.toLocaleTimeString("tr-TR", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 export function ActivityItem({ item }: ActivityItemProps): React.ReactElement {
-  const { colors, themeMode } = useUIStore();
-
-  const containerBackground = colors.card;
-  const iconContainerBackground = themeMode === "dark" ? "rgba(255, 255, 255, 0.05)" : "#F3F4F6";
-
+  const { colors } = useUIStore();
   const IconComponent = getIcon(item.type);
   const iconColor = getIconColor(item.type);
+  const statusColor =
+    item.status === "completed"
+      ? colors.success
+      : item.status === "pending"
+        ? colors.warning
+        : colors.error;
 
   return (
-    <View
-      style={[
-        styles.container,
-        { 
-          backgroundColor: containerBackground, 
-          borderColor: colors.border 
-        },
-      ]}
-    >
-      <View style={[styles.iconContainer, { backgroundColor: iconContainerBackground }]}>
-        <IconComponent size={20} color={iconColor}  />
+    <View className="flex-row items-center rounded-2xl mb-3 border border-app-border dark:border-app-borderDark bg-app-card dark:bg-app-cardDark overflow-hidden">
+      <View className="w-11 h-11 rounded-xl items-center justify-center ml-4 my-3.5 mr-3.5 bg-app-backgroundSecondary dark:bg-white/5">
+        <IconComponent size={20} color={iconColor} />
       </View>
-      
-      <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]}>{item.title}</Text>
-        <Text style={[styles.description, { color: colors.textSecondary }]}>
+      <View className="flex-1 min-w-0 py-3.5 pr-4">
+        <Text
+          className="text-[14px] font-semibold text-app-text dark:text-app-textDark mb-0.5"
+          numberOfLines={1}
+        >
+          {item.title}
+        </Text>
+        <Text
+          className="text-[12px] leading-4 text-app-textSecondary dark:text-app-textSecondaryDark"
+          numberOfLines={1}
+        >
           {item.description}
         </Text>
       </View>
-      
-      <View style={styles.meta}>
-        <Text style={[styles.time, { color: colors.textMuted }]}>
+      <View className="items-end justify-center pr-4 py-3.5">
+        <Text className="text-[11px] text-app-textMuted dark:text-app-textMutedDark mb-1.5">
           {formatTime(item.timestamp)}
         </Text>
         <View
-          style={[
-            styles.statusDot,
-            {
-              backgroundColor:
-                item.status === "completed"
-                  ? colors.success
-                  : item.status === "pending"
-                  ? colors.warning
-                  : colors.error,
-            },
-          ]}
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: statusColor }}
         />
       </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 16, // Daha yuvarlak köşeler
-    marginBottom: 8,
-    borderWidth: 1,
-  },
-  iconContainer: {
-    width: 40,
-    height: 40,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
-  content: {
-    flex: 1,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 2,
-  },
-  description: {
-    fontSize: 12,
-  },
-  meta: {
-    alignItems: "flex-end",
-  },
-  time: {
-    fontSize: 11,
-    marginBottom: 6,
-    fontWeight: "500",
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-});
