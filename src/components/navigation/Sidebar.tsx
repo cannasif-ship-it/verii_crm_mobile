@@ -132,10 +132,7 @@ export function Sidebar(): React.ReactElement {
     opacity: backdropOpacity.value,
   }));
 
-  if (!isSidebarOpen && translateX.value === -SIDEBAR_WIDTH) {
-    return <View />;
-  }
-  
+  if (!isSidebarOpen) return <View />;
   if (isAuthScreen) return <View />;
 
   const sidebarHeight = height - insets.top;
@@ -148,117 +145,137 @@ export function Sidebar(): React.ReactElement {
       onRequestClose={closeSidebar}
       statusBarTranslucent
     >
-      <View style={styles.overlay}>
+      <View className="flex-1 justify-start">
         <Pressable style={StyleSheet.absoluteFill} onPress={closeSidebar}>
-          <AnimatedBlurView 
-            intensity={Platform.OS === 'android' ? 100 : 30} 
+          <AnimatedBlurView
+            intensity={Platform.OS === "android" ? 100 : 30}
             tint="dark"
-            style={[StyleSheet.absoluteFill, backdropStyle]} 
+            style={[StyleSheet.absoluteFill, backdropStyle]}
           />
         </Pressable>
 
         <Animated.View
           style={[
-            styles.container,
-            { 
+            {
               width: SIDEBAR_WIDTH,
-              marginTop: insets.top, 
+              marginTop: insets.top,
               height: sidebarHeight,
-              backgroundColor: colors.background, 
+              backgroundColor: colors.background,
               borderRightColor: colors.border,
+              borderRightWidth: 1,
+              borderTopRightRadius: 24,
+              borderBottomRightRadius: 0,
+              shadowColor: "#000",
+              shadowOffset: { width: 5, height: 0 },
+              shadowOpacity: 0.2,
+              shadowRadius: 15,
+              elevation: 20,
+              overflow: "hidden",
+              justifyContent: "space-between",
             },
             animatedStyle,
           ]}
         >
-          {/* Header */}
-          <View style={styles.header}>
-            <View style={styles.userInfo}>
+          <View className="flex-row items-center justify-between px-4 pt-6 pb-5">
+            <View className="flex-row items-center flex-1 mr-2 min-w-0">
               <LinearGradient
                 colors={GRADIENT.primary}
-                style={styles.avatarPlaceholder}
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: 22,
+                  alignItems: "center",
+                  justifyContent: "center",
+                  marginRight: 12,
+                }}
               >
-                <Text style={styles.avatarText}>
+                <Text className="text-white text-base font-bold">
                   {getInitials(user?.name || "")}
                 </Text>
               </LinearGradient>
-              
-              <View style={styles.userDetails}>
-                <Text style={[styles.userName, { color: colors.text }]} numberOfLines={1}>
+              <View className="flex-1 justify-center min-w-0">
+                <Text
+                  className="text-base font-bold mb-0.5"
+                  style={{ color: colors.text }}
+                  numberOfLines={1}
+                >
                   {user?.name || t("common.guest", "Misafir")}
                 </Text>
-                <Text style={[styles.userEmail, { color: colors.textSecondary }]} numberOfLines={1}>
+                <Text
+                  className="text-xs"
+                  style={{ color: colors.textSecondary }}
+                  numberOfLines={1}
+                >
                   {user?.email || ""}
                 </Text>
               </View>
             </View>
-            
-            <TouchableOpacity 
-              onPress={closeSidebar} 
-              style={[styles.closeButton, { backgroundColor: colors.card }]}
+            <TouchableOpacity
+              onPress={closeSidebar}
+              className="p-2 rounded-full"
+              style={{ backgroundColor: colors.card }}
             >
               <Cancel01Icon size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View className="h-px w-full opacity-10" style={{ backgroundColor: colors.border }} />
 
-          {/* MENÜ LİSTESİ */}
-          <ScrollView 
-            style={styles.scrollView} 
-            contentContainerStyle={styles.scrollContent}
+          <ScrollView
+            className="flex-1"
+            contentContainerStyle={{ paddingVertical: 10, paddingHorizontal: 16 }}
             showsVerticalScrollIndicator={false}
           >
             {MENU_ITEMS.map((item, index) => {
               if (item.isHeader) {
                 return (
-                  <Text 
-                    key={`header-${index}`} 
-                    // HEADER COLOR BURADA UYGULANIYOR
-                    style={[styles.menuHeader, { color: HEADER_COLOR }]}
+                  <Text
+                    key={`header-${index}`}
+                    className="text-xs font-extrabold uppercase mt-6 mb-2 ml-3 tracking-wider"
+                    style={{ color: HEADER_COLOR }}
                   >
                     {item.title}
                   </Text>
                 );
               }
-
               return (
                 <Pressable
                   key={item.key}
                   onPress={() => item.route && handleNavigation(item.route)}
                   style={({ pressed }) => [
-                    styles.menuItemContainer,
-                    pressed && { backgroundColor: ACTIVE_BG_COLOR } 
+                    { marginBottom: 4, borderRadius: 12, overflow: "hidden" },
+                    pressed && { backgroundColor: ACTIVE_BG_COLOR },
                   ]}
                 >
                   {({ pressed }) => (
-                    <View style={styles.menuRowLayout}>
-                      <View style={[
-                        styles.iconContainer, 
-                        { backgroundColor: pressed ? 'transparent' : colors.card }
-                      ]}>
+                    <View className="flex-row items-center py-3 px-3">
+                      <View
+                        className="w-9 h-9 rounded-[10px] items-center justify-center mr-3.5"
+                        style={{
+                          backgroundColor: pressed ? "transparent" : colors.card,
+                        }}
+                      >
                         {item.icon && (
-                          <item.icon 
-                            size={20} 
-                            color={pressed ? ACTIVE_COLOR : colors.text} 
-                            strokeWidth={pressed ? 2.5 : 1.5} 
+                          <item.icon
+                            size={20}
+                            color={pressed ? ACTIVE_COLOR : colors.text}
+                            strokeWidth={pressed ? 2.5 : 1.5}
                           />
                         )}
                       </View>
-                      
-                      <Text style={[
-                        styles.menuText, 
-                        { 
+                      <Text
+                        className="flex-1 text-[15px]"
+                        style={{
                           color: pressed ? ACTIVE_COLOR : colors.text,
-                          fontWeight: pressed ? "700" : "500" 
-                        }
-                      ]}>
+                          fontWeight: pressed ? "700" : "500",
+                        }}
+                      >
                         {item.title}
                       </Text>
-                      
-                      <ArrowRight01Icon 
-                        size={16} 
-                        color={pressed ? ACTIVE_COLOR : colors.textMuted} 
-                        style={{ opacity: pressed ? 1 : 0.5, marginLeft: 'auto' }}
+                      <ArrowRight01Icon
+                        size={16}
+                        color={pressed ? ACTIVE_COLOR : colors.textMuted}
+                        style={{ opacity: pressed ? 1 : 0.5, marginLeft: "auto" }}
                       />
                     </View>
                   )}
@@ -267,28 +284,35 @@ export function Sidebar(): React.ReactElement {
             })}
           </ScrollView>
 
-          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View className="h-px w-full opacity-10" style={{ backgroundColor: colors.border }} />
 
-          {/* ÇIKIŞ BUTONU */}
-          <View style={[styles.footer, { paddingBottom: Math.max(insets.bottom, 20) }]}>
+          <View
+            className="px-4 pt-2.5"
+            style={{ paddingBottom: Math.max(insets.bottom, 20) }}
+          >
             <Pressable
               style={({ pressed }) => [
-                styles.menuItemContainer,
-                pressed && { backgroundColor: 'rgba(239, 68, 68, 0.1)' }
+                { marginBottom: 4, borderRadius: 12, overflow: "hidden" },
+                pressed && { backgroundColor: "rgba(239, 68, 68, 0.1)" },
               ]}
               onPress={handleLogout}
             >
-              <View style={styles.menuRowLayout}>
-                <View style={[styles.iconContainer, { backgroundColor: 'rgba(239, 68, 68, 0.1)' }]}>
+              <View className="flex-row items-center py-3 px-3">
+                <View
+                  className="w-9 h-9 rounded-[10px] items-center justify-center mr-3.5"
+                  style={{ backgroundColor: "rgba(239, 68, 68, 0.1)" }}
+                >
                   <Logout01Icon size={20} color="#EF4444" />
                 </View>
-                <Text style={[styles.menuText, { color: '#EF4444', fontWeight: '600' }]}>
+                <Text className="flex-1 text-[15px] font-semibold text-app-error">
                   {t("auth.logout", "Çıkış Yap")}
                 </Text>
               </View>
             </Pressable>
-            
-            <Text style={[styles.versionText, { color: colors.textMuted }]}>
+            <Text
+              className="text-center text-[11px] mt-2.5 opacity-40"
+              style={{ color: colors.textMuted }}
+            >
               V3RII COMP.
             </Text>
           </View>
@@ -297,121 +321,3 @@ export function Sidebar(): React.ReactElement {
     </Modal>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    justifyContent: "flex-start",
-  },
-  container: {
-    borderRightWidth: 1,
-    borderTopRightRadius: 24, 
-    borderBottomRightRadius: 0,
-    shadowColor: "#000",
-    shadowOffset: { width: 5, height: 0 },
-    shadowOpacity: 0.2,
-    shadowRadius: 15,
-    elevation: 20,
-    overflow: 'hidden', 
-    justifyContent: 'space-between'
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
-    paddingTop: 24, 
-  },
-  userInfo: {
-    flexDirection: "row",
-    alignItems: "center",
-    flex: 1,
-    marginRight: 10,
-  },
-  avatarPlaceholder: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  avatarText: {
-    color: "#FFF",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
-  userDetails: {
-    justifyContent: "center",
-    flex: 1,
-  },
-  userName: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 2,
-  },
-  userEmail: {
-    fontSize: 12,
-  },
-  closeButton: {
-    padding: 8,
-    borderRadius: 20,
-  },
-  divider: {
-    height: 1,
-    width: "100%",
-    opacity: 0.1,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  scrollContent: {
-    paddingVertical: 10,
-    paddingHorizontal: 16,
-  },
-  menuHeader: {
-    fontSize: 12,       // Büyüttük (11 -> 12)
-    fontWeight: "800",  // Ekstra kalın
-    textTransform: "uppercase",
-    marginTop: 24,
-    marginBottom: 8,
-    marginLeft: 12,     // İkonla hizalı olması için sola kaydırdık
-    letterSpacing: 1,
-    // opacity: 0.6 SİLİNDİ, artık tam net.
-  },
-  menuItemContainer: {
-    marginBottom: 4,
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  menuRowLayout: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-  },
-  iconContainer: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
-  menuText: {
-    flex: 1,
-    fontSize: 15,
-    fontWeight: "500",
-  },
-  footer: {
-    paddingHorizontal: 16,
-    paddingTop: 10,
-  },
-  versionText: {
-    textAlign: "center",
-    fontSize: 11,
-    marginTop: 10,
-    opacity: 0.4,
-  },
-});
