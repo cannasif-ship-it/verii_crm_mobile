@@ -40,7 +40,8 @@
     "next": "Sonraki",
     "tabDetail": "Detay",
     "tabApprovalFlow": "Onay Akışı",
-    "tabReport": "Rapor"
+    "tabReport": "Rapor",
+    "noData": "Veri yok"
   },
   "home": {
     "greeting": "Merhaba",
@@ -812,5 +813,59 @@
     "deleteLineMessage": "Bu işlem geri alınamaz.",
     "deleteRelatedGroupTitle": "Bu satır grubunu silmek istediğinize emin misiniz?",
     "deleteRelatedGroupMessage": "{{count}} bağlı satır da silinecektir."
+  },
+  "customer360": {
+    "title": "Customer 360",
+    "subtitle": "Müşteri özeti ve aktiviteler",
+    "button": "Customer 360",
+    "tabs": {
+      "overview": "Genel Bakış",
+      "analytics": "Analitik"
+    },
+    "kpi": {
+      "totalDemands": "Toplam Talep",
+      "totalQuotations": "Toplam Teklif",
+      "totalOrders": "Toplam Sipariş",
+      "openQuotations": "Açık Teklifler",
+      "openOrders": "Açık Siparişler"
+    },
+    "analytics": {
+      "last12MonthsOrderAmount": "Son 12 Ay Sipariş Tutarı",
+      "openQuotationAmount": "Açık Teklif Tutarı",
+      "openOrderAmount": "Açık Sipariş Tutarı",
+      "activityCount": "Aktivite Sayısı",
+      "lastActivityDate": "Son Aktivite Tarihi",
+      "error": "Analitik verisi yüklenemedi"
+    },
+    "analyticsCharts": {
+      "distributionTitle": "İşlem Dağılımı",
+      "monthlyTrendTitle": "Aylık Trend",
+      "amountComparisonTitle": "Tutar Karşılaştırması",
+      "demand": "Talep",
+      "quotation": "Teklif",
+      "order": "Sipariş",
+      "last12MonthsOrderAmount": "Son 12 Ay Sipariş Tutarı",
+      "openQuotationAmount": "Açık Teklif Tutarı",
+      "openOrderAmount": "Açık Sipariş Tutarı"
+    },
+    "sections": {
+      "contacts": "İletişimler",
+      "shippingAddresses": "Teslimat Adresleri",
+      "recentDemands": "Son Talepler",
+      "recentQuotations": "Son Teklifler",
+      "recentOrders": "Son Siparişler",
+      "recentActivities": "Son Aktiviteler",
+      "timeline": "Zaman Çizelgesi"
+    },
+    "notFound": "Müşteri bulunamadı",
+    "error": "Özet yüklenirken bir hata oluştu",
+    "retry": "Tekrar Dene",
+    "status": {
+      "HavenotStarted": "Başlamadı",
+      "Waiting": "Beklemede",
+      "Approved": "Onaylandı",
+      "Rejected": "Reddedildi",
+      "Completed": "Tamamlandı"
+    }
   }
 }

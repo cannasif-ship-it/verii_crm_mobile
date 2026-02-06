@@ -40,7 +40,8 @@
     "next": "Next",
     "tabDetail": "Detail",
     "tabApprovalFlow": "Approval Flow",
-    "tabReport": "Report"
+    "tabReport": "Report",
+    "noData": "No data"
   },
   "home": {
     "greeting": "Hello",
@@ -810,5 +811,59 @@
     "deleteLineMessage": "This action cannot be undone.",
     "deleteRelatedGroupTitle": "Are you sure you want to delete this line group?",
     "deleteRelatedGroupMessage": "{{count}} related lines will also be deleted."
+  },
+  "customer360": {
+    "title": "Customer 360",
+    "subtitle": "Customer summary and activities",
+    "button": "Customer 360",
+    "tabs": {
+      "overview": "Overview",
+      "analytics": "Analytics"
+    },
+    "kpi": {
+      "totalDemands": "Total Demands",
+      "totalQuotations": "Total Quotations",
+      "totalOrders": "Total Orders",
+      "openQuotations": "Open Quotations",
+      "openOrders": "Open Orders"
+    },
+    "analytics": {
+      "last12MonthsOrderAmount": "Last 12 Months Order Amount",
+      "openQuotationAmount": "Open Quotation Amount",
+      "openOrderAmount": "Open Order Amount",
+      "activityCount": "Activity Count",
+      "lastActivityDate": "Last Activity Date",
+      "error": "Failed to load analytics data"
+    },
+    "analyticsCharts": {
+      "distributionTitle": "Transaction Distribution",
+      "monthlyTrendTitle": "Monthly Trend",
+      "amountComparisonTitle": "Amount Comparison",
+      "demand": "Demand",
+      "quotation": "Quotation",
+      "order": "Order",
+      "last12MonthsOrderAmount": "Last 12 Months Order Amount",
+      "openQuotationAmount": "Open Quotation Amount",
+      "openOrderAmount": "Open Order Amount"
+    },
+    "sections": {
+      "contacts": "Contacts",
+      "shippingAddresses": "Shipping Addresses",
+      "recentDemands": "Recent Demands",
+      "recentQuotations": "Recent Quotations",
+      "recentOrders": "Recent Orders",
+      "recentActivities": "Recent Activities",
+      "timeline": "Timeline"
+    },
+    "notFound": "Customer not found",
+    "error": "An error occurred while loading the summary",
+    "retry": "Retry",
+    "status": {
+      "HavenotStarted": "Not Started",
+      "Waiting": "Waiting",
+      "Approved": "Approved",
+      "Rejected": "Rejected",
+      "Completed": "Completed"
+    }
   }
 }
