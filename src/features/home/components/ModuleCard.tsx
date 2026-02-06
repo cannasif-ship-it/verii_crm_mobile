@@ -1,23 +1,26 @@
 import React from "react";
 import { TouchableOpacity, StyleSheet, View } from "react-native";
+import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
-import { SvgProps } from "react-native-svg";
+import type { Module } from "../types";
 
 interface ModuleCardProps {
-  title: string;
-  description: string;
-  // İkonu bileşen olarak alıyoruz
-  icon: React.FC<SvgProps & { size?: number; color?: string; variant?: "solid" | "stroke" | "duotone" }>;
-  color: string;
-  onPress: () => void;
+  module: Module;
+  onPress: (route: string) => void;
 }
 
-export function ModuleCard({ title, description, icon: Icon, color, onPress }: ModuleCardProps) {
+export function ModuleCard({ module, onPress }: ModuleCardProps): React.ReactElement {
+  const { t } = useTranslation();
   const { colors, themeMode } = useUIStore();
-
-  // İkon arka plan rengi (Opaklık ayarlı)
+  const title = t(`home.${module.key}`);
+  const description = t(`home.${module.key}Desc`);
+  const color = module.color;
   const iconBgColor = themeMode === "dark" ? `${color}25` : `${color}15`;
+
+  const handlePress = (): void => {
+    onPress(module.route);
+  };
 
   return (
     <TouchableOpacity
@@ -25,16 +28,15 @@ export function ModuleCard({ title, description, icon: Icon, color, onPress }: M
         styles.card,
         {
           backgroundColor: colors.card,
-          borderColor: colors.border, // cardBorder yerine border kullanıyoruz
+          borderColor: colors.border,
           shadowColor: themeMode === "dark" ? "#000" : "#000",
         }
       ]}
-      onPress={onPress}
+      onPress={handlePress}
       activeOpacity={0.7}
     >
       <View style={[styles.iconContainer, { backgroundColor: iconBgColor }]}>
-        {/* İkonu burada render ediyoruz */}
-        <Icon size={28} color={color} variant="solid" />
+        <Text style={styles.iconEmoji}>{module.icon}</Text>
       </View>
 
       <View style={styles.content}>
@@ -51,13 +53,12 @@ export function ModuleCard({ title, description, icon: Icon, color, onPress }: M
 
 const styles = StyleSheet.create({
   card: {
-    width: "48%", // Grid yapısı için genişlik
+    width: "48%",
     borderRadius: 16,
     padding: 16,
     marginBottom: 12,
     minHeight: 140,
     borderWidth: 1,
-    // Hafif gölge
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.05,
     shadowRadius: 8,
@@ -71,6 +72,9 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     marginBottom: 12,
+  },
+  iconEmoji: {
+    fontSize: 28,
   },
   content: {
     flex: 1,
