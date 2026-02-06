@@ -1,4 +1,4 @@
-export { Header, ModuleCard, ActivityItem } from "./components";
+export { Header, HomeHero, StatsStrip, ModuleCard, ActivityItem } from "./components";
 export { useDashboard } from "./hooks/useDashboard";
 export { CRM_MODULES } from "./constants/modules";
 export { homeApi } from "./api";
