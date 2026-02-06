@@ -1,6 +1,7 @@
 import { apiClient } from "../../../lib/axios";
 import type { ApiResponse } from "../../auth/types";
 import type {
+  CustomerGetDto,
   CustomerDto,
   CreateCustomerDto,
   UpdateCustomerDto,
@@ -32,52 +33,60 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
 };
 
 export const customerApi = {
-  getList: async (params: PagedParams = {}): Promise<PagedResponse<CustomerDto>> => {
-    const queryParams = buildQueryParams(params);
-    const response = await apiClient.get<PagedApiResponse<CustomerDto>>("/api/Customer", {
+  getList: async (params: PagedParams = {}): Promise<PagedResponse<CustomerGetDto>> => {
+    const queryParams = buildQueryParams({
+      sortBy: "Id",
+      sortDirection: "asc",
+      ...params,
+    });
+    const response = await apiClient.get<PagedApiResponse<CustomerGetDto>>("/api/Customer", {
       params: queryParams,
     });
 
     if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Müşteri listesi alınamadı"
-      );
+      const msg =
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
+        "Müşteri listesi alınamadı";
+      throw new Error(msg);
     }
 
     return response.data.data;
   },
 
-  getById: async (id: number): Promise<CustomerDto> => {
-    const response = await apiClient.get<ApiResponse<CustomerDto>>(`/api/Customer/${id}`);
+  getById: async (id: number): Promise<CustomerGetDto> => {
+    const response = await apiClient.get<ApiResponse<CustomerGetDto>>(`/api/Customer/${id}`);
 
     if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Müşteri bulunamadı"
-      );
+      const msg =
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
+        "Müşteri bulunamadı";
+      throw new Error(msg);
     }
 
     return response.data.data;
   },
 
-  create: async (data: CreateCustomerDto): Promise<CustomerDto> => {
-    const response = await apiClient.post<ApiResponse<CustomerDto>>("/api/Customer", data);
+  create: async (data: CreateCustomerDto): Promise<CustomerGetDto> => {
+    const response = await apiClient.post<ApiResponse<CustomerGetDto>>("/api/Customer", data);
 
     if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Müşteri oluşturulamadı"
-      );
+      const msg =
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
+        "Müşteri oluşturulamadı";
+      throw new Error(msg);
     }
 
     return response.data.data;
   },
 
-  update: async (id: number, data: UpdateCustomerDto): Promise<CustomerDto> => {
-    const response = await apiClient.put<ApiResponse<CustomerDto>>(`/api/Customer/${id}`, data);
+  update: async (id: number, data: UpdateCustomerDto): Promise<CustomerGetDto> => {
+    const response = await apiClient.put<ApiResponse<CustomerGetDto>>(`/api/Customer/${id}`, data);
 
     if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Müşteri güncellenemedi"
-      );
+      const msg =
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
+        "Müşteri güncellenemedi";
+      throw new Error(msg);
     }
 
     return response.data.data;
@@ -87,9 +96,10 @@ export const customerApi = {
     const response = await apiClient.delete<ApiResponse<void>>(`/api/Customer/${id}`);
 
     if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Müşteri silinemedi"
-      );
+      const msg =
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
+        "Müşteri silinemedi";
+      throw new Error(msg);
     }
   },
 };

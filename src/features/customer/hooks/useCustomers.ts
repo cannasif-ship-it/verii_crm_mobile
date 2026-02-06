@@ -12,10 +12,10 @@ interface UseCustomersParams {
 }
 
 export function useCustomers(params: UseCustomersParams = {}) {
-  const { filters, sortBy = "name", sortDirection = "asc", pageSize = DEFAULT_PAGE_SIZE } = params;
+  const { filters, sortBy = "Id", sortDirection = "asc", pageSize = DEFAULT_PAGE_SIZE } = params;
 
   return useInfiniteQuery<PagedResponse<CustomerDto>, Error>({
-    queryKey: ["customer", "list", { filters, sortBy, sortDirection }],
+    queryKey: ["customer", "list", { filters, sortBy, sortDirection, pageSize }],
     queryFn: ({ pageParam }) =>
       customerApi.getList({
         pageNumber: pageParam as number,

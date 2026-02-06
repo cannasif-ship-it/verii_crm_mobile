@@ -1,4 +1,4 @@
-export interface CustomerDto {
+export interface CustomerGetDto {
   id: number;
   customerCode?: string;
   name: string;
@@ -22,11 +22,14 @@ export interface CustomerDto {
   salesRepCode?: string;
   groupCode?: string;
   creditLimit?: number;
-  branchCode: number;
-  businessUnitCode: number;
-  createdDate: string;
+  branchCode?: number;
+  businessUnitCode?: number;
+  isERPIntegrated?: boolean;
+  erpIntegrationNumber?: string;
+  lastSyncDate?: string;
+  createdDate?: string;
   updatedDate?: string;
-  isDeleted: boolean;
+  isDeleted?: boolean;
   createdByFullUser?: string;
   updatedByFullUser?: string;
   deletedByFullUser?: string;
@@ -36,14 +39,13 @@ export interface CustomerDto {
   approvedByUserId?: number;
   completionDate?: string;
   countTriedBy?: number;
-  erpIntegrationNumber?: string;
   isCompleted?: boolean;
-  isERPIntegrated?: boolean;
   isPendingApproval?: boolean;
-  lastSyncDate?: string;
   rejectedReason?: string;
   year?: string;
 }
+
+export type CustomerDto = CustomerGetDto;
 
 export interface CreateCustomerDto {
   customerCode?: string;
