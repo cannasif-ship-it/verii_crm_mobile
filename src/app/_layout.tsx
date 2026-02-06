@@ -1,6 +1,6 @@
 import "../lib/suppressConsoleErrors";
 import React, { useEffect } from "react";
-import { LogBox, View } from "react-native";
+import { LogBox, View, StyleSheet } from "react-native";
 import { Stack, usePathname } from "expo-router";
 import { I18nextProvider } from "react-i18next";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -15,6 +15,32 @@ import { Sidebar } from "../components/navigation/Sidebar";
 import { AppHeader } from "../components/navigation/AppHeader";
 import i18n, { initLanguage } from "../locales";
 import "../../global.css";
+
+function RootStack({
+  isAuthScreen,
+}: {
+  isDark: boolean;
+  isAuthScreen: boolean;
+}): React.ReactElement {
+  const { colors } = useUIStore();
+  return (
+    <View style={[rootStyles.container, { backgroundColor: colors.background }]}>
+      {!isAuthScreen && <AppHeader />}
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { flex: 1, backgroundColor: colors.background },
+        }}
+      />
+    </View>
+  );
+}
+
+const rootStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
+});
 
 LogBox.ignoreLogs([
   /key.*spread|spread.*JSX/i,
@@ -43,10 +69,7 @@ export default function RootLayout(): React.ReactElement {
         <QueryClientProvider client={queryClient}>
           <GluestackUIProvider>
             <I18nextProvider i18n={i18n}>
-              <View className={`flex-1 ${isDark ? "dark" : ""}`}>
-                {!isAuthScreen && <AppHeader />}
-                <Stack screenOptions={{ headerShown: false }} />
-              </View>
+              <RootStack isDark={isDark} isAuthScreen={isAuthScreen} />
               <Sidebar />
               <ToastContainer />
             </I18nextProvider>

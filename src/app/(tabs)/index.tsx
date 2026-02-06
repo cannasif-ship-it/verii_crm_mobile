@@ -4,6 +4,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Pressable,
+  StyleSheet,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -12,6 +13,7 @@ import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { Text } from "../../components/ui/text";
 import { CustomRefreshControl } from "../../components/CustomRefreshControl";
+import { useUIStore } from "../../store/ui";
 import {
   ModuleCard,
   ActivityItem,
@@ -29,6 +31,7 @@ export default function HomeScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { colors } = useUIStore();
   const { data, isLoading, refetch } = useDashboard();
   const [refreshing, setRefreshing] = React.useState(false);
 
@@ -48,9 +51,9 @@ export default function HomeScreen(): React.ReactElement {
 
   if (isLoading && !data) {
     return (
-      <View className="flex-1 bg-app-background dark:bg-app-backgroundDark items-center justify-center">
-        <ActivityIndicator size="large" color="#E84855" />
-        <Text className="text-app-textMuted dark:text-app-textMutedDark mt-4 text-sm">
+      <View style={[styles.loadingRoot, { backgroundColor: colors.background }]}>
+        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={[styles.loadingText, { color: colors.textMuted }]}>
           {t("common.loading")}
         </Text>
       </View>
@@ -62,14 +65,15 @@ export default function HomeScreen(): React.ReactElement {
   return (
     <>
       <StatusBar style="light" />
-      <View className="flex-1 bg-app-background dark:bg-app-backgroundDark">
+      <View style={[styles.root, { backgroundColor: colors.background }]}>
         <ScrollView
-          className="flex-1 bg-app-background dark:bg-app-backgroundDark rounded-t-3xl overflow-hidden"
-          contentContainerStyle={{
-            paddingTop: SECTION_TOP,
-            paddingHorizontal: CONTENT_PX,
-            paddingBottom: contentPaddingBottom,
-          }}
+          style={[styles.scroll, { backgroundColor: colors.background }]}
+          contentContainerStyle={[
+            styles.scrollContent,
+            {
+              paddingBottom: contentPaddingBottom,
+            },
+          ]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <CustomRefreshControl
@@ -150,3 +154,28 @@ export default function HomeScreen(): React.ReactElement {
     </>
   );
 }
+
+const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
+  scroll: {
+    flex: 1,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    overflow: "hidden",
+  },
+  scrollContent: {
+    paddingTop: SECTION_TOP,
+    paddingHorizontal: CONTENT_PX,
+  },
+  loadingRoot: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+  },
+});

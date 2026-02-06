@@ -11,7 +11,12 @@ export default function TabsLayout(): React.ReactElement {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          contentStyle: { flex: 1, backgroundColor: colors.background },
+        }}
+      />
       {!hideNavBar && <BottomNavBar />}
     </View>
   );
