@@ -1,24 +1,29 @@
 import React from "react";
 import {
   View,
-  StyleSheet,
   ScrollView,
   ActivityIndicator,
+  Pressable,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import "../../locales";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { Text } from "../../components/ui/text";
 import { CustomRefreshControl } from "../../components/CustomRefreshControl";
-import { useUIStore } from "../../store/ui";
 import {
-  Header,
   ModuleCard,
   ActivityItem,
+  HomeHero,
+  StatsStrip,
   useDashboard,
   CRM_MODULES,
 } from "../../features/home";
+
+const CONTENT_PX = 20;
+const SECTION_TOP = 24;
+const SECTION_TITLE_SIZE = 20;
 
 export default function HomeScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -26,7 +31,6 @@ export default function HomeScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const { data, isLoading, refetch } = useDashboard();
   const [refreshing, setRefreshing] = React.useState(false);
-  const { colors, themeMode } = useUIStore();
 
   const onRefresh = React.useCallback(async (): Promise<void> => {
     setRefreshing(true);
@@ -38,27 +42,34 @@ export default function HomeScreen(): React.ReactElement {
     router.push(route as never);
   };
 
-  const handleSettingsPress = (): void => {
-    router.push("/(tabs)/settings" as never);
+  const handleViewAllPress = (): void => {
+    router.push("/(tabs)/activities/list" as never);
   };
 
   if (isLoading && !data) {
     return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
+      <View className="flex-1 bg-app-background dark:bg-app-backgroundDark items-center justify-center">
+        <ActivityIndicator size="large" color="#E84855" />
+        <Text className="text-app-textMuted dark:text-app-textMutedDark mt-4 text-sm">
+          {t("common.loading")}
+        </Text>
       </View>
     );
   }
 
+  const contentPaddingBottom = insets.bottom + 100;
+
   return (
     <>
       <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header, paddingTop: insets.top }]}>
-        <Header user={data?.user} onSettingsPress={handleSettingsPress} />
-
+      <View className="flex-1 bg-app-background dark:bg-app-backgroundDark">
         <ScrollView
-          style={[styles.content, { backgroundColor: colors.background }]}
-          contentContainerStyle={styles.contentContainer}
+          className="flex-1 bg-app-background dark:bg-app-backgroundDark rounded-t-3xl overflow-hidden"
+          contentContainerStyle={{
+            paddingTop: SECTION_TOP,
+            paddingHorizontal: CONTENT_PX,
+            paddingBottom: contentPaddingBottom,
+          }}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <CustomRefreshControl
@@ -67,110 +78,75 @@ export default function HomeScreen(): React.ReactElement {
             />
           }
         >
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          <HomeHero />
+
+          {data?.stats != null && (
+            <StatsStrip
+              todayReceiving={data.stats.todayReceiving}
+              todayShipping={data.stats.todayShipping}
+              pendingTasks={data.stats.pendingTasks}
+            />
+          )}
+
+          <View className="mb-8">
+            <Text
+              className="text-app-text dark:text-app-textDark mb-1 font-bold"
+              style={{ fontSize: SECTION_TITLE_SIZE }}
+            >
               {t("home.modules")}
             </Text>
-            <View style={styles.modulesGrid}>
-              {CRM_MODULES.map((module) => (
-                <View key={module.id} style={styles.moduleWrapper}>
-                  <ModuleCard module={module} onPress={handleModulePress} />
-                </View>
+            <Text className="text-[13px] text-app-textSecondary dark:text-app-textSecondaryDark mb-4">
+              {t("home.quickAccess")}
+            </Text>
+            <View>
+              {CRM_MODULES.map((module, index) => (
+                <ModuleCard
+                  key={module.id}
+                  module={module}
+                  onPress={handleModulePress}
+                  isPrimary={index === 0}
+                />
               ))}
             </View>
           </View>
 
-          <View style={styles.section}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+          <View>
+            <View className="flex-row justify-between items-baseline mb-4">
+              <Text
+                className="text-app-text dark:text-app-textDark font-bold"
+                style={{ fontSize: SECTION_TITLE_SIZE }}
+              >
                 {t("home.recentActivity")}
               </Text>
-              <Text style={[styles.viewAll, { color: colors.accent }]}>
-                {t("home.viewAll")}
-              </Text>
+              <Pressable
+                onPress={handleViewAllPress}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                className="py-2 px-1"
+                style={({ pressed }) => ({ opacity: pressed ? 0.7 : 1 })}
+              >
+                <Text className="text-[13px] font-semibold text-app-accent">
+                  {t("home.viewAll")}
+                </Text>
+              </Pressable>
             </View>
+
             {data?.recentActivity && data.recentActivity.length > 0 ? (
               data.recentActivity.map((activity) => (
                 <ActivityItem key={activity.id} item={activity} />
               ))
             ) : (
-              <View
-                style={[
-                  styles.emptyActivity,
-                  {
-                    backgroundColor: themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : "#FFFFFF",
-                    borderColor: colors.cardBorder,
-                  },
-                ]}
-              >
-                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+              <View className="py-12 px-6 rounded-2xl border border-app-cardBorder dark:border-app-cardBorderDark bg-app-card dark:bg-app-cardDark items-center justify-center">
+                <View className="w-14 h-14 rounded-full bg-app-backgroundSecondary dark:bg-white/5 items-center justify-center mb-4">
+                  <Text className="text-3xl">📋</Text>
+                </View>
+                <Text className="text-sm text-app-textMuted dark:text-app-textMutedDark text-center max-w-[220px] leading-5">
                   {t("home.noActivity")}
                 </Text>
               </View>
             )}
           </View>
-
-          <View style={{ height: insets.bottom + 100 }} />
         </ScrollView>
       </View>
     </>
   );
 }
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  content: {
-    flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  contentContainer: {
-    paddingTop: 24,
-    paddingHorizontal: 14,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 12,
-    paddingHorizontal: 6,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 12,
-    paddingHorizontal: 6,
-  },
-  viewAll: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 12,
-  },
-  modulesGrid: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    marginHorizontal: -6,
-  },
-  moduleWrapper: {
-    width: "50%",
-  },
-  emptyActivity: {
-    padding: 32,
-    alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-  },
-  emptyText: {
-    fontSize: 14,
-  },
-});
-
