@@ -1,5 +1,5 @@
-import React, { useEffect } from "react";
-import { View, StyleSheet, TouchableOpacity, Platform, LogBox } from "react-native";
+import React from "react";
+import { View, StyleSheet, TouchableOpacity, Platform } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -17,9 +17,6 @@ import {
   Money03Icon, 
   Calendar03Icon 
 } from "hugeicons-react-native";
-
-// Hata gizleme (Key spread uyarısı için)
-LogBox.ignoreLogs(['A props object containing a "key" prop is being spread']);
 
 interface NavItem {
   key: string;
@@ -42,11 +39,7 @@ export function BottomNavBar(): React.ReactElement {
   const insets = useSafeAreaInsets();
   
   // Store'dan gelen dinamik renkler
-  const { colors } = useUIStore(); 
-
-  useEffect(() => {
-    LogBox.ignoreLogs(['A props object containing a "key" prop is being spread']);
-  }, []);
+  const { colors } = useUIStore();
 
   const isActive = (route: string): boolean => {
     if (route === "/(tabs)") {

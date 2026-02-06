@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
-import { Stack, usePathname } from "expo-router"; // usePathname eklendi
+import { LogBox, View } from "react-native";
+import { Stack, usePathname } from "expo-router";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { GluestackUIProvider } from "../components/ui/gluestack-ui-provider";
@@ -8,15 +9,20 @@ import { ErrorBoundary } from "../components/ErrorBoundary";
 import { queryClient } from "../lib/queryClient";
 import { useAuthStore } from "../store/auth";
 import { Sidebar } from "../components/navigation/Sidebar";
-import { AppHeader } from "../components/navigation/AppHeader"; // YENİ HEADER
+import { AppHeader } from "../components/navigation/AppHeader";
 import { initLanguage } from "../locales";
 import "../locales";
 import "../../global.css";
-import { View } from "react-native";
+
+LogBox.ignoreLogs([
+  "key\" prop is being spread",
+  "being spread into JSX",
+  "React keys must be passed directly",
+]);
 
 export default function RootLayout(): React.ReactElement {
   const hydrate = useAuthStore((state) => state.hydrate);
-  const pathname = usePathname(); // Mevcut sayfa yolunu al
+  const pathname = usePathname();
 
   useEffect(() => {
     hydrate();
