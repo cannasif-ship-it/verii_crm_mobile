@@ -99,7 +99,11 @@
     "customerRequired": "Customer selection is required",
     "titleRequired": "Title selection is required",
     "addressRequired": "Address is required",
-    "fullNameRequired": "Full name is required"
+    "fullNameRequired": "Full name is required",
+    "subjectRequired": "Subject is required",
+    "activityTypeRequired": "Activity type is required",
+    "statusRequired": "Status is required",
+    "dateRequired": "Date is required"
   },
   "language": {
     "title": "Language",
@@ -157,6 +161,14 @@
     "createSuccess": "Customer created successfully",
     "updateSuccess": "Customer updated successfully",
     "noCustomers": "No customers yet",
+    "selectTabErp": "ERP",
+    "selectTabPotential": "Potential",
+    "selectTabAll": "All",
+    "selectEmptyErp": "No ERP customer found",
+    "selectEmptyPotential": "No potential customer found",
+    "selectEmptyAll": "No customer found",
+    "selectBadgeErp": "ERP",
+    "selectBadgePotential": "CRM",
     "contactInfo": "Contact Information",
     "taxInfo": "Tax Information",
     "approvalInfo": "Approval Information",
@@ -339,12 +351,6 @@
     "deleteSuccess": "Activity deleted successfully",
     "createSuccess": "Activity created successfully",
     "updateSuccess": "Activity updated successfully"
-  },
-  "validation": {
-    "subjectRequired": "Subject is required",
-    "activityTypeRequired": "Activity type is required",
-    "statusRequired": "Status is required",
-    "dateRequired": "Date is required"
   },
   "titleManagement": {
     "title": "Title Management",
