@@ -1,90 +1,84 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router"; // Router eklendi
-import { useSafeAreaInsets } from "react-native-safe-area-context"; // Insets eklendi
-import { Menu01Icon, Settings01Icon } from "hugeicons-react-native";
-import { Text } from "../ui/text";
+import { useRouter } from "expo-router";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Menu01Icon, UserIcon } from "hugeicons-react-native";
 import { useUIStore } from "../../store/ui";
 import { useAuthStore } from "../../store/auth";
 import { GRADIENT } from "../../constants/theme";
+import ProfilePanel from "./ProfilePanel";
 
 export function AppHeader(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
-  // Store bağlantıları
   const { colors, openSidebar } = useUIStore();
-  const { user, branch } = useAuthStore(); // User ve Branch buradan geliyor
+  const { user, branch, clearAuth } = useAuthStore(); 
 
-  const getInitials = (name: string): string => {
-    if (!name) return "??";
-    return name
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2);
+  const [isProfileOpen, setProfileOpen] = useState(false);
+
+  const handleProfilePress = () => {
+    setProfileOpen(true);
   };
 
-  const handleSettingsPress = () => {
-    router.push("/settings" as never); // Ayarlara git
+  const handleLogout = () => {
+    setProfileOpen(false);
+    if (clearAuth) clearAuth();
+    router.replace("/login" as never);
   };
 
   return (
-    <View 
-      style={[
-        styles.container, 
-        { 
-          backgroundColor: colors.header || "#140a1e", // Header rengi
-          paddingTop: insets.top + 10, // Status bar boşluğu + biraz pay
-        }
-      ]}
-    >
-      <View style={styles.left}>
-        {/* Menü Butonu */}
-        <TouchableOpacity 
-          onPress={openSidebar} 
-          style={styles.menuButton}
-          activeOpacity={0.7}
-        >
-          <Menu01Icon size={24} color="#FFFFFF" />
-        </TouchableOpacity>
+    <>
+      <View 
+        style={[
+          styles.container, 
+          { 
+            backgroundColor: colors.header || "#0f0518",
+            paddingTop: insets.top + 10,
+            borderBottomColor: colors.border || "rgba(255, 255, 255, 0.1)",
+          }
+        ]}
+      >
+        <View style={styles.leftContainer}>
+          <TouchableOpacity 
+            onPress={openSidebar} 
+            style={styles.iconButton}
+            activeOpacity={0.7}
+          >
+            <Menu01Icon size={24} color="#E2E8F0" />
+          </TouchableOpacity>
+        </View>
 
-        {/* Avatar */}
-        <LinearGradient
-          colors={[...GRADIENT.primary]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.avatar}
-        >
-          <Text style={styles.avatarText}>
-            {user?.name ? getInitials(user.name) : "??"}
-          </Text>
-        </LinearGradient>
+        <View style={styles.centerContainer} pointerEvents="none" />
 
-        {/* Bilgi Alanı */}
-        <View style={styles.info}>
-          <Text style={styles.greeting}>
-            {t("home.greeting", "Merhaba")}, {user?.name?.split(" ")[0] || "Misafir"}
-          </Text>
-          <Text style={[styles.branch, { color: "rgba(255,255,255,0.7)" }]}>
-            {branch ? `${branch.code} - ${branch.name}` : t("home.branch", "Şube Seçilmedi")}
-          </Text>
+        <View style={styles.rightContainer}>
+          <TouchableOpacity onPress={handleProfilePress} activeOpacity={0.8}>
+            <LinearGradient
+              colors={[...GRADIENT.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={styles.avatarBorder}
+            >
+              <View style={[styles.avatarInner, { backgroundColor: colors.header || "#0f0518" }]}>
+                <UserIcon size={20} color="#E2E8F0" />
+              </View>
+            </LinearGradient>
+          </TouchableOpacity>
         </View>
       </View>
 
-      {/* Ayarlar Butonu */}
-      <TouchableOpacity
-        style={styles.settingsButton}
-        onPress={handleSettingsPress}
-        activeOpacity={0.7}
-      >
-        <Settings01Icon size={20} color="#FFFFFF" />
-      </TouchableOpacity>
-    </View>
+      <ProfilePanel 
+        isOpen={isProfileOpen} 
+        onClose={() => setProfileOpen(false)}
+        userName={user?.name || "Kullanıcı"}
+        email={user?.email}
+        branch={branch?.name}
+        onLogout={handleLogout}
+      />
+    </>
   );
 }
 
@@ -93,58 +87,53 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 20,
-    paddingBottom: 16,
-    // Gölge ekleyelim ki alttaki içerikten ayrılsın
+    paddingHorizontal: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    zIndex: 50,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 3,
-    elevation: 4,
-    zIndex: 50, // En üstte kalması için
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 5,
+    minHeight: 80, 
   },
-  left: {
+  leftContainer: {
+    flex: 1,
+    alignItems: "flex-start",
+    zIndex: 20,
+  },
+  rightContainer: {
+    flex: 1,
     flexDirection: "row",
+    justifyContent: "flex-end",
     alignItems: "center",
-    flex: 1, // İsmin uzun olması durumunda ayarlar butonunu sıkıştırmasın
+    zIndex: 20,
   },
-  menuButton: {
-    marginRight: 12,
-    padding: 4,
+  centerContainer: {
+    flex: 2,
   },
-  avatar: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 12,
-  },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#FFFFFF",
-  },
-  info: {
-    justifyContent: "center",
-    flex: 1, 
-  },
-  greeting: {
-    fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginBottom: 2,
-  },
-  branch: {
-    fontSize: 12,
-  },
-  settingsButton: {
+  iconButton: {
     width: 40,
     height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 10,
+    borderRadius: 20,
+    backgroundColor: "rgba(255, 255, 255, 0.05)",
+  },
+  avatarBorder: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    padding: 2, 
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarInner: {
+    width: "100%",
+    height: "100%",
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
   },
 });
