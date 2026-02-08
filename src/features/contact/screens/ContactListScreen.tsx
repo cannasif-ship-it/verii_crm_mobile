@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -32,7 +32,7 @@ export function ContactListScreen(): React.ReactElement {
 
   const {
     data,
-    isLoading,
+    isPending,
     isError,
     refetch,
     fetchNextPage,
@@ -52,6 +52,8 @@ export function ContactListScreen(): React.ReactElement {
         .filter((item): item is ContactDto => item != null) || []
     );
   }, [data]);
+
+  const isInitialLoading = isPending && contacts.length === 0;
 
   const handleContactPress = useCallback(
     (contact: ContactDto) => {
@@ -89,7 +91,13 @@ export function ContactListScreen(): React.ReactElement {
   }, [isFetchingNextPage, colors]);
 
   const renderEmpty = useCallback(() => {
-    if (isLoading) return null;
+    if (isInitialLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.accent} />
+        </View>
+      );
+    }
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>👤</Text>
@@ -98,7 +106,7 @@ export function ContactListScreen(): React.ReactElement {
         </Text>
       </View>
     );
-  }, [isLoading, colors, t]);
+  }, [isInitialLoading, colors, t]);
 
   const keyExtractor = useCallback((item: ContactDto, index: number) => String(item?.id ?? index), []);
 
@@ -130,9 +138,14 @@ export function ContactListScreen(): React.ReactElement {
               onSearch={setSearchText}
               placeholder={t("contact.searchPlaceholder")}
             />
+            {__DEV__ && Platform.OS === "android" ? (
+              <Text style={[styles.debugText, { color: colors.textMuted }]}>
+                items: {contacts.length} {isPending ? "(pending)" : ""} {isRefetching ? "(refetching)" : ""}
+              </Text>
+            ) : null}
           </View>
 
-          {isLoading && contacts.length === 0 ? (
+          {isInitialLoading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.accent} />
             </View>
@@ -246,6 +259,11 @@ const styles = StyleSheet.create({
   footerLoading: {
     paddingVertical: 20,
     alignItems: "center",
+  },
+  debugText: {
+    marginTop: -8,
+    marginBottom: 8,
+    fontSize: 12,
   },
   addButton: {
     width: 32,

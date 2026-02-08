@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -28,7 +28,7 @@ export function ErpCustomerListScreen(): React.ReactElement {
 
   const {
     data: customers = [],
-    isLoading,
+    isPending,
     isError,
     refetch,
     isRefetching,
@@ -68,7 +68,13 @@ export function ErpCustomerListScreen(): React.ReactElement {
   );
 
   const renderEmpty = useCallback(() => {
-    if (isLoading) return null;
+    if (isPending) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.accent} />
+        </View>
+      );
+    }
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>👥</Text>
@@ -77,7 +83,7 @@ export function ErpCustomerListScreen(): React.ReactElement {
         </Text>
       </View>
     );
-  }, [isLoading, colors, t]);
+  }, [isPending, colors, t]);
 
   const keyExtractor = useCallback(
     (item: CariDto, index: number) => `${item.cariKod}-${item.subeKodu}-${index}`,
@@ -96,9 +102,14 @@ export function ErpCustomerListScreen(): React.ReactElement {
               onSearch={setSearchText}
               placeholder={t("erpCustomer.searchPlaceholder")}
             />
+            {__DEV__ && Platform.OS === "android" ? (
+              <Text style={[styles.debugText, { color: colors.textMuted }]}>
+                items: {filteredCustomers.length} {isPending ? "(pending)" : ""} {isRefetching ? "(refetching)" : ""}
+              </Text>
+            ) : null}
           </View>
 
-          {isLoading && filteredCustomers.length === 0 ? (
+          {isPending && filteredCustomers.length === 0 ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.accent} />
             </View>
@@ -185,5 +196,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
+  },
+  debugText: {
+    marginTop: -8,
+    marginBottom: 8,
+    fontSize: 12,
   },
 });

@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator } from "react-native";
+import { View, StyleSheet, FlatList, ActivityIndicator, Platform } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -31,7 +31,7 @@ export function StockListScreen(): React.ReactElement {
 
   const {
     data,
-    isLoading,
+    isPending,
     isError,
     refetch,
     fetchNextPage,
@@ -39,6 +39,8 @@ export function StockListScreen(): React.ReactElement {
     isFetchingNextPage,
     isRefetching,
   } = useStocks({ filters });
+
+  const isInitialLoading = isPending && stocks.length === 0;
 
   const handleRefresh = useCallback(() => {
     refetch();
@@ -84,7 +86,13 @@ export function StockListScreen(): React.ReactElement {
   }, [isFetchingNextPage, colors]);
 
   const renderEmpty = useCallback(() => {
-    if (isLoading) return null;
+    if (isInitialLoading) {
+      return (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.accent} />
+        </View>
+      );
+    }
     return (
       <View style={styles.emptyContainer}>
         <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
@@ -92,7 +100,7 @@ export function StockListScreen(): React.ReactElement {
         </Text>
       </View>
     );
-  }, [isLoading, colors, t]);
+  }, [isInitialLoading, colors, t]);
 
   return (
     <>
@@ -106,9 +114,14 @@ export function StockListScreen(): React.ReactElement {
               onSearch={setSearchText}
               placeholder={t("stock.searchPlaceholder")}
             />
+            {__DEV__ && Platform.OS === "android" ? (
+              <Text style={[styles.debugText, { color: colors.textMuted }]}>
+                items: {stocks.length} {isPending ? "(pending)" : ""} {isRefetching ? "(refetching)" : ""}
+              </Text>
+            ) : null}
           </View>
 
-          {isLoading && !data ? (
+          {isInitialLoading && !data ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.accent} />
             </View>
@@ -188,5 +201,10 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
+  },
+  debugText: {
+    marginTop: -8,
+    marginBottom: 8,
+    fontSize: 12,
   },
 });
