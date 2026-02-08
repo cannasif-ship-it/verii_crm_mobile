@@ -28,7 +28,9 @@ apiClient.interceptors.request.use(
 
     const branchCode = branch?.code;
     if (branchCode !== undefined && branchCode !== null && String(branchCode).trim() !== "") {
-      config.headers["X-Branch-Code"] = String(branchCode);
+      const normalizedBranchCode = String(branchCode);
+      config.headers["X-Branch-Code"] = normalizedBranchCode;
+      config.headers.BranchCode = normalizedBranchCode;
     }
 
     if (__DEV__) {
