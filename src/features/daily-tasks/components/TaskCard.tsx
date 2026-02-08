@@ -68,6 +68,20 @@ function TaskCardComponent({ task, compact = false }: TaskCardProps): React.Reac
 
   const isLoading = isStarting || isCompleting || isHolding;
 
+  const getActivityTypeText = (): string => {
+    if (typeof task.activityType === "string") {
+      return task.activityType;
+    }
+    if (
+      task.activityType &&
+      typeof task.activityType === "object" &&
+      typeof task.activityType.name === "string"
+    ) {
+      return task.activityType.name;
+    }
+    return "";
+  };
+
   const renderActionButton = (): React.ReactElement | null => {
     if (task.isCompleted || normalizedStatus === "completed") {
       return null;
@@ -184,13 +198,13 @@ function TaskCardComponent({ task, compact = false }: TaskCardProps): React.Reac
         </View>
       )}
 
-      {task.activityType && (
+      {getActivityTypeText() ? (
         <View style={styles.typeRow}>
           <Text style={[styles.typeLabel, { color: colors.textMuted }]}>
-            {task.activityType}
+            {getActivityTypeText()}
           </Text>
         </View>
-      )}
+      ) : null}
 
       {renderActionButton()}
     </TouchableOpacity>

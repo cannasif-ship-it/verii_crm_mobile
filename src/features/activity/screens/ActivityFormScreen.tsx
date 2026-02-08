@@ -23,7 +23,7 @@ import { useUIStore } from "../../../store/ui";
 import { useActivity, useActivityTypes, useCreateActivity, useUpdateActivity } from "../hooks";
 import { FormField, CustomerPicker, ContactPicker } from "../components";
 import { createActivitySchema, type ActivityFormData } from "../schemas";
-import { ACTIVITY_STATUSES, ACTIVITY_PRIORITIES, type ActivityTypeDto } from "../types";
+import { ACTIVITY_STATUSES, ACTIVITY_PRIORITIES, type ActivityTypeDto, type ActivityDto } from "../types";
 import type { CustomerDto } from "../../customer/types";
 import type { ContactDto } from "../../contact/types";
 
@@ -106,12 +106,23 @@ export function ActivityFormScreen(): React.ReactElement {
     [t]
   );
 
+  const normalizeActivityType = useCallback(
+    (activityType: ActivityDto["activityType"]): string => {
+      if (typeof activityType === "string") return activityType;
+      if (activityType && typeof activityType === "object" && typeof activityType.name === "string") {
+        return activityType.name;
+      }
+      return "";
+    },
+    []
+  );
+
   useEffect(() => {
     if (existingActivity) {
       reset({
         subject: existingActivity.subject,
         description: existingActivity.description || "",
-        activityType: existingActivity.activityType,
+        activityType: normalizeActivityType(existingActivity.activityType),
         potentialCustomerId: existingActivity.potentialCustomerId,
         erpCustomerCode: existingActivity.erpCustomerCode || "",
         productCode: existingActivity.productCode || "",
@@ -146,7 +157,7 @@ export function ActivityFormScreen(): React.ReactElement {
         } as unknown as ContactDto);
       }
     }
-  }, [existingActivity, reset]);
+  }, [existingActivity, normalizeActivityType, reset]);
 
   const handleTypeSelect = useCallback(
     (type: ActivityTypeDto) => {

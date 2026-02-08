@@ -56,7 +56,7 @@ export interface ActivityDto {
   id: number;
   subject: string;
   description?: string;
-  activityType: string;
+  activityType: string | ActivityTypeDto | null;
   activityTypeId?: number;
   potentialCustomerId?: number;
   potentialCustomer?: PotentialCustomerDto;

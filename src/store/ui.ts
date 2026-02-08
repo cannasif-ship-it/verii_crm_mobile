@@ -1,7 +1,8 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { COLORS, getSystemTheme, type ThemeMode, type ThemeColors } from "../constants/theme";
+import { Platform } from "react-native";
+import { COLORS, type ThemeMode, type ThemeColors } from "../constants/theme";
 
 interface UIState {
   isLoading: boolean;
@@ -20,8 +21,8 @@ export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
       isLoading: false,
-      themeMode: getSystemTheme(),
-      colors: COLORS[getSystemTheme()],
+      themeMode: "dark",
+      colors: COLORS.dark,
       isSidebarOpen: false,
       setIsLoading: (value: boolean) => set({ isLoading: value }),
       setThemeMode: (mode: ThemeMode) =>
@@ -39,9 +40,30 @@ export const useUIStore = create<UIState>()(
       name: "ui-storage",
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (state) => ({ themeMode: state.themeMode }),
+      version: 2,
+      migrate: (persistedState) => {
+        const state = (persistedState ?? {}) as Partial<UIState>;
+        const preferredThemeMode: ThemeMode =
+          Platform.OS === "android"
+            ? "dark"
+            : state.themeMode === "light" || state.themeMode === "dark"
+              ? state.themeMode
+              : "dark";
+        return {
+          ...state,
+          themeMode: preferredThemeMode,
+          colors: COLORS[preferredThemeMode],
+        };
+      },
       onRehydrateStorage: () => (state) => {
         if (state) {
-          state.colors = COLORS[state.themeMode];
+          const preferredThemeMode: ThemeMode =
+            Platform.OS === "android"
+              ? "dark"
+              : state.themeMode === "light" || state.themeMode === "dark"
+                ? state.themeMode
+                : "dark";
+          state.setThemeMode(preferredThemeMode);
         }
       },
     }

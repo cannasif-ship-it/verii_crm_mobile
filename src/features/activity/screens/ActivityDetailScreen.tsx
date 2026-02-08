@@ -15,6 +15,7 @@ import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useActivity, useDeleteActivity, useUpdateActivity } from "../hooks";
+import type { ActivityDto } from "../types";
 
 export function ActivityDetailScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -63,12 +64,23 @@ export function ActivityDetailScreen(): React.ReactElement {
         {
           text: t("common.confirm"),
           onPress: async () => {
+            const activityTypeText = getActivityTypeText(activity.activityType);
             await updateActivity.mutateAsync({
               id: activityId,
               data: {
-                ...activity,
+                subject: activity.subject,
+                description: activity.description,
+                activityType: activityTypeText === "-" ? "" : activityTypeText,
+                potentialCustomerId: activity.potentialCustomerId,
+                erpCustomerCode: activity.erpCustomerCode,
+                productCode: activity.productCode,
+                productName: activity.productName,
                 status: "Completed",
                 isCompleted: true,
+                priority: activity.priority,
+                contactId: activity.contactId,
+                assignedUserId: activity.assignedUserId,
+                activityDate: activity.activityDate,
               },
             });
           },
@@ -128,9 +140,12 @@ export function ActivityDetailScreen(): React.ReactElement {
     }
   };
 
-  const getActivityTypeText = (activityType?: string): string => {
-    if (!activityType) return "-";
-    return activityType;
+  const getActivityTypeText = (activityType: ActivityDto["activityType"]): string => {
+    if (typeof activityType === "string" && activityType) return activityType;
+    if (activityType && typeof activityType === "object" && typeof activityType.name === "string") {
+      return activityType.name;
+    }
+    return "-";
   };
 
   const formatDate = (dateString: string): string => {

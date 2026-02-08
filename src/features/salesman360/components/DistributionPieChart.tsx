@@ -29,25 +29,36 @@ export function DistributionPieChart({
   quotationLabel,
   orderLabel,
 }: DistributionPieChartProps): React.ReactElement {
+  const safeNumber = (value: number | null | undefined): number => {
+    if (typeof value !== "number" || Number.isNaN(value) || !Number.isFinite(value)) {
+      return 0;
+    }
+    return value;
+  };
+
   const pieData = useMemo(() => {
     const items: { value: number; color: string; text: string }[] = [];
-    if ((data?.demandCount ?? 0) > 0) {
+    const demandCount = safeNumber(data?.demandCount);
+    const quotationCount = safeNumber(data?.quotationCount);
+    const orderCount = safeNumber(data?.orderCount);
+
+    if (demandCount > 0) {
       items.push({
-        value: data.demandCount,
+        value: demandCount,
         color: CHART_COLORS.demand,
         text: demandLabel,
       });
     }
-    if ((data?.quotationCount ?? 0) > 0) {
+    if (quotationCount > 0) {
       items.push({
-        value: data.quotationCount,
+        value: quotationCount,
         color: CHART_COLORS.quotation,
         text: quotationLabel,
       });
     }
-    if ((data?.orderCount ?? 0) > 0) {
+    if (orderCount > 0) {
       items.push({
-        value: data.orderCount,
+        value: orderCount,
         color: CHART_COLORS.order,
         text: orderLabel,
       });

@@ -9,6 +9,10 @@ const CHART_COLORS = {
   quotation: "#EC4899",
   order: "#F97316",
 };
+const safeNumber = (value: unknown): number => {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+};
 
 const CHART_SIZE = Math.min(Dimensions.get("window").width - 80, 220);
 
@@ -31,23 +35,27 @@ export function DistributionPieChart({
 }: DistributionPieChartProps): React.ReactElement {
   const pieData = useMemo(() => {
     const items: { value: number; color: string; text: string }[] = [];
-    if ((data?.demandCount ?? 0) > 0) {
+    const demandCount = safeNumber(data?.demandCount);
+    const quotationCount = safeNumber(data?.quotationCount);
+    const orderCount = safeNumber(data?.orderCount);
+
+    if (demandCount > 0) {
       items.push({
-        value: data.demandCount,
+        value: demandCount,
         color: CHART_COLORS.demand,
         text: demandLabel,
       });
     }
-    if ((data?.quotationCount ?? 0) > 0) {
+    if (quotationCount > 0) {
       items.push({
-        value: data.quotationCount,
+        value: quotationCount,
         color: CHART_COLORS.quotation,
         text: quotationLabel,
       });
     }
-    if ((data?.orderCount ?? 0) > 0) {
+    if (orderCount > 0) {
       items.push({
-        value: data.orderCount,
+        value: orderCount,
         color: CHART_COLORS.order,
         text: orderLabel,
       });

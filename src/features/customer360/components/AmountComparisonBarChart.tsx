@@ -12,6 +12,10 @@ const CHART_COLORS = {
 
 const CHART_WIDTH = Math.min(Dimensions.get("window").width - 72, 320);
 const BAR_HEIGHT = 28;
+const safeNumber = (value: unknown): number => {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+};
 
 interface AmountComparisonBarChartProps {
   data: Customer360AmountComparisonDto;
@@ -33,9 +37,9 @@ export function AmountComparisonBarChart({
   formatAmount,
 }: AmountComparisonBarChartProps): React.ReactElement {
   const barData = useMemo(() => {
-    const last12 = data?.last12MonthsOrderAmount ?? 0;
-    const openQuot = data?.openQuotationAmount ?? 0;
-    const openOrd = data?.openOrderAmount ?? 0;
+    const last12 = safeNumber(data?.last12MonthsOrderAmount);
+    const openQuot = safeNumber(data?.openQuotationAmount);
+    const openOrd = safeNumber(data?.openOrderAmount);
     return [
       {
         value: last12,
@@ -78,9 +82,9 @@ export function AmountComparisonBarChart({
   ]);
 
   const maxValue = useMemo(() => {
-    const last12 = data?.last12MonthsOrderAmount ?? 0;
-    const openQuot = data?.openQuotationAmount ?? 0;
-    const openOrd = data?.openOrderAmount ?? 0;
+    const last12 = safeNumber(data?.last12MonthsOrderAmount);
+    const openQuot = safeNumber(data?.openQuotationAmount);
+    const openOrd = safeNumber(data?.openOrderAmount);
     const max = Math.max(last12, openQuot, openOrd, 1);
     return max + Math.ceil(max * 0.15);
   }, [data]);

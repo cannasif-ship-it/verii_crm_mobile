@@ -67,9 +67,20 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
     }
   };
 
-  const getActivityTypeIcon = (activityType?: string | null): string => {
-    if (activityType == null || typeof activityType !== "string") return "📋";
-    const typeLower = activityType.toLowerCase().replace(/\s+/g, "");
+  const getActivityTypeText = (
+    activityType: ActivityDto["activityType"]
+  ): string => {
+    if (typeof activityType === "string") return activityType;
+    if (activityType && typeof activityType === "object" && typeof activityType.name === "string") {
+      return activityType.name;
+    }
+    return "";
+  };
+
+  const getActivityTypeIcon = (activityType: ActivityDto["activityType"]): string => {
+    const activityTypeText = getActivityTypeText(activityType);
+    if (!activityTypeText) return "📋";
+    const typeLower = activityTypeText.toLowerCase().replace(/\s+/g, "");
     switch (typeLower) {
       case "call":
       case "telefon":

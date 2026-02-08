@@ -12,6 +12,10 @@ const CHART_COLORS = {
 
 const CHART_WIDTH = Math.min(Dimensions.get("window").width - 72, 320);
 const CHART_HEIGHT = 180;
+const safeNumber = (value: unknown): number => {
+  const numberValue = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(numberValue) ? numberValue : 0;
+};
 
 interface MonthlyTrendLineChartProps {
   data: Customer360MonthlyTrendItemDto[];
@@ -33,20 +37,20 @@ export function MonthlyTrendLineChart({
   const dataSet = useMemo(() => {
     const list = data ?? [];
     if (list.length === 0) return null;
-    const demandData = list.map((d, i) => ({
-      value: d.demandCount,
+    const demandData = list.map((d) => ({
+      value: safeNumber(d.demandCount),
       label: d.month,
-      dataPointText: String(d.demandCount),
+      dataPointText: String(safeNumber(d.demandCount)),
     }));
-    const quotationData = list.map((d, i) => ({
-      value: d.quotationCount,
+    const quotationData = list.map((d) => ({
+      value: safeNumber(d.quotationCount),
       label: d.month,
-      dataPointText: String(d.quotationCount),
+      dataPointText: String(safeNumber(d.quotationCount)),
     }));
     const orderData = list.map((d, i) => ({
-      value: d.orderCount,
+      value: safeNumber(d.orderCount),
       label: d.month,
-      dataPointText: String(d.orderCount),
+      dataPointText: String(safeNumber(d.orderCount)),
     }));
     return [
       { data: demandData, color: CHART_COLORS.demand },
@@ -59,7 +63,7 @@ export function MonthlyTrendLineChart({
     if (!data?.length) return 10;
     return Math.max(
       1,
-      ...data.flatMap((d) => [d.demandCount, d.quotationCount, d.orderCount])
+      ...data.flatMap((d) => [safeNumber(d.demandCount), safeNumber(d.quotationCount), safeNumber(d.orderCount)])
     );
   }, [data]);
 
@@ -135,12 +139,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "flex-start",
     flexWrap: "wrap",
-    gap: 16,
     marginTop: 12,
   },
   legendRow: {
     flexDirection: "row",
     alignItems: "center",
+    marginRight: 16,
+    marginBottom: 4,
   },
   legendDot: {
     width: 10,
