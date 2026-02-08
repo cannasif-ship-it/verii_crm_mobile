@@ -19,6 +19,17 @@ export const erpCustomerApi = {
       );
     }
 
-    return response.data.data;
+    const payload = response.data.data as unknown;
+    if (Array.isArray(payload)) {
+      return payload as CariDto[];
+    }
+    const shaped = payload as { items?: CariDto[]; Items?: CariDto[] } | null;
+    if (shaped && Array.isArray(shaped.items)) {
+      return shaped.items;
+    }
+    if (shaped && Array.isArray(shaped.Items)) {
+      return shaped.Items;
+    }
+    return [];
   },
 };

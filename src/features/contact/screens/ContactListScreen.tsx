@@ -46,11 +46,15 @@ export function ContactListScreen(): React.ReactElement {
   }, [refetch]);
 
   const contacts = useMemo(() => {
-    return (
-      data?.pages
-        .flatMap((page) => page.items ?? [])
-        .filter((item): item is ContactDto => item != null) || []
-    );
+    const pages = data?.pages ?? [];
+    return pages
+      .flatMap((page) => {
+        const pageData = page as unknown as { items?: ContactDto[]; Items?: ContactDto[] };
+        if (Array.isArray(pageData.items)) return pageData.items;
+        if (Array.isArray(pageData.Items)) return pageData.Items;
+        return [];
+      })
+      .filter((item): item is ContactDto => item != null);
   }, [data]);
 
   const isInitialLoading = isPending && contacts.length === 0;

@@ -40,19 +40,23 @@ export function StockListScreen(): React.ReactElement {
     isRefetching,
   } = useStocks({ filters });
 
-  const isInitialLoading = isPending && stocks.length === 0;
-
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
 
   const stocks = useMemo(() => {
-    return (
-      data?.pages
-        .flatMap((page) => page.items ?? [])
-        .filter((item): item is StockGetDto => item != null) || []
-    );
+    const pages = data?.pages ?? [];
+    return pages
+      .flatMap((page) => {
+        const pageData = page as unknown as { items?: StockGetDto[]; Items?: StockGetDto[] };
+        if (Array.isArray(pageData.items)) return pageData.items;
+        if (Array.isArray(pageData.Items)) return pageData.Items;
+        return [];
+      })
+      .filter((item): item is StockGetDto => item != null);
   }, [data]);
+
+  const isInitialLoading = isPending && stocks.length === 0;
 
   const handleStockPress = useCallback(
     (stock: StockGetDto) => {

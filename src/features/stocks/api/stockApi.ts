@@ -44,7 +44,51 @@ export const stockApi = {
       );
     }
 
-    return response.data.data;
+    const payload = response.data.data as unknown;
+    if (!payload || typeof payload !== "object") {
+      return {
+        items: [],
+        totalCount: 0,
+        pageNumber: params.pageNumber ?? 1,
+        pageSize: params.pageSize ?? 20,
+        totalPages: 0,
+        hasPreviousPage: false,
+        hasNextPage: false,
+      };
+    }
+
+    const shaped = payload as {
+      items?: StockGetDto[];
+      Items?: StockGetDto[];
+      totalCount?: number;
+      TotalCount?: number;
+      pageNumber?: number;
+      PageNumber?: number;
+      pageSize?: number;
+      PageSize?: number;
+      totalPages?: number;
+      TotalPages?: number;
+      hasPreviousPage?: boolean;
+      HasPreviousPage?: boolean;
+      hasNextPage?: boolean;
+      HasNextPage?: boolean;
+    };
+
+    const items = Array.isArray(shaped.items)
+      ? shaped.items
+      : Array.isArray(shaped.Items)
+        ? shaped.Items
+        : [];
+
+    return {
+      items,
+      totalCount: shaped.totalCount ?? shaped.TotalCount ?? items.length,
+      pageNumber: shaped.pageNumber ?? shaped.PageNumber ?? (params.pageNumber ?? 1),
+      pageSize: shaped.pageSize ?? shaped.PageSize ?? (params.pageSize ?? 20),
+      totalPages: shaped.totalPages ?? shaped.TotalPages ?? 1,
+      hasPreviousPage: shaped.hasPreviousPage ?? shaped.HasPreviousPage ?? false,
+      hasNextPage: shaped.hasNextPage ?? shaped.HasNextPage ?? false,
+    };
   },
 
   getById: async (id: number): Promise<StockGetDto> => {
