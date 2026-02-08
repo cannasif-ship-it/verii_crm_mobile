@@ -26,8 +26,9 @@ apiClient.interceptors.request.use(
 
     config.headers["X-Language"] = language || "tr";
 
-    if (branch?.code) {
-      config.headers["X-Branch-Code"] = branch.code;
+    const branchCode = branch?.code;
+    if (branchCode !== undefined && branchCode !== null && String(branchCode).trim() !== "") {
+      config.headers["X-Branch-Code"] = String(branchCode);
     }
 
     if (__DEV__) {
