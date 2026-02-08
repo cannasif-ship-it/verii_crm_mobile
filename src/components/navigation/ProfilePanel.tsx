@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,6 +9,7 @@ import {
   Pressable,
   Platform,
   ScrollView,
+  Switch,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -20,24 +21,29 @@ import Animated, {
   withTiming,
   Easing,
 } from "react-native-reanimated";
+import { useTranslation } from "react-i18next";
 
 import {
   Cancel01Icon,
-  Settings02Icon,
-  Logout01Icon, 
+  Logout01Icon,
   ArrowRight01Icon,
   UserIcon,
-  Store01Icon
+  Store01Icon,
+  GlobalIcon,
+  Moon02Icon,
+  Sun01Icon,
+  Settings02Icon,
 } from "hugeicons-react-native";
 
 import { GRADIENT } from "../../constants/theme";
 import { useUIStore } from "../../store/ui";
+import { setLanguage, getCurrentLanguage } from "../../locales";
 
 const { width, height } = Dimensions.get("window");
-const PANEL_WIDTH = width * 0.85; 
+const PANEL_WIDTH = width * 0.85;
 
-const ACTIVE_COLOR = "#fb923c"; 
-const ACTIVE_BG_COLOR = "rgba(251, 146, 60, 0.12)"; 
+const ACTIVE_COLOR = "#fb923c";
+const ACTIVE_BG_COLOR = "rgba(251, 146, 60, 0.12)";
 
 const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
@@ -60,9 +66,12 @@ const ProfilePanel = ({
 }: ProfilePanelProps) => {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  
-  const { colors, themeMode } = useUIStore();
+  const { t } = useTranslation();
 
+  const { colors, themeMode, toggleTheme } = useUIStore();
+  const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
+
+  const isDarkMode = themeMode === "dark";
   const translateX = useSharedValue(PANEL_WIDTH);
   const backdropOpacity = useSharedValue(0);
 
@@ -84,6 +93,11 @@ const ProfilePanel = ({
 
   const handleClose = () => {
     onClose();
+  };
+
+  const handleLanguageChange = async (lang: "tr" | "en") => {
+    await setLanguage(lang);
+    setCurrentLang(lang);
   };
 
   const handleMenuItemPress = (action: string) => {
@@ -138,21 +152,23 @@ const ProfilePanel = ({
             animatedStyle,
           ]}
         >
+          {/* Header */}
           <View style={styles.header}>
-            <View style={{ flex: 1 }} /> 
-            <TouchableOpacity 
-              onPress={handleClose} 
+            <View style={{ flex: 1 }} />
+            <TouchableOpacity
+              onPress={handleClose}
               style={[styles.closeButton, { backgroundColor: colors.card }]}
             >
               <Cancel01Icon size={20} color={colors.text} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView 
+          <ScrollView
             style={{ flex: 1 }}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
+            {/* User Info Section */}
             <View style={styles.userInfoContainer}>
               <LinearGradient
                 colors={[...GRADIENT.primary]}
@@ -161,7 +177,7 @@ const ProfilePanel = ({
                 style={styles.avatarBorder}
               >
                 <View style={[styles.avatarInner, { backgroundColor: colors.background }]}>
-                   <UserIcon size={32} color={colors.text} />
+                  <UserIcon size={32} color={colors.text} />
                 </View>
               </LinearGradient>
 
@@ -170,13 +186,15 @@ const ProfilePanel = ({
 
               <View style={styles.infoBoxes}>
                 <View style={[styles.infoBox, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                    <Store01Icon size={16} color={colors.textMuted} style={{ marginRight: 8 }} />
-                    <Text style={[styles.infoLabel, { color: colors.textMuted }]}>Şube:</Text>
+                  <Store01Icon size={18} color={ACTIVE_COLOR} style={{ marginRight: 10 }} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
+                      {t("home.branch")}
+                    </Text>
+                    <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
+                      {branch}
+                    </Text>
                   </View>
-                  <Text style={[styles.infoValue, { color: colors.text }]} numberOfLines={1}>
-                    {branch}
-                  </Text>
                 </View>
               </View>
             </View>
@@ -188,73 +206,102 @@ const ProfilePanel = ({
               style={styles.separator}
             />
 
+            {/* Menu Items */}
             <View style={styles.menuContainer}>
-              <Pressable
-                onPress={() => handleMenuItemPress("profile")}
-                style={({ pressed }) => [
-                  styles.menuItem,
-                  pressed && { backgroundColor: ACTIVE_BG_COLOR }
-                ]}
-              >
-                 {({ pressed }) => (
-                  <View style={styles.menuItemInner}>
-                    <View style={[styles.iconBox, { backgroundColor: pressed ? "transparent" : colors.card }]}>
-                      <UserIcon size={20} color={pressed ? ACTIVE_COLOR : colors.text} />
-                    </View>
-                    <Text style={[
-                      styles.menuText, 
-                      { color: pressed ? ACTIVE_COLOR : colors.text, fontWeight: pressed ? "700" : "500" }
-                    ]}>
-                      Profilim
-                    </Text>
-                    <ArrowRight01Icon size={16} color={pressed ? ACTIVE_COLOR : colors.textMuted} style={{ marginLeft: "auto", opacity: pressed ? 1 : 0.5 }} />
-                  </View>
-                 )}
-              </Pressable>
-
+              
+              {/* Profil Ayarları */}
               <Pressable
                 onPress={() => handleMenuItemPress("settings")}
-                style={({ pressed }) => [
-                  styles.menuItem,
-                  pressed && { backgroundColor: ACTIVE_BG_COLOR }
-                ]}
+                style={({ pressed }) => [styles.menuItem, pressed && { backgroundColor: ACTIVE_BG_COLOR }]}
               >
-                 {({ pressed }) => (
+                {({ pressed }) => (
                   <View style={styles.menuItemInner}>
                     <View style={[styles.iconBox, { backgroundColor: pressed ? "transparent" : colors.card }]}>
                       <Settings02Icon size={20} color={pressed ? ACTIVE_COLOR : colors.text} />
                     </View>
-                    <Text style={[
-                      styles.menuText, 
-                      { color: pressed ? ACTIVE_COLOR : colors.text, fontWeight: pressed ? "700" : "500" }
-                    ]}>
-                      Ayarlar
+                    <Text style={[styles.menuText, { color: pressed ? ACTIVE_COLOR : colors.text, fontWeight: pressed ? "700" : "500" }]}>
+                      Profil Ayarları
                     </Text>
                     <ArrowRight01Icon size={16} color={pressed ? ACTIVE_COLOR : colors.textMuted} style={{ marginLeft: "auto", opacity: pressed ? 1 : 0.5 }} />
                   </View>
-                 )}
+                )}
               </Pressable>
+
+              {/* Tema Değiştirme (Switch) */}
+              <View style={styles.menuItem}>
+                <View style={styles.menuItemInner}>
+                  <View style={[styles.iconBox, { backgroundColor: colors.card }]}>
+                    {isDarkMode ? (
+                      <Moon02Icon size={20} color={ACTIVE_COLOR} />
+                    ) : (
+                      <Sun01Icon size={20} color="#facc15" />
+                    )}
+                  </View>
+                  <Text style={[styles.menuText, { color: colors.text }]}>
+                    {t("settings.darkMode")}
+                  </Text>
+                  <Switch
+                    value={isDarkMode}
+                    onValueChange={toggleTheme}
+                    trackColor={{ false: "#E5E7EB", true: ACTIVE_COLOR }}
+                    thumbColor="#FFFFFF"
+                  />
+                </View>
+              </View>
+
+              <LinearGradient
+                colors={['transparent', colors.border || 'rgba(255,255,255,0.2)', 'transparent']}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.separator}
+              />
+
+              {/* Dil Seçimi (Badge Yapısı) */}
+              <View style={{ paddingHorizontal: 12, marginTop: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+                  <GlobalIcon size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
+                  <Text style={[styles.infoLabel, { color: colors.textMuted }]}>
+                    {t("language.title")}
+                  </Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  {[
+                    { id: 'tr', label: t("language.turkish"), flag: '🇹🇷' },
+                    { id: 'en', label: t("language.english"), flag: '🇬🇧' }
+                  ].map((lang) => (
+                    <TouchableOpacity
+                      key={lang.id}
+                      onPress={() => handleLanguageChange(lang.id as "tr" | "en")}
+                      style={[
+                        styles.languageBadge,
+                        {
+                          backgroundColor: currentLang === lang.id ? ACTIVE_BG_COLOR : colors.card,
+                          borderColor: currentLang === lang.id ? ACTIVE_COLOR : colors.border
+                        }
+                      ]}
+                    >
+                      <Text style={{ fontSize: 16, marginRight: 6 }}>{lang.flag}</Text>
+                      <Text style={{
+                        color: currentLang === lang.id ? ACTIVE_COLOR : colors.text,
+                        fontWeight: currentLang === lang.id ? "700" : "500",
+                        fontSize: 13
+                      }}>
+                        {lang.label}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </View>
           </ScrollView>
 
-          <LinearGradient
-            colors={['transparent', colors.border || 'rgba(255,255,255,0.2)', 'transparent']}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
-            style={[styles.separator, { marginTop: 0, marginBottom: 0 }]}
-          />
-
-          <View style={[
-            styles.footer, 
-            { 
-              paddingBottom: insets.bottom + 10 
-            }
-          ]}>
-            <Pressable 
+          {/* Footer - Çıkış Yap */}
+          <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
+            <Pressable
               style={({ pressed }) => [
-                styles.menuItem, 
+                styles.menuItem,
                 pressed && { backgroundColor: "rgba(239, 68, 68, 0.1)" }
-              ]} 
+              ]}
               onPress={onLogout}
             >
               {({ pressed }) => (
@@ -262,11 +309,11 @@ const ProfilePanel = ({
                   <View style={[styles.iconBox, { backgroundColor: "rgba(239, 68, 68, 0.1)" }]}>
                     <Logout01Icon size={20} color="#EF4444" />
                   </View>
-                  <Text style={styles.logoutText}>Çıkış Yap</Text>
+                  <Text style={styles.logoutText}>{t("common.logout")}</Text>
                 </View>
               )}
             </Pressable>
-            
+
             <Text style={[styles.companyText, { color: colors.textMuted }]}>
               V3RII COMPANY
             </Text>
@@ -281,18 +328,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     flexDirection: "row",
-    justifyContent: "flex-end", 
+    justifyContent: "flex-end",
   },
   panel: {
     borderLeftWidth: 1,
-    borderTopLeftRadius: 24, 
-    borderBottomLeftRadius: 0,
+    borderTopLeftRadius: 24,
     shadowColor: "#000",
     shadowOffset: { width: -5, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 20,
-    overflow: "hidden", 
+    overflow: "hidden",
     justifyContent: "space-between",
   },
   header: {
@@ -300,7 +346,6 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingHorizontal: 16,
     paddingTop: 10,
-    paddingBottom: 5,
   },
   closeButton: {
     padding: 8,
@@ -346,25 +391,27 @@ const styles = StyleSheet.create({
   infoBox: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
     paddingHorizontal: 16,
     paddingVertical: 12,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
   },
   infoLabel: {
-    fontSize: 13,
-    fontWeight: "500",
+    fontSize: 11,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 2,
   },
   infoValue: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "700",
   },
   separator: {
     height: 1,
-    width: "80%", 
+    width: "90%",
     alignSelf: "center",
-    marginVertical: 15, 
+    marginVertical: 15,
   },
   menuContainer: {
     gap: 4,
@@ -381,9 +428,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
   },
   iconBox: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
@@ -392,9 +439,18 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 15,
   },
+  languageBadge: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
   footer: {
     paddingHorizontal: 16,
-    paddingTop: 10, 
+    paddingTop: 10,
   },
   logoutText: {
     flex: 1,
@@ -404,14 +460,12 @@ const styles = StyleSheet.create({
   },
   companyText: {
     textAlign: "center",
-    fontSize: 12,
-    fontWeight: "600",
-    letterSpacing: 1.5,
-    opacity: 0.5,
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 2,
+    opacity: 0.4,
     marginTop: 20,
-    marginBottom: -20,
   },
 });
 
 export default ProfilePanel;
-
