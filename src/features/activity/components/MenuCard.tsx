@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, TouchableOpacity, StyleSheet } from "react-native";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
@@ -6,34 +6,109 @@ import { useUIStore } from "../../../store/ui";
 interface MenuCardProps {
   title: string;
   description: string;
-  icon: string;
+  // Hem String (Emoji) hem Component (SVG) alabilsin
+  icon: React.ReactNode; 
   onPress: () => void;
+  // EKLENDİ: Artık sağ ikonu kabul ediyor
+  rightIcon?: React.ReactNode;
 }
 
-export function MenuCard({ title, description, icon, onPress }: MenuCardProps): React.ReactElement {
-  const { colors } = useUIStore();
+export function MenuCard({ 
+  title, 
+  description, 
+  icon, 
+  onPress,
+  rightIcon // EKLENDİ: Props'tan çekiyoruz
+}: MenuCardProps): React.ReactElement {
+  
+  const { colors, themeMode } = useUIStore() as any; // Type hatası almamak için any
+  
+  // --- TIKLAMA DURUMU (WOW EFEKTİ) ---
+  const [isPressed, setIsPressed] = useState(false);
+
+  // --- RENKLER ---
+  const ACTIVE_PINK = "#ec4899"; // Neon Pembe
+
+  // 1. ZEMİN RENGİ
+  const isDark = themeMode === "dark";
+  const cardBg = colors.card; 
+
+  // 2. BORDER (ÇERÇEVE)
+  const normalBorder = colors.cardBorder;
+  const currentBorder = isPressed ? ACTIVE_PINK : normalBorder;
+
+  // 3. İKON KUTUSU ARKAPLANI
+  const normalIconBg = "rgba(232, 72, 85, 0.1)";
+  const pressedIconBg = "rgba(236, 72, 153, 0.15)";
+  const currentIconBg = isPressed ? pressedIconBg : normalIconBg;
+
+  // 4. METİN RENKLERİ
+  const normalTitleColor = isDark ? "#FFFFFF" : colors.text;
+  const normalDescColor = isDark ? "#E2E8F0" : colors.textSecondary;
+  const normalArrowColor = isDark ? "#E2E8F0" : colors.textSecondary;
+
+  // Basınca Başlık ve Ok PEMBE olsun
+  const currentTitleColor = isPressed ? ACTIVE_PINK : normalTitleColor;
+  const currentArrowColor = isPressed ? ACTIVE_PINK : normalArrowColor;
 
   return (
     <TouchableOpacity
       style={[
         styles.container,
-        { backgroundColor: colors.card, borderColor: colors.cardBorder },
+        { 
+          backgroundColor: cardBg, 
+          borderColor: currentBorder,
+          // Basınca çizgi hafif kalınlaşsın
+          borderWidth: isPressed ? 1.5 : 1 
+        },
       ]}
       onPress={onPress}
+      // Tıklama olaylarını yakalıyoruz
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
       activeOpacity={0.7}
     >
-      <View style={styles.iconContainer}>
-        <Text style={styles.icon}>{icon}</Text>
+      {/* İKON KUTUSU */}
+      <View style={[styles.iconContainer, { backgroundColor: currentIconBg }]}>
+        {/* SVG veya Emoji Kontrolü */}
+        {React.isValidElement(icon) ? (
+          React.cloneElement(icon as React.ReactElement<any>, {
+            // SADECE RENK DEĞİŞTİRİYORUZ (Variant değiştirince ikon kaybolabiliyor)
+            color: isPressed ? ACTIVE_PINK : (isDark ? "#FFFFFF" : colors.text),
+            // variant: "stroke" // Varsayılan neyse o kalsın, zorlamıyoruz
+          })
+        ) : (
+          <Text style={[styles.icon, { color: isPressed ? ACTIVE_PINK : undefined }]}>
+            {icon}
+          </Text>
+        )}
       </View>
+
+      {/* İÇERİK */}
       <View style={styles.content}>
-        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
-        <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
+        <Text style={[styles.title, { color: currentTitleColor }]}>
+          {title}
+        </Text>
+        <Text style={[styles.description, { color: normalDescColor }]}>
+          {description}
+        </Text>
       </View>
-      <Text style={[styles.arrow, { color: colors.textMuted }]}>›</Text>
+
+      {/* SAĞ TARAF (Right Icon veya Ok) */}
+      <View style={styles.rightContainer}>
+        {rightIcon ? (
+          // Eğer dışarıdan sağ ikon gelirse (örn: HugeIcon oku)
+          rightIcon
+        ) : (
+          // Gelmezse varsayılan Text ok
+          <Text style={[styles.arrow, { color: currentArrowColor }]}>›</Text>
+        )}
+      </View>
     </TouchableOpacity>
   );
 }
 
+// --- STİLLER ---
 const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
@@ -47,7 +122,6 @@ const styles = StyleSheet.create({
     width: 48,
     height: 48,
     borderRadius: 12,
-    backgroundColor: "rgba(232, 72, 85, 0.1)",
     alignItems: "center",
     justifyContent: "center",
     marginRight: 16,
@@ -57,6 +131,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+    paddingRight: 8,
   },
   title: {
     fontSize: 16,
@@ -65,6 +140,11 @@ const styles = StyleSheet.create({
   },
   description: {
     fontSize: 14,
+  },
+  // Sağ tarafı ortalamak için container ekledik
+  rightContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   arrow: {
     fontSize: 24,

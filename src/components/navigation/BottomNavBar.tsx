@@ -80,7 +80,7 @@ export function BottomNavBar(): React.ReactElement {
                 <View style={styles.iconContainer}>
                   <IconComponent
                     size={22}
-                    color={active ? colors.accent : colors.textMuted}
+                    color={active ? colors.accent : colors.textSecondary}
                     strokeWidth={active ? 2.5 : 1.5}
                   />
                 </View>
@@ -88,7 +88,7 @@ export function BottomNavBar(): React.ReactElement {
               <Text
                 style={[
                   styles.label,
-                  { color: active ? colors.accent : colors.textMuted },
+                  { color: active ? colors.accent : colors.textSecondary },
                   active && styles.labelActive,
                 ]}
               >

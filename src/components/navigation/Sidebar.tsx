@@ -68,6 +68,8 @@ export function Sidebar(): React.ReactElement {
   const translateX = useSharedValue(-SIDEBAR_WIDTH);
   const backdropOpacity = useSharedValue(0);
 
+  const TEXT_COLOR = themeMode === "dark" ? "#FFFFFF" : colors.text;
+  const TEXT_SECONDARY_COLOR = themeMode === "dark" ? "#E2E8F0" : colors.textSecondary;
   const HEADER_COLOR = themeMode === "dark" ? "#f472b6" : "#be185d";
 
   const MENU_ITEMS = [
@@ -231,7 +233,7 @@ export function Sidebar(): React.ReactElement {
                         {item.icon && (
                           <item.icon
                             size={20}
-                            color={(pressed || isActive) ? ACTIVE_COLOR : colors.text}
+                            color={(pressed || isActive) ? ACTIVE_COLOR : TEXT_COLOR}
                             
                           />
                         )}
@@ -240,7 +242,7 @@ export function Sidebar(): React.ReactElement {
                         style={[
                           styles.menuItemText,
                           { 
-                            color: (pressed || isActive) ? ACTIVE_COLOR : colors.text,
+                            color: (pressed || isActive) ? ACTIVE_COLOR : TEXT_COLOR,
                             fontWeight: (pressed || isActive) ? "700" : "500"
                           }
                         ]}
@@ -249,8 +251,8 @@ export function Sidebar(): React.ReactElement {
                       </Text>
                       <ArrowRight01Icon
                         size={16}
-                        color={(pressed || isActive) ? ACTIVE_COLOR : colors.textMuted}
-                        style={{ opacity: (pressed || isActive) ? 1 : 0.5 }}
+                        color={(pressed || isActive) ? ACTIVE_COLOR : TEXT_SECONDARY_COLOR}
+                        style={{ opacity: (pressed || isActive) ? 1 : 0.8 }}
                       />
                     </View>
                   )}
@@ -267,7 +269,7 @@ export function Sidebar(): React.ReactElement {
           />
 
           <View style={styles.footer}>
-            <Text style={[styles.companyText, { color: colors.textMuted }]}>
+            <Text style={[styles.companyText, { color: colors.text }]}>
               V3RII COMPANY
             </Text>
           </View>
