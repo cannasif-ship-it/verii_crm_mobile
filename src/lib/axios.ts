@@ -50,10 +50,19 @@ apiClient.interceptors.request.use(
 apiClient.interceptors.response.use(
   (response) => {
     if (__DEV__) {
+      const payload = response.data as { data?: unknown; success?: boolean } | undefined;
+      const pageData = payload?.data as { items?: unknown[]; Items?: unknown[]; totalCount?: number; TotalCount?: number } | undefined;
+      const itemsCount = Array.isArray(pageData?.items)
+        ? pageData?.items.length
+        : Array.isArray(pageData?.Items)
+          ? pageData?.Items.length
+          : undefined;
+
       console.log(`[API Response] ${response.config.method?.toUpperCase()} ${response.config.url}`, {
         status: response.status,
-        success: response.data?.success,
-        data: response.data,
+        success: payload?.success,
+        itemsCount,
+        totalCount: pageData?.totalCount ?? pageData?.TotalCount,
       });
     }
     return response;

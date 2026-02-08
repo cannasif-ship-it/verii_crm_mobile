@@ -1,6 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, ScrollView, Text as RNText } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -14,7 +13,6 @@ import type { CariDto } from "../types";
 
 export function ErpCustomerListScreen(): React.ReactElement {
   const { t } = useTranslation();
-  const router = useRouter();
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
 
@@ -52,20 +50,9 @@ export function ErpCustomerListScreen(): React.ReactElement {
     );
   }, [customers, searchText]);
 
-  const handleCustomerPress = useCallback(
-    (customer: CariDto) => {
-      console.log("ERP Customer selected:", customer);
-    },
-    []
-  );
-
-  const renderItem = useCallback(
-    ({ item }: { item: CariDto }) => {
-      if (!item) return null;
-      return <ErpCustomerCard customer={item} onPress={() => handleCustomerPress(item)} />;
-    },
-    [handleCustomerPress]
-  );
+  const handleCustomerPress = useCallback((customer: CariDto) => {
+    console.log("ERP Customer selected:", customer);
+  }, []);
 
   const renderEmpty = useCallback(() => {
     if (isPending) {
@@ -85,28 +72,18 @@ export function ErpCustomerListScreen(): React.ReactElement {
     );
   }, [isPending, colors, t]);
 
-  const keyExtractor = useCallback(
-    (item: CariDto, index: number) => `${item.cariKod}-${item.subeKodu}-${index}`,
-    []
-  );
-
   return (
     <>
       <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
+      <View style={[styles.container, { backgroundColor: colors.header }]}> 
         <ScreenHeader title={t("erpCustomer.title")} showBackButton />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}>
+        <View style={[styles.content, { backgroundColor: contentBackground }]}> 
           <View style={styles.topSection}>
             <SearchInput
               value={searchText}
               onSearch={setSearchText}
               placeholder={t("erpCustomer.searchPlaceholder")}
             />
-            {__DEV__ && Platform.OS === "android" ? (
-              <Text style={[styles.debugText, { color: colors.textMuted }]}>
-                items: {filteredCustomers.length} {isPending ? "(pending)" : ""} {isRefetching ? "(refetching)" : ""}
-              </Text>
-            ) : null}
           </View>
 
           {isPending && filteredCustomers.length === 0 ? (
@@ -121,23 +98,38 @@ export function ErpCustomerListScreen(): React.ReactElement {
               </TouchableOpacity>
             </View>
           ) : (
-            <FlatList
-              data={filteredCustomers}
-              keyExtractor={keyExtractor}
-              renderItem={renderItem}
-              contentContainerStyle={[
-                styles.listContent,
-                { paddingBottom: insets.bottom + 100 },
-              ]}
+            <ScrollView
+              style={styles.list}
+              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
               showsVerticalScrollIndicator={false}
-              ListEmptyComponent={renderEmpty}
               refreshControl={
-                <CustomRefreshControl
-                  refreshing={isRefetching}
-                  onRefresh={handleRefresh}
-                />
+                Platform.OS === "android"
+                  ? undefined
+                  : <CustomRefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
               }
-            />
+            >
+              {filteredCustomers.length === 0 ? renderEmpty() : null}
+              {filteredCustomers.map((item, index) =>
+                Platform.OS === "android" ? (
+                  <TouchableOpacity
+                    key={`${item.cariKod}-${item.subeKodu}-${index}`}
+                    style={styles.androidCard}
+                    onPress={() => handleCustomerPress(item)}
+                    activeOpacity={0.8}
+                  >
+                    <RNText style={styles.androidCardTitle}>{item.cariIsim || item.cariKod}</RNText>
+                    <RNText style={styles.androidCardSub}>{item.cariKod}</RNText>
+                    <RNText style={styles.androidCardSub}>{item.cariTel || item.email || "-"}</RNText>
+                  </TouchableOpacity>
+                ) : (
+                  <ErpCustomerCard
+                    key={`${item.cariKod}-${item.subeKodu}-${index}`}
+                    customer={item}
+                    onPress={() => handleCustomerPress(item)}
+                  />
+                )
+              )}
+            </ScrollView>
           )}
         </View>
       </View>
@@ -157,6 +149,9 @@ const styles = StyleSheet.create({
   topSection: {
     paddingHorizontal: 20,
     paddingTop: 16,
+  },
+  list: {
+    flex: 1,
   },
   listContent: {
     paddingHorizontal: 20,
@@ -197,9 +192,23 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
   },
-  debugText: {
-    marginTop: -8,
-    marginBottom: 8,
-    fontSize: 12,
+  androidCard: {
+    backgroundColor: "#1f2937",
+    borderColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  androidCardTitle: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  androidCardSub: {
+    color: "#cbd5e1",
+    fontSize: 13,
   },
 });

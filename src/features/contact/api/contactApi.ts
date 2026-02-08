@@ -31,6 +31,45 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
   return queryParams;
 };
 
+const toNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const normalizeContact = (raw: unknown): ContactDto | null => {
+  if (!raw || typeof raw !== "object") return null;
+
+  const item = raw as Record<string, unknown>;
+  const id = toNumber(item.id ?? item.Id);
+  const customerId = toNumber(item.customerId ?? item.CustomerId);
+  const titleId = toNumber(item.titleId ?? item.TitleId);
+
+  if (id == null || customerId == null || titleId == null) return null;
+
+  return {
+    id,
+    fullName: String(item.fullName ?? item.FullName ?? ""),
+    email: (item.email ?? item.Email ?? undefined) as string | undefined,
+    phone: (item.phone ?? item.Phone ?? undefined) as string | undefined,
+    mobile: (item.mobile ?? item.Mobile ?? undefined) as string | undefined,
+    notes: (item.notes ?? item.Notes ?? undefined) as string | undefined,
+    customerId,
+    customerName: (item.customerName ?? item.CustomerName ?? undefined) as string | undefined,
+    titleId,
+    titleName: (item.titleName ?? item.TitleName ?? undefined) as string | undefined,
+    createdDate: String(item.createdDate ?? item.CreatedDate ?? ""),
+    updatedDate: (item.updatedDate ?? item.UpdatedDate ?? undefined) as string | undefined,
+    isDeleted: Boolean(item.isDeleted ?? item.IsDeleted ?? false),
+    createdByFullUser: (item.createdByFullUser ?? item.CreatedByFullUser ?? undefined) as string | undefined,
+    updatedByFullUser: (item.updatedByFullUser ?? item.UpdatedByFullUser ?? undefined) as string | undefined,
+    deletedByFullUser: (item.deletedByFullUser ?? item.DeletedByFullUser ?? undefined) as string | undefined,
+  };
+};
+
 export const contactApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<ContactDto>> => {
     const queryParams = buildQueryParams(params);
@@ -58,8 +97,8 @@ export const contactApi = {
     }
 
     const shaped = payload as {
-      items?: ContactDto[];
-      Items?: ContactDto[];
+      items?: unknown[];
+      Items?: unknown[];
       totalCount?: number;
       TotalCount?: number;
       pageNumber?: number;
@@ -74,11 +113,15 @@ export const contactApi = {
       HasNextPage?: boolean;
     };
 
-    const items = Array.isArray(shaped.items)
+    const rawItems = Array.isArray(shaped.items)
       ? shaped.items
       : Array.isArray(shaped.Items)
         ? shaped.Items
         : [];
+
+    const items = rawItems
+      .map(normalizeContact)
+      .filter((item): item is ContactDto => item != null);
 
     return {
       items,
@@ -98,7 +141,12 @@ export const contactApi = {
       throw new Error(response.data.message || response.data.exceptionMessage || "Kişi bulunamadı");
     }
 
-    return response.data.data;
+    const normalized = normalizeContact(response.data.data);
+    if (!normalized) {
+      throw new Error("Kişi verisi çözümlenemedi");
+    }
+
+    return normalized;
   },
 
   create: async (data: CreateContactDto): Promise<ContactDto> => {
@@ -110,7 +158,12 @@ export const contactApi = {
       );
     }
 
-    return response.data.data;
+    const normalized = normalizeContact(response.data.data);
+    if (!normalized) {
+      throw new Error("Kişi verisi çözümlenemedi");
+    }
+
+    return normalized;
   },
 
   update: async (id: number, data: UpdateContactDto): Promise<ContactDto> => {
@@ -122,7 +175,12 @@ export const contactApi = {
       );
     }
 
-    return response.data.data;
+    const normalized = normalizeContact(response.data.data);
+    if (!normalized) {
+      throw new Error("Kişi verisi çözümlenemedi");
+    }
+
+    return normalized;
   },
 
   delete: async (id: number): Promise<void> => {
@@ -149,15 +207,18 @@ export const contactApi = {
     }
 
     const payload = response.data.data as unknown as {
-      items?: ContactDto[];
-      Items?: ContactDto[];
+      items?: unknown[];
+      Items?: unknown[];
     } | null;
-    if (payload && Array.isArray(payload.items)) {
-      return payload.items;
-    }
-    if (payload && Array.isArray(payload.Items)) {
-      return payload.Items;
-    }
-    return [];
+
+    const rawItems = payload && Array.isArray(payload.items)
+      ? payload.items
+      : payload && Array.isArray(payload.Items)
+        ? payload.Items
+        : [];
+
+    return rawItems
+      .map(normalizeContact)
+      .filter((item): item is ContactDto => item != null);
   },
 };

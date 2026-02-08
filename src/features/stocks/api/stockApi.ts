@@ -31,6 +31,58 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
   return queryParams;
 };
 
+const toNumber = (value: unknown): number | undefined => {
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  if (typeof value === "string" && value.trim() !== "") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return parsed;
+  }
+  return undefined;
+};
+
+const normalizeStock = (raw: unknown): StockGetDto | null => {
+  if (!raw || typeof raw !== "object") return null;
+
+  const item = raw as Record<string, unknown>;
+  const id = toNumber(item.id ?? item.Id);
+  if (id == null) return null;
+
+  const erpStockCode = String(item.erpStockCode ?? item.ErpStockCode ?? "");
+  const stockName = String(item.stockName ?? item.StockName ?? erpStockCode ?? "").trim();
+  const branchCode = toNumber(item.branchCode ?? item.BranchCode) ?? 0;
+
+  return {
+    id,
+    erpStockCode,
+    stockName,
+    unit: (item.unit ?? item.Unit ?? undefined) as string | undefined,
+    ureticiKodu: (item.ureticiKodu ?? item.UreticiKodu ?? undefined) as string | undefined,
+    branchCode,
+    stockImages: (item.stockImages ?? item.StockImages ?? []) as StockGetDto["stockImages"],
+    parentRelations: (item.parentRelations ?? item.ParentRelations ?? []) as StockGetDto["parentRelations"],
+    grupKodu: (item.grupKodu ?? item.GrupKodu ?? undefined) as string | undefined,
+    grupAdi: (item.grupAdi ?? item.GrupAdi ?? undefined) as string | undefined,
+    kod1: (item.kod1 ?? item.Kod1 ?? undefined) as string | undefined,
+    kod1Adi: (item.kod1Adi ?? item.Kod1Adi ?? undefined) as string | undefined,
+    kod2: (item.kod2 ?? item.Kod2 ?? undefined) as string | undefined,
+    kod2Adi: (item.kod2Adi ?? item.Kod2Adi ?? undefined) as string | undefined,
+    kod3: (item.kod3 ?? item.Kod3 ?? undefined) as string | undefined,
+    kod3Adi: (item.kod3Adi ?? item.Kod3Adi ?? undefined) as string | undefined,
+    kod4: (item.kod4 ?? item.Kod4 ?? undefined) as string | undefined,
+    kod4Adi: (item.kod4Adi ?? item.Kod4Adi ?? undefined) as string | undefined,
+    kod5: (item.kod5 ?? item.Kod5 ?? undefined) as string | undefined,
+    kod5Adi: (item.kod5Adi ?? item.Kod5Adi ?? undefined) as string | undefined,
+    stockDetail: (item.stockDetail ?? item.StockDetail ?? undefined) as StockGetDto["stockDetail"],
+    createdDate: (item.createdDate ?? item.CreatedDate ?? undefined) as string | undefined,
+    updatedDate: (item.updatedDate ?? item.UpdatedDate ?? undefined) as string | undefined,
+    deletedDate: (item.deletedDate ?? item.DeletedDate ?? undefined) as string | undefined,
+    isDeleted: (item.isDeleted ?? item.IsDeleted ?? false) as boolean,
+    createdByFullUser: (item.createdByFullUser ?? item.CreatedByFullUser ?? undefined) as string | undefined,
+    updatedByFullUser: (item.updatedByFullUser ?? item.UpdatedByFullUser ?? undefined) as string | undefined,
+    deletedByFullUser: (item.deletedByFullUser ?? item.DeletedByFullUser ?? undefined) as string | undefined,
+  };
+};
+
 export const stockApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<StockGetDto>> => {
     const queryParams = buildQueryParams(params);
@@ -58,8 +110,8 @@ export const stockApi = {
     }
 
     const shaped = payload as {
-      items?: StockGetDto[];
-      Items?: StockGetDto[];
+      items?: unknown[];
+      Items?: unknown[];
       totalCount?: number;
       TotalCount?: number;
       pageNumber?: number;
@@ -74,11 +126,15 @@ export const stockApi = {
       HasNextPage?: boolean;
     };
 
-    const items = Array.isArray(shaped.items)
+    const rawItems = Array.isArray(shaped.items)
       ? shaped.items
       : Array.isArray(shaped.Items)
         ? shaped.Items
         : [];
+
+    const items = rawItems
+      .map(normalizeStock)
+      .filter((item): item is StockGetDto => item != null);
 
     return {
       items,
@@ -100,7 +156,12 @@ export const stockApi = {
       );
     }
 
-    return response.data.data;
+    const normalized = normalizeStock(response.data.data);
+    if (!normalized) {
+      throw new Error("Stok verisi çözümlenemedi");
+    }
+
+    return normalized;
   },
 
   getRelations: async (stockId: number, params: PagedParams = {}): Promise<PagedResponse<StockRelationDto>> => {

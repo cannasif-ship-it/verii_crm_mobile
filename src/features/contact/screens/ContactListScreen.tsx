@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity, Platform } from "react-native";
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, ScrollView, Text as RNText } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -71,28 +71,11 @@ export function ContactListScreen(): React.ReactElement {
     router.push("/(tabs)/customers/contacts/create");
   }, [router]);
 
-  const handleEndReached = useCallback(() => {
+  const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: ContactDto }) => {
-      if (!item) return null;
-      return <ContactCard contact={item} onPress={() => handleContactPress(item)} />;
-    },
-    [handleContactPress]
-  );
-
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={styles.footerLoading}>
-        <ActivityIndicator size="small" color={colors.accent} />
-      </View>
-    );
-  }, [isFetchingNextPage, colors]);
 
   const renderEmpty = useCallback(() => {
     if (isInitialLoading) {
@@ -105,19 +88,17 @@ export function ContactListScreen(): React.ReactElement {
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>👤</Text>
-        <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+        <Text style={[styles.emptyText, { color: colors.textMuted }]}> 
           {t("contact.noContacts")}
         </Text>
       </View>
     );
   }, [isInitialLoading, colors, t]);
 
-  const keyExtractor = useCallback((item: ContactDto, index: number) => String(item?.id ?? index), []);
-
   return (
     <>
       <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
+      <View style={[styles.container, { backgroundColor: colors.header }]}> 
         <ScreenHeader
           title={t("contact.title")}
           showBackButton
@@ -127,7 +108,7 @@ export function ContactListScreen(): React.ReactElement {
             </TouchableOpacity>
           }
         />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}>
+        <View style={[styles.content, { backgroundColor: contentBackground }]}> 
           <View style={styles.topSection}>
             <TouchableOpacity
               style={[styles.createButton, { backgroundColor: colors.accent }]}
@@ -142,11 +123,6 @@ export function ContactListScreen(): React.ReactElement {
               onSearch={setSearchText}
               placeholder={t("contact.searchPlaceholder")}
             />
-            {__DEV__ && Platform.OS === "android" ? (
-              <Text style={[styles.debugText, { color: colors.textMuted }]}>
-                items: {contacts.length} {isPending ? "(pending)" : ""} {isRefetching ? "(refetching)" : ""}
-              </Text>
-            ) : null}
           </View>
 
           {isInitialLoading ? (
@@ -161,26 +137,51 @@ export function ContactListScreen(): React.ReactElement {
               </TouchableOpacity>
             </View>
           ) : (
-            <FlatList
-              data={contacts}
-              keyExtractor={keyExtractor}
-              renderItem={renderItem}
-              contentContainerStyle={[
-                styles.listContent,
-                { paddingBottom: insets.bottom + 100 },
-              ]}
+            <ScrollView
+              style={styles.list}
+              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
               showsVerticalScrollIndicator={false}
-              onEndReached={handleEndReached}
-              onEndReachedThreshold={0.3}
-              ListFooterComponent={renderFooter}
-              ListEmptyComponent={renderEmpty}
               refreshControl={
-                <CustomRefreshControl
-                  refreshing={isRefetching && !isFetchingNextPage}
-                  onRefresh={handleRefresh}
-                />
+                Platform.OS === "android"
+                  ? undefined
+                  : <CustomRefreshControl refreshing={isRefetching && !isFetchingNextPage} onRefresh={handleRefresh} />
               }
-            />
+            >
+              {contacts.length === 0 ? renderEmpty() : null}
+              {contacts.map((item, index) =>
+                Platform.OS === "android" ? (
+                  <TouchableOpacity
+                    key={String(item.id ?? index)}
+                    style={styles.androidCard}
+                    onPress={() => handleContactPress(item)}
+                    activeOpacity={0.8}
+                  >
+                    <RNText style={styles.androidCardTitle}>{item.fullName || "-"}</RNText>
+                    <RNText style={styles.androidCardSub}>{item.titleName || "Unvan: -"}</RNText>
+                    <RNText style={styles.androidCardSub}>{item.phone || item.mobile || "-"}</RNText>
+                  </TouchableOpacity>
+                ) : (
+                  <ContactCard
+                    key={String(item.id ?? index)}
+                    contact={item}
+                    onPress={() => handleContactPress(item)}
+                  />
+                )
+              )}
+              {hasNextPage ? (
+                <TouchableOpacity
+                  style={[styles.loadMoreButton, { borderColor: colors.cardBorder }]}
+                  onPress={handleLoadMore}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Text style={{ color: colors.text }}>{t("common.loadMore", "Daha Fazla")}</Text>
+                  )}
+                </TouchableOpacity>
+              ) : null}
+            </ScrollView>
           )}
         </View>
       </View>
@@ -221,6 +222,9 @@ const styles = StyleSheet.create({
     color: "#FFFFFF",
     fontWeight: "600",
   },
+  list: {
+    flex: 1,
+  },
   listContent: {
     paddingHorizontal: 20,
   },
@@ -260,15 +264,6 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
   },
-  footerLoading: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  debugText: {
-    marginTop: -8,
-    marginBottom: 8,
-    fontSize: 12,
-  },
   addButton: {
     width: 32,
     height: 32,
@@ -278,9 +273,37 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   addIcon: {
-    fontSize: 24,
+    fontSize: 18,
     color: "#FFFFFF",
-    fontWeight: "300",
-    marginTop: -2,
+    fontWeight: "600",
+    lineHeight: 22,
+  },
+  loadMoreButton: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  androidCard: {
+    backgroundColor: "#1f2937",
+    borderColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  androidCardTitle: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  androidCardSub: {
+    color: "#cbd5e1",
+    fontSize: 13,
   },
 });

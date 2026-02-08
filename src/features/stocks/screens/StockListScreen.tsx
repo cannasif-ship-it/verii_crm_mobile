@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator, Platform } from "react-native";
+import { View, StyleSheet, ActivityIndicator, Platform, ScrollView, TouchableOpacity, Text as RNText } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -66,28 +66,11 @@ export function StockListScreen(): React.ReactElement {
     [router]
   );
 
-  const handleEndReached = useCallback(() => {
+  const handleLoadMore = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  const renderItem = useCallback(
-    ({ item }: { item: StockGetDto }) => {
-      if (!item) return null;
-      return <StockCard stock={item} onPress={() => handleStockPress(item)} />;
-    },
-    [handleStockPress]
-  );
-
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
-    return (
-      <View style={styles.footer}>
-        <ActivityIndicator size="small" color={colors.accent} />
-      </View>
-    );
-  }, [isFetchingNextPage, colors]);
 
   const renderEmpty = useCallback(() => {
     if (isInitialLoading) {
@@ -109,20 +92,15 @@ export function StockListScreen(): React.ReactElement {
   return (
     <>
       <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
+      <View style={[styles.container, { backgroundColor: colors.header }]}> 
         <ScreenHeader title={t("stock.list")} showBackButton />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}>
-          <View style={[styles.searchContainer, { paddingTop: insets.top > 0 ? 0 : 20 }]}>
+        <View style={[styles.content, { backgroundColor: contentBackground }]}> 
+          <View style={[styles.searchContainer, { paddingTop: insets.top > 0 ? 0 : 20 }]}> 
             <SearchInput
               value={searchText}
               onSearch={setSearchText}
               placeholder={t("stock.searchPlaceholder")}
             />
-            {__DEV__ && Platform.OS === "android" ? (
-              <Text style={[styles.debugText, { color: colors.textMuted }]}>
-                items: {stocks.length} {isPending ? "(pending)" : ""} {isRefetching ? "(refetching)" : ""}
-              </Text>
-            ) : null}
           </View>
 
           {isInitialLoading && !data ? (
@@ -134,24 +112,47 @@ export function StockListScreen(): React.ReactElement {
               <Text style={[styles.errorText, { color: colors.error }]}>{t("common.error")}</Text>
             </View>
           ) : (
-            <FlatList
-              data={stocks}
-              renderItem={renderItem}
-              keyExtractor={(item) => String(item.id)}
-              contentContainerStyle={[
-                styles.listContent,
-                stocks.length === 0 && styles.listContentEmpty,
-                { paddingBottom: insets.bottom + 20 },
-              ]}
-              onEndReached={handleEndReached}
-              onEndReachedThreshold={0.5}
-              ListFooterComponent={renderFooter}
-              ListEmptyComponent={renderEmpty}
-              refreshControl={
-                <CustomRefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
-              }
+            <ScrollView
+              style={styles.list}
+              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 20 }]}
               showsVerticalScrollIndicator={false}
-            />
+              refreshControl={
+                Platform.OS === "android"
+                  ? undefined
+                  : <CustomRefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
+              }
+            >
+              {stocks.length === 0 ? renderEmpty() : null}
+              {stocks.map((item) =>
+                Platform.OS === "android" ? (
+                  <TouchableOpacity
+                    key={String(item.id)}
+                    style={styles.androidCard}
+                    onPress={() => handleStockPress(item)}
+                    activeOpacity={0.8}
+                  >
+                    <RNText style={styles.androidCardTitle}>{item.stockName || item.erpStockCode}</RNText>
+                    <RNText style={styles.androidCardSub}>{item.erpStockCode || "-"}</RNText>
+                    <RNText style={styles.androidCardSub}>{item.unit ? `Birim: ${item.unit}` : "Birim: -"}</RNText>
+                  </TouchableOpacity>
+                ) : (
+                  <StockCard key={String(item.id)} stock={item} onPress={() => handleStockPress(item)} />
+                )
+              )}
+              {hasNextPage ? (
+                <TouchableOpacity
+                  style={[styles.loadMoreButton, { borderColor: colors.cardBorder }]}
+                  onPress={handleLoadMore}
+                  disabled={isFetchingNextPage}
+                >
+                  {isFetchingNextPage ? (
+                    <ActivityIndicator size="small" color={colors.accent} />
+                  ) : (
+                    <Text style={{ color: colors.text }}>{t("common.loadMore", "Daha Fazla")}</Text>
+                  )}
+                </TouchableOpacity>
+              ) : null}
+            </ScrollView>
           )}
         </View>
       </View>
@@ -172,11 +173,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 20,
   },
+  list: {
+    flex: 1,
+  },
   listContent: {
     paddingHorizontal: 20,
-  },
-  listContentEmpty: {
-    flexGrow: 1,
   },
   loadingContainer: {
     flex: 1,
@@ -193,10 +194,6 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 16,
   },
-  footer: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
   emptyContainer: {
     flex: 1,
     alignItems: "center",
@@ -206,9 +203,32 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
   },
-  debugText: {
-    marginTop: -8,
-    marginBottom: 8,
-    fontSize: 12,
+  loadMoreButton: {
+    minHeight: 42,
+    borderWidth: 1,
+    borderRadius: 10,
+    justifyContent: "center",
+    alignItems: "center",
+    marginBottom: 16,
+    marginTop: 8,
+  },
+  androidCard: {
+    backgroundColor: "#1f2937",
+    borderColor: "rgba(255,255,255,0.15)",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 12,
+  },
+  androidCardTitle: {
+    color: "#ffffff",
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  androidCardSub: {
+    color: "#cbd5e1",
+    fontSize: 13,
   },
 });
