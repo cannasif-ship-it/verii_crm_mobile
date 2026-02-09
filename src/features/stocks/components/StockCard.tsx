@@ -1,167 +1,112 @@
 import React, { memo, useState } from "react";
-import { View, StyleSheet, Pressable } from "react-native";
-import { Text } from "../../../components/ui/text";
-import { useUIStore } from "../../../store/ui";
+import { View, StyleSheet, TouchableWithoutFeedback, Text, DimensionValue } from "react-native";
+import { PackageIcon } from "hugeicons-react-native";
 import type { StockGetDto } from "../types";
 
-// İkonlar
-import { 
-  PackageIcon,      
-  CubeIcon,       
-  BarCode01Icon,      
-  Factory02Icon 
-} from "hugeicons-react-native";
-
 interface StockCardProps {
-  stock: StockGetDto;
-  onPress: () => void;
+  item: StockGetDto;
+  viewMode: 'grid' | 'list';
+  isDark: boolean;
+  router: any;
+  theme: any;
+  gridWidth: number; // Grid genişliğini dışarıdan alacağız
 }
 
-function StockCardComponent({ stock, onPress }: StockCardProps): React.ReactElement {
-  const { colors, themeMode } = useUIStore() as any;
-  const isDark = themeMode === "dark";
-  
+const StockCardComponent = ({ item, viewMode, isDark, router, theme, gridWidth }: StockCardProps) => {
   const [isPressed, setIsPressed] = useState(false);
-  const THEME_PINK = "#ec4899"; 
 
-  // --- RENK AYARLARI (CONTRAST) ---
-  // Kart rengini arka plandan ayırıyoruz.
-  // Dark Mod: Kartlar biraz daha açık (Slate-800 gibi), Zemin simsiyah.
-  const cardBg = isDark ? "#1E293B" : "#FFFFFF"; 
-  const borderColor = isPressed ? THEME_PINK : (isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0");
-  
-  const titleColor = isDark ? "#F8FAFC" : "#111827";
-  const subTextColor = isDark ? "#94A3B8" : "#64748B";
-
-  // İkon Kutusu
-  const iconBoxBg = isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9";
+  // Grid ve List için stil hesaplaması
+  const containerStyle = [
+    viewMode === 'grid' ? styles.gridCard : styles.listCard,
+    {
+      // Grid ise hesaplanan genişlik, List ise %100
+      width: (viewMode === 'grid' ? gridWidth : '100%') as DimensionValue,
+      backgroundColor: theme.cardBg,
+      borderColor: isPressed ? theme.primary : theme.cardBorder, // BASINCA PEMBE
+      borderWidth: 1.5, // SABİT KALINLIK (Kaymayı önler)
+      shadowColor: isDark ? "#000" : "#94a3b8",
+    }
+  ];
 
   return (
-    <Pressable
-      style={({ pressed }) => [
-        styles.container,
-        { 
-          backgroundColor: cardBg, 
-          borderColor: borderColor,
-          borderWidth: isPressed ? 1.5 : 1, // Basınca kalınlaşan çerçeve
-          // GÖLGE VE DERİNLİK
-          shadowColor: "#000",
-          shadowOpacity: isDark ? 0.3 : 0.08,
-          shadowOffset: { width: 0, height: 4 },
-          shadowRadius: 6,
-          elevation: 3,
-          // Basınca ufak bir küçülme efekti (Mobile hissi)
-          transform: [{ scale: pressed ? 0.98 : 1 }]
-        },
-      ]}
-      onPress={onPress}
-      onPressIn={() => setIsPressed(true)}
-      onPressOut={() => setIsPressed(false)}
+    <TouchableWithoutFeedback
+      onPress={() => router.push(`/(tabs)/stock/${item.id}`)}
+      onPressIn={() => setIsPressed(true)}  
+      onPressOut={() => setIsPressed(false)} 
     >
-      <View style={styles.mainRow}>
+      <View style={containerStyle}>
         
-        {/* SOL: İKON KUTUSU */}
-        <View style={[styles.iconBox, { backgroundColor: isPressed ? "rgba(236,72,153,0.15)" : iconBoxBg }]}>
-          <PackageIcon 
-            size={24} 
-            color={isPressed ? THEME_PINK : (isDark ? "#CBD5E1" : "#64748B")} 
-            variant="stroke" 
-          />
+        {/* İKON ALANI */}
+        <View style={[
+          viewMode === 'grid' ? styles.iconBox : styles.listIconBox, 
+          { backgroundColor: theme.primaryBg, marginBottom: viewMode === 'grid' ? 12 : 0 }
+        ]}>
+           <PackageIcon size={20} color={theme.primary} variant="stroke" />
         </View>
 
-        {/* ORTA: BİLGİLER */}
-        <View style={styles.infoContainer}>
-          {/* Stok Adı (AD etiketi olmadan, net başlık) */}
-          <Text style={[styles.title, { color: titleColor }]} numberOfLines={2}>
-            {stock.stockName || "İsimsiz Stok"}
+        {/* ORTA BİLGİ */}
+        <View style={viewMode === 'list' ? { flex: 1, paddingHorizontal: 12 } : {}}>
+          <Text 
+            style={[
+              viewMode === 'grid' ? styles.gridTitle : styles.listTitle, 
+              { color: theme.textTitle }
+            ]} 
+            numberOfLines={viewMode === 'grid' ? 2 : 1}
+          >
+            {item.stockName}
           </Text>
           
-          {/* Kod Alanı (Barkod ikonu ile) */}
-          <View style={styles.codeRow}>
-            <BarCode01Icon size={14} color={subTextColor} />
-            <Text style={[styles.codeText, { color: subTextColor }]}>
-              {stock.erpStockCode || "Kod Yok"}
-            </Text>
-          </View>
+          {/* List modunda kod hemen ismin altında */}
+          {viewMode === 'list' && (
+             <Text style={[styles.label, { color: theme.textMute }]}>Kod: {item.erpStockCode || "-"}</Text>
+          )}
         </View>
-      </View>
 
-      {/* ALT: ETİKETLER (Çizgi ile ayrılmış detay alanı) */}
-      {(stock.unit || stock.ureticiKodu) && (
-        <View style={[styles.footer, { borderTopColor: isDark ? "rgba(255,255,255,0.08)" : "#F1F5F9" }]}>
-          {stock.unit && (
-            <View style={styles.badge}>
-              <CubeIcon size={12} color={subTextColor} />
-              <Text style={[styles.badgeText, { color: subTextColor }]}>{stock.unit}</Text>
-            </View>
-          )}
-          {stock.ureticiKodu && (
-            <View style={styles.badge}>
-              <Factory02Icon size={12} color={subTextColor} />
-              <Text style={[styles.badgeText, { color: subTextColor }]}>{stock.ureticiKodu}</Text>
-            </View>
-          )}
+        {/* ALT / SAĞ BİLGİ */}
+        <View style={viewMode === 'grid' ? styles.gridFooter : { alignItems: 'flex-end' }}>
+           {viewMode === 'grid' ? (
+              <Text style={[styles.label, { color: theme.textMute }]}>{item.erpStockCode || "-"}</Text>
+           ) : (
+              <View style={[styles.badge, { borderColor: theme.cardBorder, marginBottom: 4 }]}>
+                <Text style={[styles.badgeText, { color: theme.textMute }]}>{item.grupAdi || "Genel"}</Text>
+              </View>
+           )}
+           
+           <View style={[styles.stockBadge, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+            <Text style={[styles.stockText, { color: theme.textTitle, fontSize: 10 }]}>{item.unit || "Adet"}</Text>
+           </View>
         </View>
-      )}
-    </Pressable>
+
+      </View>
+    </TouchableWithoutFeedback>
   );
-}
+};
 
 export const StockCard = memo(StockCardComponent);
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 16,
-    borderRadius: 16, 
-    marginBottom: 16, // KARTLAR ARASI NET BOŞLUK
-    borderWidth: 1,
+  label: { fontSize: 10, fontWeight: '500' },
+  stockBadge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 },
+  stockText: { fontSize: 11, fontWeight: '600' },
+  badge: { paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, borderWidth: 1, backgroundColor: 'transparent' },
+  badgeText: { fontSize: 9, fontWeight: '600' },
+
+  // GRID KART
+  gridCard: {
+    borderRadius: 16,
+    padding: 12,
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowRadius: 6, 
+    elevation: 2,
+    justifyContent: 'space-between',
+    minHeight: 160, 
   },
-  mainRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  iconBox: {
-    width: 48,
-    height: 48,
-    borderRadius: 12, 
-    alignItems: "center",
-    justifyContent: "center",
-    marginRight: 14,
-  },
-  infoContainer: {
-    flex: 1,
-    justifyContent: "center",
-  },
-  title: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 6,
-    lineHeight: 20,
-  },
-  codeRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  codeText: {
-    fontSize: 13,
-    fontWeight: "500",
-    fontFamily: "monospace", // Kod olduğu belli olsun diye
-  },
-  footer: {
-    marginTop: 12,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    flexDirection: "row",
-    gap: 12,
-  },
-  badge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: "500",
-  },
+  iconBox: { width: 36, height: 36, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  gridTitle: { fontSize: 13, fontWeight: '700', marginBottom: 12, lineHeight: 18, minHeight: 36 },
+  gridFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto' },
+
+  // LIST KART
+  listCard: { flexDirection: 'row', alignItems: 'center', borderRadius: 12, padding: 12 },
+  listIconBox: { width: 40, height: 40, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  listTitle: { fontSize: 14, fontWeight: '700', marginBottom: 4 },
 });

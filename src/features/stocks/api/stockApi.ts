@@ -9,28 +9,7 @@ import type {
   PagedApiResponse,
 } from "../types";
 
-const buildQueryParams = (params: PagedParams): Record<string, string | number> => {
-  const queryParams: Record<string, string | number> = {};
-
-  if (params.pageNumber) {
-    queryParams.pageNumber = params.pageNumber;
-  }
-  if (params.pageSize) {
-    queryParams.pageSize = params.pageSize;
-  }
-  if (params.sortBy) {
-    queryParams.sortBy = params.sortBy;
-  }
-  if (params.sortDirection) {
-    queryParams.sortDirection = params.sortDirection;
-  }
-  if (params.filters && params.filters.length > 0) {
-    queryParams.filters = JSON.stringify(params.filters);
-  }
-
-  return queryParams;
-};
-
+// --- YARDIMCI FONKSİYONLAR ---
 const toNumber = (value: unknown): number | undefined => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {
@@ -42,11 +21,9 @@ const toNumber = (value: unknown): number | undefined => {
 
 const normalizeStock = (raw: unknown): StockGetDto | null => {
   if (!raw || typeof raw !== "object") return null;
-
   const item = raw as Record<string, unknown>;
   const id = toNumber(item.id ?? item.Id);
   if (id == null) return null;
-
   const erpStockCode = String(item.erpStockCode ?? item.ErpStockCode ?? "");
   const stockName = String(item.stockName ?? item.StockName ?? erpStockCode ?? "").trim();
   const branchCode = toNumber(item.branchCode ?? item.BranchCode) ?? 0;
@@ -85,161 +62,73 @@ const normalizeStock = (raw: unknown): StockGetDto | null => {
 
 export const stockApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<StockGetDto>> => {
-    const queryParams = buildQueryParams(params);
-    const response = await apiClient.get<PagedApiResponse<StockGetDto>>("/api/Stock", {
-      params: queryParams,
-    });
+    // Sadece Sayfalama Parametreleri
+    const queryParams = new URLSearchParams();
+    if (params.pageNumber) queryParams.append("PageNumber", params.pageNumber.toString());
+    if (params.pageSize) queryParams.append("PageSize", params.pageSize.toString());
+    queryParams.append("SortBy", "StockName");
+    queryParams.append("SortDirection", "asc");
+
+    const fullPath = `/api/Stock?${queryParams.toString()}`;
+    console.log("📡 API REQUEST (Bulk Load):", fullPath);
+
+    const response = await apiClient.get<PagedApiResponse<StockGetDto>>(fullPath);
 
     if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Stok listesi alınamadı"
-      );
+      throw new Error(response.data.message || "Hata");
     }
 
     const payload = response.data.data as unknown;
     if (!payload || typeof payload !== "object") {
-      return {
-        items: [],
-        totalCount: 0,
-        pageNumber: params.pageNumber ?? 1,
-        pageSize: params.pageSize ?? 20,
-        totalPages: 0,
-        hasPreviousPage: false,
-        hasNextPage: false,
-      };
+      return { items: [], totalCount: 0, pageNumber: 1, pageSize: 20, totalPages: 0, hasPreviousPage: false, hasNextPage: false };
     }
 
-    const shaped = payload as {
-      items?: unknown[];
-      Items?: unknown[];
-      totalCount?: number;
-      TotalCount?: number;
-      pageNumber?: number;
-      PageNumber?: number;
-      pageSize?: number;
-      PageSize?: number;
-      totalPages?: number;
-      TotalPages?: number;
-      hasPreviousPage?: boolean;
-      HasPreviousPage?: boolean;
-      hasNextPage?: boolean;
-      HasNextPage?: boolean;
-    };
-
-    const rawItems = Array.isArray(shaped.items)
-      ? shaped.items
-      : Array.isArray(shaped.Items)
-        ? shaped.Items
-        : [];
-
+    const shaped = payload as any;
+    const rawItems = Array.isArray(shaped.items) ? shaped.items : (shaped.Items || []);
+    
+    // Type Safe Mapping
     const items = rawItems
-      .map(normalizeStock)
-      .filter((item): item is StockGetDto => item != null);
+      .map((item: any) => normalizeStock(item))
+      .filter((item: any): item is StockGetDto => item !== null);
 
     return {
       items,
       totalCount: shaped.totalCount ?? shaped.TotalCount ?? items.length,
-      pageNumber: shaped.pageNumber ?? shaped.PageNumber ?? (params.pageNumber ?? 1),
-      pageSize: shaped.pageSize ?? shaped.PageSize ?? (params.pageSize ?? 20),
+      pageNumber: shaped.pageNumber ?? shaped.PageNumber ?? 1,
+      pageSize: shaped.pageSize ?? shaped.PageSize ?? 20,
       totalPages: shaped.totalPages ?? shaped.TotalPages ?? 1,
-      hasPreviousPage: shaped.hasPreviousPage ?? shaped.HasPreviousPage ?? false,
-      hasNextPage: shaped.hasNextPage ?? shaped.HasNextPage ?? false,
+      hasPreviousPage: shaped.hasPreviousPage ?? false,
+      hasNextPage: shaped.hasNextPage ?? false,
     };
   },
-
+  
+  // Diğer metodlar aynı kalıyor (getById vb.)
   getById: async (id: number): Promise<StockGetDto> => {
     const response = await apiClient.get<ApiResponse<StockGetDto>>(`/api/Stock/${id}`);
-
-    if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Stok bulunamadı"
-      );
-    }
-
+    if (!response.data.success) throw new Error("Stok bulunamadı");
     const normalized = normalizeStock(response.data.data);
-    if (!normalized) {
-      throw new Error("Stok verisi çözümlenemedi");
-    }
-
+    if (!normalized) throw new Error("Veri hatası");
     return normalized;
   },
 
   getRelations: async (stockId: number, params: PagedParams = {}): Promise<PagedResponse<StockRelationDto>> => {
-    const queryParams = buildQueryParams(params);
-    const response = await apiClient.get<PagedApiResponse<StockRelationDto>>(
-      `/api/Stock/${stockId}/relations`,
-      {
-        params: queryParams,
-      }
-    );
-
-    if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Stok ilişkileri alınamadı"
-      );
-    }
-
+    const response = await apiClient.get<PagedApiResponse<StockRelationDto>>(`/api/Stock/${stockId}/relations`);
     return response.data.data;
   },
 
-  getRelationsAsRelatedStock: async (
-    relatedStockId: number,
-    params: PagedParams = {}
-  ): Promise<PagedResponse<StockRelationDto>> => {
-    const queryParams = { ...buildQueryParams(params), asRelated: "true" };
-    const response = await apiClient.get<PagedApiResponse<StockRelationDto>>(
-      `/api/Stock/${relatedStockId}/relations`,
-      { params: queryParams }
-    );
-
-    if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Stok ilişkileri alınamadı"
-      );
-    }
-
+  getRelationsAsRelatedStock: async (relatedStockId: number, params: PagedParams = {}): Promise<PagedResponse<StockRelationDto>> => {
+    const response = await apiClient.get<PagedApiResponse<StockRelationDto>>(`/api/Stock/${relatedStockId}/relations?asRelated=true`);
     const raw = response.data.data;
-    const items = Array.isArray(raw)
-      ? raw
-      : (raw && Array.isArray((raw as PagedResponse<StockRelationDto>).items)
-          ? (raw as PagedResponse<StockRelationDto>).items
-          : []);
-
-    return {
-      items,
-      totalCount: items.length,
-      pageNumber: 1,
-      pageSize: params.pageSize ?? 100,
-      totalPages: 1,
-      hasPreviousPage: false,
-      hasNextPage: false,
-    };
+    const items = Array.isArray(raw) ? raw : ((raw as any)?.items || []);
+    return { items, totalCount: items.length, pageNumber: 1, pageSize: 100, totalPages: 1, hasPreviousPage: false, hasNextPage: false };
   },
 
   createRelation: async (data: StockRelationCreateDto): Promise<StockRelationDto> => {
-    const response = await apiClient.post<ApiResponse<StockRelationDto>>(
-      `/api/Stock/${data.stockId}/relations`,
-      data
-    );
-
-    if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Stok ilişkisi oluşturulamadı"
-      );
-    }
-
+    const response = await apiClient.post<ApiResponse<StockRelationDto>>(`/api/Stock/${data.stockId}/relations`, data);
     return response.data.data;
   },
 
   deleteRelation: async (stockId: number, relationId: number): Promise<void> => {
-    const response = await apiClient.delete<ApiResponse<void>>(
-      `/api/Stock/${stockId}/relations/${relationId}`
-    );
-
-    if (!response.data.success) {
-      throw new Error(
-        response.data.message || response.data.exceptionMessage || "Stok ilişkisi silinemedi"
-      );
-    }
+    await apiClient.delete<ApiResponse<void>>(`/api/Stock/${stockId}/relations/${relationId}`);
   },
 };

@@ -1,7 +1,8 @@
-import React, { useState, useCallback } from "react";
-import { View, TextInput, StyleSheet, TouchableOpacity } from "react-native";
-import { Text } from "../../../components/ui/text";
+import React, { useState } from "react";
+import { View, TextInput, StyleSheet, Pressable, Dimensions } from "react-native";
 import { useUIStore } from "../../../store/ui";
+// HugeIcons: Emojiler yerine profesyonel ikonlar
+import { Search01Icon, Cancel01Icon } from "hugeicons-react-native";
 
 interface SearchInputProps {
   value: string;
@@ -14,43 +15,69 @@ export function SearchInput({
   onSearch,
   placeholder = "Ara...",
 }: SearchInputProps): React.ReactElement {
-  const { colors } = useUIStore();
-  const [localValue, setLocalValue] = useState(value);
+  const { themeMode } = useUIStore() as any;
+  const isDark = themeMode === "dark";
+  const [isFocused, setIsFocused] = useState(false);
 
-  const handleChangeText = useCallback(
-    (text: string) => {
-      setLocalValue(text);
-      onSearch(text);
-    },
-    [onSearch]
-  );
-
-  const handleClear = useCallback(() => {
-    setLocalValue("");
-    onSearch("");
-  }, [onSearch]);
+  // --- TEMA RENKLERİ ---
+  const theme = {
+    // Input Arka Planı: StockListScreen header'ından bir tık daha açık/farklı olmalı
+    bg: isDark ? "rgba(255, 255, 255, 0.05)" : "#F1F5F9",
+    border: isDark ? "rgba(255, 255, 255, 0.1)" : "#E2E8F0",
+    text: isDark ? "#FFFFFF" : "#0F172A",
+    placeholder: isDark ? "#64748B" : "#94A3B8",
+    icon: isDark ? "#94A3B8" : "#64748B",
+    primary: "#db2777", // Pembe vurgu
+  };
 
   return (
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+        {
+          backgroundColor: theme.bg,
+          borderColor: isFocused ? theme.primary : theme.border,
+          // Focus olunca border kalınlaşsın
+          borderWidth: isFocused ? 1.5 : 1,
+        },
       ]}
     >
-      <Text style={styles.searchIcon}>🔍</Text>
+      {/* SOL: ARAMA İKONU */}
+      <View style={styles.iconLeft}>
+        <Search01Icon 
+          size={18} 
+          color={isFocused ? theme.primary : theme.icon} 
+          variant="stroke"
+        />
+      </View>
+
+      {/* ORTA: INPUT */}
       <TextInput
-        style={[styles.input, { color: colors.text }]}
-        value={localValue}
-        onChangeText={handleChangeText}
+        style={[styles.input, { color: theme.text }]}
+        value={value}
+        // Doğrudan parent fonksiyonunu çağırıyoruz, senkronizasyon sorunu yok
+        onChangeText={onSearch} 
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={theme.placeholder}
         autoCapitalize="none"
         autoCorrect={false}
+        // Focus olaylarını yakala
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       />
-      {localValue.length > 0 && (
-        <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-          <Text style={[styles.clearIcon, { color: colors.textMuted }]}>✕</Text>
-        </TouchableOpacity>
+
+      {/* SAĞ: TEMİZLEME BUTONU (Sadece yazı varsa görünür) */}
+      {value.length > 0 && (
+        <Pressable 
+          onPress={() => onSearch("")} 
+          style={({ pressed }) => [
+            styles.clearButton,
+            { opacity: pressed ? 0.7 : 1 }
+          ]}
+          hitSlop={10} // Parmağın kolay basması için alanı genişlet
+        >
+          <Cancel01Icon size={16} color={theme.icon} variant="stroke" />
+        </Pressable>
       )}
     </View>
   );
@@ -60,25 +87,24 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
+    borderRadius: 14, // Daha yumuşak köşeler
+    height: 48, // Standart dokunmatik yükseklik
     paddingHorizontal: 12,
-    height: 48,
-    marginBottom: 16,
+    // Margin'i buradan kaldırdık, parent component (StockList) kontrol etsin diye
   },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
+  iconLeft: {
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    padding: 0,
+    fontSize: 15,
+    fontWeight: "500",
+    height: "100%", // Tıklama alanını doldursun
+    padding: 0, // Android default padding'i sıfırla
   },
   clearButton: {
     padding: 4,
-  },
-  clearIcon: {
-    fontSize: 14,
+    borderRadius: 99,
+    marginLeft: 8,
   },
 });
