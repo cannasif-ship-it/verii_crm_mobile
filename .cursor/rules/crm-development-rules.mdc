@@ -1,49 +1,31 @@
 ---
-description: CRM Expo (React Native) Cursor Rules — architecture, UI, data fetching, performance
+description: CRM Expo Cursor Rules — senior, Android-safe, single source of truth
 alwaysApply: true
 ---
 
-# 🚀 CRM Expo Cursor Rules (React Native + TypeScript + Expo)
+# CRM Expo Cursor Rules
+React Native + Expo + TypeScript
 
-Bu proje **Expo + React Native + TypeScript** ile geliştirilir.
-Cursor aşağıdaki kurallara **her dosyada** otomatik ve eksiksiz uyar.
-
-AMAÇ:
-- Feature-first mimari + co-location
-- UI / business logic / network ayrımı
-- TanStack Query ile tip güvenli server state
-- Performanslı listeleme (ScrollView yerine FlatList/SectionList)
-- Ortak UI standardı (Gluestack UI v3) + merkezi tema
+Bu dosya projedeki TEK ve KESİN kural setidir.
+Cursor bu kurallara uymayan kod üretmemelidir.
 
 ================================================================================
+## 0) KIRMIZI ÇİZGİLER (ASLA YAPMA)
 
-## 1) TEMEL KURALLAR (KIRMIZI ÇİZGİ)
-
-- Asla yorum satırı kullanma
-- `any` kesin yasak, gerekirse `unknown` + type-guard
-- Component içinde doğrudan `fetch/axios` çağrısı yapma
-- API istekleri **TanStack Query** ile yapılır
-- Her query için **özel `staleTime`** zorunludur (global default’a güvenme)
-- Feature dışından feature içi dosyaya direkt import yasak (sadece `index.ts` üzerinden)
-- “God component/screen” yasak, küçük ve okunabilir parçalara böl
-
-================================================================================
-
-## 2) UI KÜTÜPHANESİ / COMPONENT STANDARDI
-
-- Temel UI kütüphanesi: **Gluestack UI v3**
-- Gluestack componentleri **`@/components/ui`** altından import edilir
-- `src/components/ui` sadece presentational bileşenlerdir, business logic içermez
-
-KULLANIM PRENSİBİ:
-- Feature’a özel görsel bileşenler ilgili feature altında yaşar
-- Yeni UI bileşeni eklemek için: `npx gluestack-ui add <component-name>`
+- Comment satırı yazma
+- any kullanma (unknown + type guard)
+- Component veya Screen içinde fetch/axios çağrısı yapma
+- Feature dışından feature içi dosyaya direkt import yapma
+- ScrollView ile dinamik/uzun liste render etme
+- ScrollView + map kullanma
+- Büyük listede inline renderItem yazma
+- Form state’ini useState ile yönetme
+- Hardcoded string yazma
+- God screen / god component yazma
+- Screen içinde business logic yazma
 
 ================================================================================
-
-## 3) MİMARİ — FEATURE FIRST (ZORUNLU)
-
-Klasör yapısı:
+## 1) PROJE MİMARİSİ (FEATURE FIRST — ZORUNLU)
 
 src/
   app/
@@ -57,6 +39,7 @@ src/
       screens/
       components/
       types/
+      utils/
       index.ts
   components/
     ui/
@@ -72,146 +55,151 @@ src/
   constants/
     env.ts
 
-KURALLAR:
-- Başka feature’dan direkt import yasak
-- Dış dünya feature’a sadece `features/<feature>/index.ts` ile erişir
-- Bir feature ile ilgili her şey aynı feature klasöründe bulunur (co-location)
+Kurallar:
+- Feature’a dışarıdan erişim sadece index.ts ile
+- Feature içindeki her şey aynı feature klasöründe yaşar
+- Ortak UI sadece components/ui altındadır
+- Feature’a özel UI feature/components altındadır
 
 ================================================================================
+## 2) SCREEN / HOOK / API AYRIMI (KATI)
 
-## 4) SCREEN — HOOK AYRIMI (KATI)
+Screen:
+- Sadece UI composition yapar
+- Hook çağırır
+- Query, mutation, pagination, form, navigation içermez
 
-SCREEN:
-- Sadece UI render eder
-- API çağrısı yasak
-- Navigation yasak
-- İş kuralı / validasyon yasak
-- Liste renderı için yalnızca hazır item componentlerini kullanır
+Hook:
+- Tüm business logic
+- Navigation
+- Query / mutation
+- Pagination
+- Form + validation
 
-HOOK:
-- Tüm business logic burada
-- Navigation burada
-- Form state + validation burada
-- Query/mutation yönetimi burada
-- Loading/error/success state burada
-- Pagination / infinite scroll burada
+API Service:
+- Sadece HTTP çağrısı
+- State veya logic içermez
 
 Akış:
-Screen → Hook → (Query/Mutation) → Service → API
+Screen → Hook → Query/Mutation → Service → API
 
 ================================================================================
+## 3) UI STANDARDI
 
-## 5) DATA FETCHING — TANSTACK QUERY (ZORUNLU)
-
-- Query ve mutation’lar hook içinde tanımlanır
-- Her query için `staleTime` açıkça yazılır
-- Query key standardı:
-  ['feature', 'entity', params]
-
-Component içinde:
-- Query client’a erişme
-- Cache invalidation yapma
-- Network logic yazma
+- UI library: Gluestack UI v3
+- Gluestack componentleri sadece @/components/ui üzerinden import edilir
+- components/ui sadece presentational’dır
+- Yeni component eklemek için: npx gluestack-ui add <name>
 
 ================================================================================
+## 4) DATA FETCHING (TANSTACK QUERY — ZORUNLU)
 
-## 6) API & SERVICE PATTERN
-
-- Tüm servisler `src/features/<feature>/api` altında
-- Saf axios import yasak, sadece `src/lib/axios.ts` instance kullanılır
-- Service sadece HTTP çağrısı yapar, state/logic içermez
-
-ZORUNLU:
-- Response tipleri:
-  - `ApiResponse<T>`
-  - `PagedResponse<T>`
-- DTO/type’lar sadece `src/features/<feature>/types` altında
+- Query/mutation sadece hook’larda tanımlanır
+- Her query’de staleTime açıkça yazılır
+- Query key standardı: ["feature", "entity", params]
+- Component içinde queryClient kullanımı yasaktır
 
 ================================================================================
+## 5) API / SERVICE STANDARDI
 
-## 7) LİSTELEME — SCROLLVIEW KURAL SETİ (PERFORMANS)
+- Axios sadece src/lib/axios.ts üzerinden kullanılır
+- Service saf HTTP katmanıdır
+- DTO ve response tipleri feature/types altındadır
 
-ALTIN KURAL:
-- Liste renderı **map ile asla yapılmaz**
-- Liste renderı için **FlatList / SectionList zorunlu**
+Pagination response standardı:
 
-ScrollView KULLANIMI:
-- `ScrollView` sadece **kısa ve statik** içerik (form, 5-10 eleman gibi) için kullanılabilir
-- Dinamik, uzun, büyüyen veri (müşteri listesi, siparişler, stok vb.) için **ScrollView yasak**
-- `ScrollView + .map` kombinasyonu kesin yasak
-
-FlatList ZORUNLULUKLARI:
-- `keyExtractor` zorunlu
-- `renderItem` ayrı component olmalı (örn: `CustomerRow`)
-- Item component `memo` ile sarmalanmalı (gerektiğinde)
-- Infinite scroll gerekiyorsa `onEndReached` hook tarafından yönetilir
-
-Paged liste standardı:
-- Hook, `PagedResponse.items` render eder
-- Hook, `hasNextPage` / `pageNumber` / `pageSize` kontrolünü yapar
-- Screen sadece `data`, `onEndReached`, `isFetchingNextPage` gibi props alır
+type PagedResponse<T> = {
+  items: T[];
+  page: number;
+  pageSize: number;
+  total?: number;
+  nextPage?: number | null;
+};
 
 ================================================================================
+## 6) FORM STANDARDI
 
-## 8) FORM STANDARDI
-
-- Form state: `react-hook-form`
-- Validation: `zod` zorunlu
-- `useState` ile form yönetimi yasak
-- Validasyon logic’i component/screen içine yazılmaz, hook + schema ile yapılır
-
-================================================================================
-
-## 9) STATE YÖNETİMİ
-
-- Server state: TanStack Query
-- Global UI state: Zustand veya Context API
-- Redux kesin yasak
+- react-hook-form + zod zorunlu
+- useState ile form yönetimi yasak
+- Validation screen içinde yazılmaz
+- Submit handler hook içindedir
 
 ================================================================================
+## 7) LİSTELEME (ANDROID SAFE — ZORUNLU)
 
-## 10) STYLE / THEME KURALLARI
+- RecyclerView karşılığı: FlashList / FlatList
+- ScrollView sadece kısa ve statik içerik için
+- Uzun/dinamik veri için ScrollView kesin yasak
+- .map() ile liste render edilmez
 
-- Inline style yasak
-- Stil tanımları merkezi theme yaklaşımıyla yapılır (Gluestack + merkezi sabitler)
-- Renkler proje standardına uygun olmalı (primary/accent/text/background/border/success/error/warning)
-- Gereksiz yeni renk tanımlama yapma, mevcut palette kullan
-
-================================================================================
-
-## 11) i18n (ÇOKLU DİL) ZORUNLU
-
-- `i18next` + `react-i18next` kullanılır
-- Dil dosyaları `src/locales/` altında (`tr.json`, `en.json`)
-- Tüm statik metinler `t()` ile çağrılır
-- Hardcoded string yasak
-- Dil tercihi storage ile persist edilir
+Tercih sırası:
+1) FlashList
+2) FlatList
+3) SectionList
 
 ================================================================================
+## 8) PAGINATION + INFINITE SCROLL (ZORUNLU)
 
-## 12) İSİMLENDİRME
-
-- Klasörler: kebab-case (customer-list)
-- Component dosyaları: PascalCase (CustomerRow.tsx)
-- Hook dosyaları: camelCase ve `use` ile başlar (useCustomerList.ts)
-- Utility: camelCase (formatPrice.ts)
-- Types/Interfaces: PascalCase (CustomerDto)
-- Constants: UPPER_SNAKE_CASE (API_TIMEOUT)
+- Pagination sadece TanStack Query useInfiniteQuery ile yapılır
+- Pagination state screen’de tutulmaz
+- Aynı anda birden fazla fetch yasak
+- Listeye yeni sayfa EKLENEREK ilerlenir
+- Pagination logic sadece hook içindedir
 
 ================================================================================
+## 9) INFINITE QUERY HOOK STANDARDI
 
-## 13) GENEL YASAKLAR ÖZET
-
-- Comment satırı
-- Component/screen içinde API çağrısı
-- Feature dışından direkt import
-- `any`
-- Listeyi `.map` ile render
-- Uzun/dinamik listeleri ScrollView ile yapmak
-- Screen içinde navigation / business logic
-- Inline style
+- initialPageParam zorunlu
+- getNextPageParam zorunlu
+- hasNextPage + isFetchingNextPage guard zorunlu
+- Liste birleştirme hook içinde yapılır
 
 ================================================================================
+## 10) ANDROID SAFE LIST KURALLARI
 
-Cursor bu kurallara uymayan kod üretmemelidir.
-Bu kurallar HER ZAMAN ve HER DOSYADA geçerlidir.
+- Row component memo ile sarılır
+- renderItem useCallback ile memo’lanır
+- keyExtractor zorunludur
+- FlashList kullanılıyorsa estimatedItemSize zorunludur
+- Tek scroll container kullanılır
+- Render içinde console.log yasaktır
+
+================================================================================
+## 11) SCREEN STANDARDI
+
+- Screen sadece composition yapar
+- Loader / Empty / Error state render eder
+- Liste component’e sadece data ve handler’ları verir
+- Pagination logic içermez
+
+================================================================================
+## 12) i18n STANDARDI
+
+- Tüm metinler t("key") ile gelir
+- Hardcoded string yasaktır
+- Dil dosyaları locales/ altında tutulur
+
+================================================================================
+## 13) İSİMLENDİRME
+
+- Klasör: kebab-case
+- Component: PascalCase
+- Hook: useXxx
+- Type / Interface: PascalCase
+- Constants: UPPER_SNAKE_CASE
+
+================================================================================
+## 14) ANDROID DONMA / KİTLENME ÖNLEME (ZORUNLU)
+
+- Uzun listeler ScrollView ile yapılmaz
+- Büyük listeler FlashList tercih eder
+- Filtre/sort işlemleri render içinde yapılmaz
+- Search input debounce edilir
+- Gereksiz re-render engellenir
+- Tek scroll view kullanılır
+
+================================================================================
+## 15) SON SÖZ
+
+Bu kurallara uymayan kod kabul edilmez.
+Cursor bu dosyayı TEK KAYNAK olarak kabul eder.
