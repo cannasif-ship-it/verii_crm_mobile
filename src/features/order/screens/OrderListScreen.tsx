@@ -1,49 +1,77 @@
-import React, { useState, useCallback, useMemo } from "react";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
 import {
   View,
   StyleSheet,
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
+  TouchableWithoutFeedback,
+  Dimensions,
+  Text 
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../../components/navigation";
-import { Text } from "../../../components/ui/text";
-import { CustomRefreshControl } from "../../../components/CustomRefreshControl";
 import { useUIStore } from "../../../store/ui";
 import { useOrderList, useCreateRevisionOfOrder } from "../hooks";
 import { OrderRow } from "../components";
 import { SearchInput } from "../../customer/components";
 import type { OrderGetDto, PagedFilter } from "../types";
+// Tasarım bütünlüğü için ikon
+import { Add01Icon } from "hugeicons-react-native";
+
+const GAP = 12;
+const PADDING = 16;
 
 export function OrderListScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors, themeMode } = useUIStore();
+  const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+  
+  const isDark = themeMode === "dark";
+
+  // --- TEMA AYARLARI ---
+  const theme = {
+    screenBg: isDark ? "#1a0b2e" : "#F8FAFC",
+    headerBg: isDark ? "#1a0b2e" : "#FFFFFF",
+    cardBg: isDark ? "#1e1b29" : "#FFFFFF",
+    cardBorder: isDark ? "rgba(255, 255, 255, 0.1)" : "#E2E8F0",
+    textTitle: isDark ? "#FFFFFF" : "#0F172A",
+    textMute: isDark ? "#94a3b8" : "#64748B",
+    primary: "#db2777",
+    primaryBg: isDark ? "rgba(219, 39, 119, 0.15)" : "rgba(219, 39, 119, 0.1)",
+    activeSwitch: "#db2777",
+    error: "#ef4444",
+  };
 
   const [sortBy, setSortBy] = useState<string>("Id");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
+  
   const [searchTerm, setSearchTerm] = useState<string>("");
+  // Performans için debounce
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
+  useEffect(() => {
+    const handler = setTimeout(() => { setDebouncedQuery(searchTerm); }, 300);
+    return () => clearTimeout(handler);
+  }, [searchTerm]);
 
   const filters: PagedFilter[] | undefined = useMemo(() => {
-    if (searchTerm.trim().length >= 2) {
+    if (debouncedQuery.trim().length >= 2) {
       return [
-        { column: "OfferNo", operator: "contains", value: searchTerm.trim() },
+        { column: "OfferNo", operator: "contains", value: debouncedQuery.trim() },
         {
           column: "PotentialCustomerName",
           operator: "contains",
-          value: searchTerm.trim(),
+          value: debouncedQuery.trim(),
         },
       ];
     }
     return undefined;
-  }, [searchTerm]);
+  }, [debouncedQuery]);
 
   const {
     data,
@@ -86,17 +114,14 @@ export function OrderListScreen(): React.ReactElement {
     router.push("/(tabs)/sales/orders/create");
   }, [router]);
 
-  const handleClearSearch = useCallback(() => {
-    setSearchTerm("");
-  }, []);
-
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const quotations = useMemo(() => {
+  // Veri Düzleştirme (Değişken ismini düzelttik: quotations -> orders)
+  const orders = useMemo(() => {
     return (
       data?.pages
         .flatMap((page) => page.items ?? [])
@@ -104,244 +129,178 @@ export function OrderListScreen(): React.ReactElement {
     );
   }, [data]);
 
+  // --- RENDER ITEMS ---
+
   const renderItem = useCallback(
     ({ item }: { item: OrderGetDto }) => {
       return (
-        <OrderRow
-          order={item}
-          onPress={handleRowClick}
-          onRevision={handleRevision}
-          isPending={createRevisionMutation.isPending}
-        />
+        // Wrapper: Tema uyumu için çerçeve
+        <View style={[
+            styles.cardWrapper, 
+            { 
+                backgroundColor: theme.cardBg,
+                borderColor: theme.cardBorder
+            }
+        ]}>
+            <OrderRow
+              order={item}
+              onPress={handleRowClick}
+              onRevision={handleRevision}
+              isPending={createRevisionMutation.isPending}
+            />
+        </View>
       );
     },
-    [handleRowClick, handleRevision, createRevisionMutation.isPending]
+    [handleRowClick, handleRevision, createRevisionMutation.isPending, theme]
   );
 
   const renderEmpty = useCallback(() => {
     if (isLoading || isFetching) return null;
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📄</Text>
-        <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+      <View style={styles.center}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>📄</Text>
+        <Text style={{ color: theme.textMute, fontSize: 16 }}>
           {t("order.noOrders")}
         </Text>
       </View>
     );
-  }, [isLoading, isFetching, colors, t]);
-
-  const renderHeader = useCallback(() => {
-    return (
-      <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, { color: colors.text }]}>
-            {t("order.list")}
-          </Text>
-          <Text style={[styles.headerDescription, { color: colors.textSecondary }]}>
-            {t("order.listDescription")}
-          </Text>
-        </View>
-        <TouchableOpacity
-          style={[styles.createButton, { backgroundColor: colors.accent }]}
-          onPress={handleCreatePress}
-          activeOpacity={0.7}
-        >
-          <Text style={styles.createButtonText}>+ {t("order.createNew")}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }, [colors, t, handleCreatePress]);
+  }, [isLoading, isFetching, theme, t]);
 
   const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
+    if (!isFetchingNextPage) return <View style={{ height: 40 }} />;
     return (
       <View style={styles.footerLoading}>
-        <ActivityIndicator size="small" color={colors.accent} />
+        <ActivityIndicator size="small" color={theme.primary} />
       </View>
     );
-  }, [isFetchingNextPage, colors]);
+  }, [isFetchingNextPage, theme]);
 
-  if (isLoading && !data) {
-    return (
-      <>
-        <StatusBar style="light" />
-        <View style={[styles.container, { backgroundColor: colors.header }]}>
-          <ScreenHeader title={t("order.list")} showBackButton />
-          <View style={[styles.content, { backgroundColor: contentBackground }]}>
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
-            </View>
-          </View>
-        </View>
-      </>
-    );
-  }
-
+  // --- ERROR STATE ---
   if (error) {
     return (
-      <>
-        <StatusBar style="light" />
-        <View style={[styles.container, { backgroundColor: colors.header }]}>
-          <ScreenHeader title={t("order.list")} showBackButton />
-          <View style={[styles.content, { backgroundColor: contentBackground }]}>
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: colors.error }]}>
-                {t("common.error")}
-              </Text>
-              <TouchableOpacity
-                style={[styles.retryButton, { backgroundColor: colors.accent }]}
+      <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
+        <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
+        <ScreenHeader title={t("order.list")} showBackButton />
+        <View style={styles.center}>
+            <Text style={{ color: theme.error, marginBottom: 12 }}>{t("common.error")}</Text>
+            <TouchableOpacity 
+                style={[styles.retryButton, { backgroundColor: theme.primary }]} 
                 onPress={() => refetch()}
-              >
-                <Text style={styles.retryButtonText}>{t("common.retry")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+            >
+                <Text style={{ color: "#FFF", fontWeight: "600" }}>{t("common.retry")}</Text>
+            </TouchableOpacity>
         </View>
-      </>
+      </View>
     );
   }
 
+  // --- MAIN RENDER ---
   return (
-    <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
-        <ScreenHeader title={t("order.list")} showBackButton />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}>
-          <View style={styles.searchContainer}>
-            <SearchInput
-              value={searchTerm}
-              onSearch={setSearchTerm}
-              placeholder={t("order.searchPlaceholder")}
-            />
-            <TouchableOpacity
-              style={[styles.refreshButton, { borderColor: colors.border }]}
-              onPress={handleClearSearch}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.refreshIcon}>🔄</Text>
-            </TouchableOpacity>
-          </View>
+    <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
+      
+      <ScreenHeader title={t("order.list")} showBackButton />
 
+      <View style={styles.listContainer}>
+        
+        {/* CONTROLS AREA (Header Altı) */}
+        <View style={[styles.controlsArea, { backgroundColor: theme.headerBg }]}>
+             {/* Arama Inputu */}
+             <View style={{ flex: 1, marginRight: 10 }}>
+                <SearchInput
+                    value={searchTerm}
+                    onSearch={setSearchTerm}
+                    placeholder={t("order.searchPlaceholder")}
+                />
+             </View>
+
+             {/* Yeni Ekle Butonu */}
+             <View style={[styles.actionBtnContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+                <TouchableWithoutFeedback onPress={handleCreatePress}>
+                    <View style={[styles.iconBtn, { backgroundColor: theme.activeSwitch }]}>
+                         <Add01Icon size={20} color="#FFF" variant="stroke" />
+                    </View>
+                </TouchableWithoutFeedback>
+             </View>
+        </View>
+
+        {/* LOADING & LIST */}
+        {isLoading && !data ? (
+           <View style={styles.center}>
+             <ActivityIndicator size="large" color={theme.primary} />
+           </View>
+        ) : (
           <FlatList
-            data={quotations}
+            data={orders}
             renderItem={renderItem}
             keyExtractor={(item) => item.id.toString()}
-            ListHeaderComponent={renderHeader}
-            ListEmptyComponent={renderEmpty}
-            ListFooterComponent={renderFooter}
-            contentContainerStyle={[
-              styles.listContent,
-              { paddingBottom: insets.bottom + 100 },
-            ]}
+            contentContainerStyle={{
+                paddingHorizontal: PADDING,
+                paddingTop: 12,
+                paddingBottom: insets.bottom + 20,
+                gap: GAP, 
+            }}
             showsVerticalScrollIndicator={false}
-            refreshControl={
-              <CustomRefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
-            }
+            refreshing={isRefetching}
+            onRefresh={handleRefresh}
             onEndReached={handleEndReached}
             onEndReachedThreshold={0.5}
+            ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderFooter}
           />
-        </View>
+        )}
       </View>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  listContainer: { flex: 1 },
+  center: { 
+    flex: 1, 
+    alignItems: "center", 
+    justifyContent: "center", 
+    marginTop: 50 
   },
-  content: {
-    flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  retryButton: {
+  // Controls Area
+  controlsArea: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
     paddingVertical: 12,
-    paddingHorizontal: 24,
-    borderRadius: 8,
   },
-  retryButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  searchContainer: {
-    flexDirection: "row",
-    gap: 12,
-    padding: 20,
-    paddingBottom: 0,
-  },
-  refreshButton: {
-    width: 48,
+  actionBtnContainer: {
+    flexDirection: 'row', 
+    padding: 4, 
+    borderRadius: 12, 
+    alignItems: 'center', 
     height: 48,
-    borderRadius: 12,
+    width: 48, 
+    justifyContent: 'center'
+  },
+  iconBtn: { 
+    padding: 8, 
+    borderRadius: 8, 
+    height: 40, 
+    width: 40, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
+  },
+  // Kart Stili
+  cardWrapper: {
+    borderRadius: 16,
     borderWidth: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  refreshIcon: {
-    fontSize: 20,
-  },
-  listContent: {
-    padding: 20,
-    paddingTop: 0,
-  },
-  header: {
-    marginBottom: 20,
-  },
-  headerContent: {
-    marginBottom: 12,
-  },
-  headerTitle: {
-    fontSize: 24,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  headerDescription: {
-    fontSize: 14,
-  },
-  createButton: {
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  createButtonText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  emptyContainer: {
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 64,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 16,
+    overflow: 'hidden',
   },
   footerLoading: {
     paddingVertical: 20,
     alignItems: "center",
     justifyContent: "center",
   },
+  retryButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  }
 });

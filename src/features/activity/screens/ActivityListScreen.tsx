@@ -1,33 +1,66 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, FlatList, ActivityIndicator, TouchableOpacity } from "react-native";
+import React, { useState, useCallback, useMemo, useEffect } from "react";
+import {
+  View,
+  StyleSheet,
+  FlatList,
+  ActivityIndicator,
+  TouchableOpacity,
+  TouchableWithoutFeedback,
+  Dimensions,
+  Text
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../../components/navigation";
-import { Text } from "../../../components/ui/text";
-import { CustomRefreshControl } from "../../../components/CustomRefreshControl";
 import { useUIStore } from "../../../store/ui";
 import { useActivities } from "../hooks";
 import { SearchInput, ActivityCard } from "../components";
 import type { ActivityDto, PagedFilter } from "../types";
+// İkon (Tasarım bütünlüğü için)
+import { Add01Icon } from "hugeicons-react-native";
+
+const GAP = 12;
+const PADDING = 16;
 
 export function ActivityListScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors, themeMode } = useUIStore();
+  const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+  
+  const isDark = themeMode === "dark";
+
+  // --- TEMA AYARLARI ---
+  const theme = {
+    screenBg: isDark ? "#1a0b2e" : "#F8FAFC",
+    headerBg: isDark ? "#1a0b2e" : "#FFFFFF",
+    cardBg: isDark ? "#1e1b29" : "#FFFFFF",
+    cardBorder: isDark ? "rgba(255, 255, 255, 0.1)" : "#E2E8F0",
+    textTitle: isDark ? "#FFFFFF" : "#0F172A",
+    textMute: isDark ? "#94a3b8" : "#64748B",
+    primary: "#db2777",
+    primaryBg: isDark ? "rgba(219, 39, 119, 0.15)" : "rgba(219, 39, 119, 0.1)",
+    activeSwitch: "#db2777",
+    error: "#ef4444",
+  };
 
   const [searchText, setSearchText] = useState("");
+  // Performans için debounce
+  const [debouncedQuery, setDebouncedQuery] = useState("");
 
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
+  useEffect(() => {
+    const handler = setTimeout(() => { setDebouncedQuery(searchText); }, 300);
+    return () => clearTimeout(handler);
+  }, [searchText]);
 
   const filters: PagedFilter[] | undefined = useMemo(() => {
-    if (searchText.trim().length >= 2) {
-      return [{ column: "subject", operator: "contains", value: searchText.trim() }];
+    if (debouncedQuery.trim().length >= 2) {
+      return [{ column: "subject", operator: "contains", value: debouncedQuery.trim() }];
     }
     return undefined;
-  }, [searchText]);
+  }, [debouncedQuery]);
 
   const {
     data,
@@ -45,6 +78,7 @@ export function ActivityListScreen(): React.ReactElement {
     refetch();
   }, [refetch]);
 
+  // Veri Düzleştirme
   const activities = useMemo(() => {
     return (
       data?.pages
@@ -65,205 +99,185 @@ export function ActivityListScreen(): React.ReactElement {
     router.push("/(tabs)/activities/create");
   }, [router]);
 
+  const handleEndReached = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+
+  // --- RENDER ITEMS ---
+
   const renderItem = useCallback(
     ({ item }: { item: ActivityDto }) => {
       if (!item) return null;
-      return <ActivityCard activity={item} onPress={() => handleActivityPress(item)} />;
+      return (
+        // Wrapper: Tema uyumu için çerçeve
+        <View style={[
+            styles.cardWrapper, 
+            { 
+                backgroundColor: theme.cardBg,
+                borderColor: theme.cardBorder
+            }
+        ]}>
+             <ActivityCard 
+                activity={item} 
+                onPress={() => handleActivityPress(item)} 
+             />
+        </View>
+      );
     },
-    [handleActivityPress]
+    [handleActivityPress, theme]
   );
 
   const renderFooter = useCallback(() => {
-    if (!hasNextPage && !isFetchingNextPage) {
-      return <View style={styles.footerSpacer} />;
-    }
-
+    if (!isFetchingNextPage) return <View style={{ height: 40 }} />;
     return (
-      <TouchableOpacity
-        onPress={() => fetchNextPage()}
-        disabled={!hasNextPage || isFetchingNextPage}
-        style={styles.loadMoreButton}
-      >
-        {isFetchingNextPage ? (
-          <ActivityIndicator size="small" color={colors.accent} />
-        ) : (
-          <Text style={[styles.loadMoreText, { color: colors.accent }]}>{t("common.loadMore")}</Text>
-        )}
-      </TouchableOpacity>
+      <View style={styles.footerLoading}>
+        <ActivityIndicator size="small" color={theme.primary} />
+      </View>
     );
-  }, [colors.accent, fetchNextPage, hasNextPage, isFetchingNextPage, t]);
+  }, [isFetchingNextPage, theme]);
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null;
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📅</Text>
-        <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t("activity.noActivities")}</Text>
+      <View style={styles.center}>
+        <Text style={{ fontSize: 48, marginBottom: 16 }}>📅</Text>
+        <Text style={{ color: theme.textMute, fontSize: 16 }}>
+          {t("activity.noActivities")}
+        </Text>
       </View>
     );
-  }, [isLoading, colors.textMuted, t]);
+  }, [isLoading, theme, t]);
 
-  const keyExtractor = useCallback((item: ActivityDto, index: number) => String(item?.id ?? index), []);
-
-  return (
-    <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
-        <ScreenHeader
-          title={t("activity.title")}
-          showBackButton
-          rightContent={
-            <TouchableOpacity onPress={handleCreatePress} style={styles.addButton}>
-              <Text style={styles.addIcon}>+</Text>
-            </TouchableOpacity>
-          }
-        />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}>
-          <View style={styles.topSection}>
-            <TouchableOpacity
-              style={[styles.createButton, { backgroundColor: colors.accent }]}
-              onPress={handleCreatePress}
-              activeOpacity={0.8}
+  // --- ERROR STATE ---
+  if (isError) {
+    return (
+      <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
+        <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
+        <ScreenHeader title={t("activity.title")} showBackButton />
+        <View style={styles.center}>
+            <Text style={{ color: theme.error, marginBottom: 12, textAlign: 'center' }}>
+                {error?.message || t("common.error")}
+            </Text>
+            <TouchableOpacity 
+                style={[styles.retryButton, { backgroundColor: theme.primary }]} 
+                onPress={() => refetch()}
             >
-              <Text style={styles.createButtonIcon}>+</Text>
-              <Text style={styles.createButtonText}>{t("activity.create")}</Text>
+                <Text style={{ color: "#FFF", fontWeight: "600" }}>{t("common.retry")}</Text>
             </TouchableOpacity>
-            <SearchInput
-              value={searchText}
-              onSearch={setSearchText}
-              placeholder={t("activity.searchPlaceholder")}
-            />
-          </View>
-
-          {isLoading && activities.length === 0 ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
-            </View>
-          ) : isError ? (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{error?.message || t("common.error")}</Text>
-              <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-                <Text style={[styles.retryText, { color: colors.accent }]}>{t("common.retry")}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <FlatList
-              data={activities}
-              keyExtractor={keyExtractor}
-              renderItem={renderItem}
-              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-              showsVerticalScrollIndicator={false}
-              ListFooterComponent={renderFooter}
-              ListEmptyComponent={renderEmpty}
-              refreshControl={
-                <CustomRefreshControl
-                  refreshing={isRefetching && !isFetchingNextPage}
-                  onRefresh={handleRefresh}
-                />
-              }
-            />
-          )}
         </View>
       </View>
-    </>
+    );
+  }
+
+  // --- MAIN RENDER ---
+  return (
+    <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
+      
+      <ScreenHeader title={t("activity.title")} showBackButton />
+
+      <View style={styles.listContainer}>
+        
+        {/* CONTROLS AREA (Header Altı) */}
+        <View style={[styles.controlsArea, { backgroundColor: theme.headerBg }]}>
+             {/* Arama Inputu */}
+             <View style={{ flex: 1, marginRight: 10 }}>
+                <SearchInput
+                    value={searchText}
+                    onSearch={setSearchText}
+                    placeholder={t("activity.searchPlaceholder")}
+                />
+             </View>
+
+             {/* Yeni Ekle Butonu */}
+             <View style={[styles.actionBtnContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
+                <TouchableWithoutFeedback onPress={handleCreatePress}>
+                    <View style={[styles.iconBtn, { backgroundColor: theme.activeSwitch }]}>
+                         <Add01Icon size={20} color="#FFF" variant="stroke" />
+                    </View>
+                </TouchableWithoutFeedback>
+             </View>
+        </View>
+
+        {/* LOADING & LIST */}
+        {isLoading && activities.length === 0 ? (
+           <View style={styles.center}>
+             <ActivityIndicator size="large" color={theme.primary} />
+           </View>
+        ) : (
+          <FlatList
+            data={activities}
+            keyExtractor={(item, index) => String(item?.id ?? index)}
+            renderItem={renderItem}
+            contentContainerStyle={{
+                paddingHorizontal: PADDING,
+                paddingTop: 12,
+                paddingBottom: insets.bottom + 20,
+                gap: GAP, 
+            }}
+            showsVerticalScrollIndicator={false}
+            refreshing={isRefetching && !isFetchingNextPage}
+            onRefresh={handleRefresh}
+            onEndReached={handleEndReached}
+            onEndReachedThreshold={0.5}
+            ListEmptyComponent={renderEmpty}
+            ListFooterComponent={renderFooter}
+          />
+        )}
+      </View>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  listContainer: { flex: 1 },
+  center: { 
+    flex: 1, 
+    alignItems: "center", 
+    justifyContent: "center", 
+    marginTop: 50 
   },
-  content: {
-    flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+  // Controls Area
+  controlsArea: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
+    paddingVertical: 12,
   },
-  topSection: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 12,
+  actionBtnContainer: {
+    flexDirection: 'row', 
+    padding: 4, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    height: 48,
+    width: 48, 
+    justifyContent: 'center'
   },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    gap: 6,
+  iconBtn: { 
+    padding: 8, 
+    borderRadius: 8, 
+    height: 40, 
+    width: 40, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
   },
-  createButtonIcon: {
-    fontSize: 16,
-    color: "#FFFFFF",
-    fontWeight: "600",
+  // Kart Stili
+  cardWrapper: {
+    borderRadius: 16,
+    borderWidth: 1,
+    overflow: 'hidden',
   },
-  createButtonText: {
-    fontSize: 13,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  listContent: {
-    paddingHorizontal: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  errorContainer: {
-    flex: 1,
+  footerLoading: {
+    paddingVertical: 20,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 14,
-    marginBottom: 16,
-    textAlign: "center",
   },
   retryButton: {
-    paddingHorizontal: 20,
     paddingVertical: 10,
-  },
-  retryText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 16,
-  },
-  loadMoreButton: {
-    paddingVertical: 16,
-    alignItems: "center",
-  },
-  loadMoreText: {
-    fontSize: 14,
-    fontWeight: "600",
-  },
-  footerSpacer: {
-    height: 36,
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addIcon: {
-    fontSize: 24,
-    color: "#FFFFFF",
-    fontWeight: "300",
-  },
+    paddingHorizontal: 20,
+    borderRadius: 8,
+  }
 });
