@@ -1,11 +1,11 @@
 import React from "react";
 import {
   View,
-  ScrollView,
   ActivityIndicator,
   Pressable,
   StyleSheet,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import "../../locales";
@@ -66,7 +66,7 @@ export default function HomeScreen(): React.ReactElement {
     <>
       <StatusBar style="light" />
       <View style={[styles.root, { backgroundColor: colors.background }]}>
-        <ScrollView
+        <FlatListScrollView
           style={[styles.scroll, { backgroundColor: colors.background }]}
           contentContainerStyle={[
             styles.scrollContent,
@@ -149,7 +149,7 @@ export default function HomeScreen(): React.ReactElement {
               </View>
             )}
           </View>
-        </ScrollView>
+        </FlatListScrollView>
       </View>
     </>
   );

@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   View,
   StyleSheet,
-  ScrollView,
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -575,7 +575,7 @@ export function OrderCreateScreen(): React.ReactElement {
         keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
       >
         <ScreenHeader title={t("order.createNew")} showBackButton />
-        <ScrollView
+        <FlatListScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}
           contentContainerStyle={[
             styles.contentContainer,
@@ -1183,7 +1183,7 @@ export function OrderCreateScreen(): React.ReactElement {
               )}
             </TouchableOpacity>
           </View>
-        </ScrollView>
+        </FlatListScrollView>
 
         <Modal
           visible={deliveryDateModalOpen}

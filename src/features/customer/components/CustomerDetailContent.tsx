@@ -1,5 +1,6 @@
 import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { Text } from "../../../components/ui/text";
 import type { CustomerDto } from "../types";
 
@@ -101,7 +102,7 @@ export function CustomerDetailContent({
   const hasERPInfo = customer?.erpIntegrationNumber || customer?.isERPIntegrated !== undefined || customer?.lastSyncDate;
 
   return (
-    <ScrollView
+    <FlatListScrollView
       style={styles.tabContent}
       contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
       showsVerticalScrollIndicator={false}
@@ -247,7 +248,7 @@ export function CustomerDetailContent({
         <DetailRow label={t("customer.updatedBy")} value={customer?.updatedByFullUser} colors={colors} />
         <DetailRow label={t("customer.updatedDate")} value={formatDate(customer?.updatedDate)} colors={colors} />
       </View>
-    </ScrollView>
+    </FlatListScrollView>
   );
 }
 

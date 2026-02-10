@@ -3,11 +3,11 @@ import {
   View,
   StyleSheet,
   Modal,
-  ScrollView,
   TouchableOpacity,
   Text,
   ActivityIndicator,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useUIStore } from "../../../store/ui";
 import type { StockRelationDto } from "../../stocks/types";
@@ -135,7 +135,7 @@ export function RelatedStocksSelectDialog({
             Ana stok ile birlikte eklemek istediğiniz bağlı stokları seçin. Zorunlu stoklar otomatik olarak seçilidir.
           </Text>
 
-          <ScrollView
+          <FlatListScrollView
             style={styles.scroll}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -152,7 +152,7 @@ export function RelatedStocksSelectDialog({
                 {optionalRelations.map((r) => renderRelationRow(r, false))}
               </View>
             )}
-          </ScrollView>
+          </FlatListScrollView>
 
           <View style={[styles.footer, { borderTopColor: colors.border }]}>
             <TouchableOpacity

@@ -1,5 +1,6 @@
 import React from "react";
-import { View, StyleSheet, ScrollView, ActivityIndicator, TouchableOpacity } from "react-native";
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
@@ -153,7 +154,7 @@ export function DemandApprovalFlowTab({ demandId }: DemandApprovalFlowTabProps):
   }
 
   return (
-    <ScrollView
+    <FlatListScrollView
       style={[styles.scroll, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -185,7 +186,7 @@ export function DemandApprovalFlowTab({ demandId }: DemandApprovalFlowTabProps):
       {data.steps.map((step) => (
         <StepCard key={step.stepOrder} step={step} locale={locale} />
       ))}
-    </ScrollView>
+    </FlatListScrollView>
   );
 }
 

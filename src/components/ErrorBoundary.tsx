@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { View, StyleSheet, TouchableOpacity, ScrollView } from "react-native";
+import { View, StyleSheet, TouchableOpacity } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { Text } from "./ui/text";
 
 interface Props {
@@ -52,7 +53,7 @@ export class ErrorBoundary extends Component<Props, State> {
             </Text>
 
             {__DEV__ && this.state.error && (
-              <ScrollView style={styles.errorBox} contentContainerStyle={styles.errorBoxContent}>
+              <FlatListScrollView style={styles.errorBox} contentContainerStyle={styles.errorBoxContent}>
                 <Text style={styles.errorTitle}>Hata Detayı:</Text>
                 <Text style={styles.errorText}>{this.state.error.toString()}</Text>
                 {this.state.errorInfo && (
@@ -60,7 +61,7 @@ export class ErrorBoundary extends Component<Props, State> {
                     {this.state.errorInfo.componentStack}
                   </Text>
                 )}
-              </ScrollView>
+              </FlatListScrollView>
             )}
 
             <TouchableOpacity

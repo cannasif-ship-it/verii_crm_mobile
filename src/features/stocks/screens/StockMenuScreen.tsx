@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -43,7 +44,7 @@ export function StockMenuScreen(): React.ReactElement {
         />
         
         {/* İÇERİK ALANI: colors.background */}
-        <ScrollView
+        <FlatListScrollView
           style={[styles.content, { backgroundColor: colors.background }]}
           contentContainerStyle={[
             styles.contentContainer, 
@@ -77,7 +78,7 @@ export function StockMenuScreen(): React.ReactElement {
 
           {/* İleride buraya "Depo Sayımı", "Ürün Listesi" gibi başka kartlar ekleyebilirsiniz */}
 
-        </ScrollView>
+        </FlatListScrollView>
       </View>
     </>
   );

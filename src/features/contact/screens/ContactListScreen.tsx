@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, ScrollView, Text as RNText } from "react-native";
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, Text as RNText } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -137,7 +138,7 @@ export function ContactListScreen(): React.ReactElement {
               </TouchableOpacity>
             </View>
           ) : (
-            <ScrollView
+            <FlatListScrollView
               style={styles.list}
               contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
               showsVerticalScrollIndicator={false}
@@ -181,7 +182,7 @@ export function ContactListScreen(): React.ReactElement {
                   )}
                 </TouchableOpacity>
               ) : null}
-            </ScrollView>
+            </FlatListScrollView>
           )}
         </View>
       </View>

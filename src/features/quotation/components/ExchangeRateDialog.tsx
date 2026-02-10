@@ -3,11 +3,11 @@ import {
   View,
   StyleSheet,
   Modal,
-  ScrollView,
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
@@ -187,7 +187,7 @@ export function ExchangeRateDialog({
               </Text>
             </View>
           ) : (
-          <ScrollView
+          <FlatListScrollView
             style={styles.scrollContent}
             contentContainerStyle={styles.scrollContentContainer}
             showsVerticalScrollIndicator={false}
@@ -300,7 +300,7 @@ export function ExchangeRateDialog({
                 </View>
               </>
             )}
-          </ScrollView>
+          </FlatListScrollView>
           )}
           </View>
 

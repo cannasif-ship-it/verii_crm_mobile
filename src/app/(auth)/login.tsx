@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
-  ScrollView,
   View,
   TouchableOpacity,
   Pressable,
@@ -11,6 +10,7 @@ import {
   LogBox,
   Image,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation, Trans } from "react-i18next";
@@ -109,7 +109,7 @@ export default function LoginScreen(): React.ReactElement {
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           className="flex-1"
         >
-          <ScrollView
+          <FlatListScrollView
             contentContainerStyle={{ 
                 flexGrow: 1, 
                 justifyContent: "space-between",
@@ -211,7 +211,7 @@ export default function LoginScreen(): React.ReactElement {
                 </Text>
               </View>
             </View>
-          </ScrollView>
+          </FlatListScrollView>
         </KeyboardAvoidingView>
       </View>
     </>

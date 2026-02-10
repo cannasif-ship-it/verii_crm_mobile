@@ -7,8 +7,8 @@ import {
   FlatList,
   ActivityIndicator,
   TextInput,
-  ScrollView,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
@@ -342,7 +342,7 @@ function ProductPickerInner(
                 <Text style={[styles.relatedSelectDesc, { color: colors.textSecondary }]}>
                   {t("demand.relatedStocksSelectDesc")}
                 </Text>
-                <ScrollView
+                <FlatListScrollView
                   style={styles.relatedSelectScroll}
                   contentContainerStyle={styles.relatedSelectScrollContent}
                   showsVerticalScrollIndicator={false}
@@ -400,7 +400,7 @@ function ProductPickerInner(
                       })}
                     </View>
                   )}
-                </ScrollView>
+                </FlatListScrollView>
                 <View style={[styles.relatedSelectFooter, { borderTopColor: colors.border }]}>
                   <TouchableOpacity style={[styles.relatedSelectCancelBtn, { borderColor: colors.border }]} onPress={handleRelatedCancel}>
                     <Text style={[styles.relatedSelectCancelText, { color: colors.text }]}>{t("common.cancel")}</Text>
@@ -441,7 +441,7 @@ function ProductPickerInner(
                     </Text>
                   </View>
                 ) : (
-                  <ScrollView
+                  <FlatListScrollView
                     style={styles.relationDetailScroll}
                     contentContainerStyle={styles.relationDetailScrollContent}
                     showsVerticalScrollIndicator={false}
@@ -473,7 +473,7 @@ function ProductPickerInner(
                         </View>
                       );
                     })}
-                  </ScrollView>
+                  </FlatListScrollView>
                 )}
               </View>
             ) : (

@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -25,7 +26,7 @@ export function StockMenuScreen(): React.ReactElement {
       <StatusBar style="light" />
       <View style={[styles.container, { backgroundColor: colors.header }]}>
         <ScreenHeader title={t("stockMenu.title")} showBackButton />
-        <ScrollView
+        <FlatListScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
@@ -36,7 +37,7 @@ export function StockMenuScreen(): React.ReactElement {
             icon="📦"
             onPress={handleStockListPress}
           />
-        </ScrollView>
+        </FlatListScrollView>
       </View>
     </>
   );

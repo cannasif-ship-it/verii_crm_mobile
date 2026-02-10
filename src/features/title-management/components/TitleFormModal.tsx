@@ -4,10 +4,10 @@ import {
   StyleSheet,
   Modal,
   TouchableOpacity,
-  ScrollView,
   ActivityIndicator,
   TextInput,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -119,7 +119,7 @@ export function TitleFormModal({
             </Text>
           </View>
 
-          <ScrollView
+          <FlatListScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -212,7 +212,7 @@ export function TitleFormModal({
                 )}
               />
             </View>
-          </ScrollView>
+          </FlatListScrollView>
 
           <View style={[styles.modalFooter, { paddingBottom: insets.bottom + 16 }]}>
             <TouchableOpacity

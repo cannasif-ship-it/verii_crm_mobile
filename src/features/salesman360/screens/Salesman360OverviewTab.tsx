@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { KpiCard, CurrencyTotalsTable } from "../components";
 import type { Salesmen360OverviewDto } from "../types";
@@ -44,7 +45,7 @@ export function Salesman360OverviewTab({
   const noDataKey = t("common.noData");
 
   return (
-    <ScrollView
+    <FlatListScrollView
       style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -103,7 +104,7 @@ export function Salesman360OverviewTab({
         orderAmountLabel={t("salesman360.currencyTotals.orderAmount")}
         noDataKey={noDataKey}
       />
-    </ScrollView>
+    </FlatListScrollView>
   );
 }
 

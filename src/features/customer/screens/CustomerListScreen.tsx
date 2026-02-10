@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, ScrollView, Dimensions, FlatList, Text as RNText } from "react-native";
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Dimensions, FlatList, Text as RNText } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -90,7 +91,7 @@ export function CustomerListScreen(): React.ReactElement {
 
          {/* 3. LIST SECTION (Exact Remaining Height) */}
          <View style={{ height: listHeight }}>
-             {/* Using FlatList instead of ScrollView for better Android rendering */}
+             {/* Using FlatList for better Android rendering */}
              <FlatList
                  data={customers}
                  renderItem={renderItem}

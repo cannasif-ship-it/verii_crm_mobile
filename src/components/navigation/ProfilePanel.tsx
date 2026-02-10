@@ -8,9 +8,9 @@ import {
   Dimensions,
   Pressable,
   Platform,
-  ScrollView,
   Switch,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
@@ -163,7 +163,7 @@ const ProfilePanel = ({
             </TouchableOpacity>
           </View>
 
-          <ScrollView
+          <FlatListScrollView
             style={{ flex: 1 }}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -293,7 +293,7 @@ const ProfilePanel = ({
                 </View>
               </View>
             </View>
-          </ScrollView>
+          </FlatListScrollView>
 
           {/* Footer - Çıkış Yap */}
           <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>

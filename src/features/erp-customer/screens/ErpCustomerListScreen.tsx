@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, ScrollView, Text as RNText } from "react-native";
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, Text as RNText } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -98,7 +99,7 @@ export function ErpCustomerListScreen(): React.ReactElement {
               </TouchableOpacity>
             </View>
           ) : (
-            <ScrollView
+            <FlatListScrollView
               style={styles.list}
               contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
               showsVerticalScrollIndicator={false}
@@ -129,7 +130,7 @@ export function ErpCustomerListScreen(): React.ReactElement {
                   />
                 )
               )}
-            </ScrollView>
+            </FlatListScrollView>
           )}
         </View>
       </View>

@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import {
   KpiCard,
@@ -91,7 +92,7 @@ export function Customer360OverviewTab({
   const noDataKey = t("common.noData");
 
   return (
-    <ScrollView
+    <FlatListScrollView
       style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -177,7 +178,7 @@ export function Customer360OverviewTab({
         getStatusLabel={getStatusLabel}
         formatAmount={formatAmountCb}
       />
-    </ScrollView>
+    </FlatListScrollView>
   );
 }
 

@@ -2,11 +2,11 @@ import React, { useCallback, useState } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -104,7 +104,7 @@ export function ContactDetailScreen(): React.ReactElement {
             ) : undefined
           }
         />
-        <ScrollView
+        <FlatListScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
@@ -175,7 +175,7 @@ export function ContactDetailScreen(): React.ReactElement {
               )}
             </>
           ) : null}
-        </ScrollView>
+        </FlatListScrollView>
       </View>
     </>
   );

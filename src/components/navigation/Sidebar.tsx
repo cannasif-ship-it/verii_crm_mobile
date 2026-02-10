@@ -6,10 +6,10 @@ import {
   Modal, 
   Pressable, 
   Dimensions, 
-  Platform, 
-  ScrollView,
+  Platform,
   Image 
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -194,7 +194,7 @@ export function Sidebar(): React.ReactElement {
             style={styles.separator}
           />
 
-          <ScrollView
+          <FlatListScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
@@ -259,7 +259,7 @@ export function Sidebar(): React.ReactElement {
                 </Pressable>
               );
             })}
-          </ScrollView>
+          </FlatListScrollView>
 
           <LinearGradient
             colors={['transparent', colors.border || 'rgba(255,255,255,0.2)', 'transparent']}

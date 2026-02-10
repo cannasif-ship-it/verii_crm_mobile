@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   View,
   StyleSheet,
-  ScrollView,
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
@@ -11,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -775,7 +775,7 @@ export function QuotationDetailScreen(): React.ReactElement {
         ) : activeTab === "report" && quotationId != null ? (
           <QuotationReportTab quotationId={quotationId} />
         ) : (
-        <ScrollView
+        <FlatListScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
@@ -1195,7 +1195,7 @@ export function QuotationDetailScreen(): React.ReactElement {
               </TouchableOpacity>
             )}
           </View>
-        </ScrollView>
+        </FlatListScrollView>
         )}
 
         <QuotationLineForm

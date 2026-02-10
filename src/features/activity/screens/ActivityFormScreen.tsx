@@ -2,12 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
   Modal,
-  FlatList,
   Platform,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -448,12 +447,15 @@ export function ActivityFormScreen(): React.ReactElement {
           title={isEditMode ? t("activity.edit") : t("activity.create")}
           showBackButton
         />
-        <ScrollView
+        <FlatList
           style={[styles.content, { backgroundColor: contentBackground }]}
+          data={[0]}
+          keyExtractor={(item) => String(item)}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
-        >
+          renderItem={() => (
+            <>
           <Controller
             control={control}
             name="subject"
@@ -677,7 +679,9 @@ export function ActivityFormScreen(): React.ReactElement {
               </Text>
             )}
           </TouchableOpacity>
-        </ScrollView>
+            </>
+          )}
+        />
       </View>
 
       <Modal

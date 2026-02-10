@@ -2,11 +2,11 @@ import React, { useState } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
   TouchableOpacity,
   Alert,
   Switch,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -67,7 +67,7 @@ export default function SettingsScreen(): React.ReactElement {
           <View style={styles.backButton} />
         </View>
 
-        <ScrollView
+        <FlatListScrollView
           style={[styles.content, { backgroundColor: colors.background }]}
           contentContainerStyle={[
             styles.contentContainer,
@@ -172,7 +172,7 @@ export default function SettingsScreen(): React.ReactElement {
               {t("common.logout")}
             </Text>
           </TouchableOpacity>
-        </ScrollView>
+        </FlatListScrollView>
       </View>
     </>
   );

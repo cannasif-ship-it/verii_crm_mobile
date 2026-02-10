@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback, useState } from "react";
-import { View, StyleSheet, ScrollView, FlatList, Image, TouchableOpacity } from "react-native";
+import { View, StyleSheet, FlatList, Image, TouchableOpacity } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { Text } from "../../../components/ui/text";
 import { API_BASE_URL } from "../../../constants/env";
 import type { StockGetDto, StockRelationDto, StockImageDto } from "../types";
@@ -136,7 +137,7 @@ export function StockDetailContent({
 
   const renderDetailsTab = useCallback((): React.ReactElement => {
     return (
-      <ScrollView
+      <FlatListScrollView
         style={styles.tabContent}
         contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
@@ -234,7 +235,7 @@ export function StockDetailContent({
             </View>
           )}
         </View>
-      </ScrollView>
+      </FlatListScrollView>
     );
   }, [stock, colors, insets, t, formatDate]);
 
@@ -279,7 +280,7 @@ export function StockDetailContent({
     }
 
     return (
-      <ScrollView
+      <FlatListScrollView
         style={styles.tabContent}
         contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
@@ -294,7 +295,7 @@ export function StockDetailContent({
             {row.length === 1 && <View style={styles.imageContainer} />}
           </View>
         ))}
-      </ScrollView>
+      </FlatListScrollView>
     );
   }, [hasImages, stock?.stockImages, colors, insets, t, renderImageItem]);
 
@@ -310,7 +311,7 @@ export function StockDetailContent({
     }
 
     return (
-      <ScrollView
+      <FlatListScrollView
         style={styles.tabContent}
         contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
         showsVerticalScrollIndicator={false}
@@ -321,7 +322,7 @@ export function StockDetailContent({
           keyExtractor={(item) => String(item.id)}
           scrollEnabled={false}
         />
-      </ScrollView>
+      </FlatListScrollView>
     );
   }, [hasRelations, relations, colors, insets, t, renderRelation]);
 

@@ -2,11 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
   TouchableOpacity,
   useWindowDimensions,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { Buffer } from "buffer";
 import * as FileSystem from "expo-file-system/legacy";
@@ -159,7 +159,7 @@ export function ReportTab({ entityId, ruleType }: ReportTabProps): React.ReactEl
   }
 
   return (
-    <ScrollView
+    <FlatListScrollView
       style={[styles.scroll, { backgroundColor: colors.background }]}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -228,7 +228,7 @@ export function ReportTab({ entityId, ruleType }: ReportTabProps): React.ReactEl
         title={t("report.selectTemplate")}
         searchPlaceholder={t("report.searchTemplate")}
       />
-    </ScrollView>
+    </FlatListScrollView>
   );
 }
 

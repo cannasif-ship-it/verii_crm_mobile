@@ -1,5 +1,6 @@
 import React, { useMemo, useCallback } from "react";
-import { View, StyleSheet, ScrollView, FlatList, Image } from "react-native";
+import { View, StyleSheet, FlatList, Image } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { Text } from "../../../components/ui/text";
 import type { StockGetDto, StockRelationDto, StockImageDto } from "../types";
 
@@ -95,7 +96,7 @@ export function StockDetailContent({
   );
 
   return (
-    <ScrollView
+    <FlatListScrollView
       style={styles.tabContent}
       contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
       showsVerticalScrollIndicator={false}
@@ -159,7 +160,7 @@ export function StockDetailContent({
           />
         </View>
       )}
-    </ScrollView>
+    </FlatListScrollView>
   );
 }
 

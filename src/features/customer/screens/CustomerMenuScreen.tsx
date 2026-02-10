@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -70,7 +71,7 @@ export function CustomerMenuScreen(): React.ReactElement {
         <ScreenHeader title={t("customerMenu.title")} showBackButton />
         
         {/* İÇERİK ALANI (Modern Yuvarlak Köşeler) */}
-        <ScrollView
+        <FlatListScrollView
           style={[styles.content, { backgroundColor: contentBg }]}
           contentContainerStyle={[
             styles.contentContainer, 
@@ -158,7 +159,7 @@ export function CustomerMenuScreen(): React.ReactElement {
             onPress={handleTitlesPress}
           />
 
-        </ScrollView>
+        </FlatListScrollView>
       </View>
     </>
   );

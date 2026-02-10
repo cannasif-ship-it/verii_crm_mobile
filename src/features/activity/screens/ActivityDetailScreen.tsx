@@ -2,7 +2,7 @@ import React, { useCallback } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
+  FlatList,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
@@ -232,11 +232,14 @@ export function ActivityDetailScreen(): React.ReactElement {
             </View>
           }
         />
-        <ScrollView
+        <FlatList
           style={[styles.content, { backgroundColor: contentBackground }]}
+          data={[0]}
+          keyExtractor={(item) => String(item)}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
-        >
+          renderItem={() => (
+            <>
           <View style={[styles.headerCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <Text style={[styles.subject, { color: colors.text }]}>{activity.subject}</Text>
             <View style={styles.headerMeta}>
@@ -394,7 +397,9 @@ export function ActivityDetailScreen(): React.ReactElement {
               <Text style={styles.completeButtonText}>✓ {t("activity.markComplete")}</Text>
             </TouchableOpacity>
           )}
-        </ScrollView>
+            </>
+          )}
+        />
       </View>
     </>
   );

@@ -2,13 +2,13 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
-  ScrollView,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
   Modal,
   FlatList,
 } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -168,7 +168,7 @@ export function ContactFormScreen(): React.ReactElement {
           title={isEditMode ? t("contact.edit") : t("contact.create")}
           showBackButton
         />
-        <ScrollView
+        <FlatListScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
@@ -301,7 +301,7 @@ export function ContactFormScreen(): React.ReactElement {
               </Text>
             )}
           </TouchableOpacity>
-        </ScrollView>
+        </FlatListScrollView>
       </View>
 
       <Modal

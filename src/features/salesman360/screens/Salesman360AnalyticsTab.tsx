@@ -1,5 +1,6 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet } from "react-native";
+import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import {
@@ -73,7 +74,7 @@ export function Salesman360AnalyticsTab({
   }
 
   return (
-    <ScrollView
+    <FlatListScrollView
       style={styles.scroll}
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
@@ -209,7 +210,7 @@ export function Salesman360AnalyticsTab({
           ) : null}
         </>
       )}
-    </ScrollView>
+    </FlatListScrollView>
   );
 }
 
