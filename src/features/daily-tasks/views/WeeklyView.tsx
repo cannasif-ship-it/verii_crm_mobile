@@ -81,40 +81,6 @@ export function WeeklyView({ onCreateTask }: WeeklyViewProps): React.ReactElemen
   const weekRange = useMemo(() => getWeekRange(), []);
   const { data: tasks, isLoading, isError, refetch } = useDailyTasks(weekRange);
   const weekDays = useMemo(() => getWeekDays(weekRange.startDate), [weekRange.startDate]);
-
-  const renderEmpty = (): React.ReactElement => {
-    if (isLoading) return <View />;
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>📅</Text>
-        <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-          {t("dailyTasks.noWeeklyTasks")}
-        </Text>
-      </View>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color={colors.accent} />
-      </View>
-    );
-  }
-
-  if (isError) {
-    return (
-      <View style={styles.errorContainer}>
-        <Text style={[styles.errorText, { color: colors.error }]}>{t("common.error")}</Text>
-        <View style={styles.retryButton}>
-          <Text style={[styles.retryText, { color: colors.accent }]} onPress={() => refetch()}>
-            {t("common.retry")}
-          </Text>
-        </View>
-      </View>
-    );
-  }
-
   const safeTasks = tasks ?? [];
 
   const renderDayColumn = useCallback(
@@ -150,6 +116,39 @@ export function WeeklyView({ onCreateTask }: WeeklyViewProps): React.ReactElemen
     ),
     [colors, safeTasks, onCreateTask]
   );
+
+  const renderEmpty = (): React.ReactElement => {
+    if (isLoading) return <View />;
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={styles.emptyIcon}>📅</Text>
+        <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+          {t("dailyTasks.noWeeklyTasks")}
+        </Text>
+      </View>
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={colors.accent} />
+      </View>
+    );
+  }
+
+  if (isError) {
+    return (
+      <View style={styles.errorContainer}>
+        <Text style={[styles.errorText, { color: colors.error }]}>{t("common.error")}</Text>
+        <View style={styles.retryButton}>
+          <Text style={[styles.retryText, { color: colors.accent }]} onPress={() => refetch()}>
+            {t("common.retry")}
+          </Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <FlatList
