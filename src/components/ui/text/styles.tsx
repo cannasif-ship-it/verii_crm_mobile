@@ -6,7 +6,8 @@ const baseStyle = isWeb
   : '';
 
 export const textStyle = tva({
-  base: `text-typography-700 font-body ${baseStyle}`,
+// Renk kodlarını buradan kaldırdık, sadece font kaldı.
+base: `font-body ${baseStyle}`,
 
   variants: {
     isTruncated: {
