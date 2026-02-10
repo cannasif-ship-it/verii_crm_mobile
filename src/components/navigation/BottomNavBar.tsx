@@ -42,14 +42,16 @@ export function BottomNavBar(): React.ReactElement {
   };
 
   const handlePress = (route: string): void => {
-    if (isActive(route)) return;
-    router.navigate(route as never);
+    if (isActive(route)) {
+      return;
+    }
+    router.replace(route as never);
   };
 
   const paddingBottom = Platform.OS === "ios" ? insets.bottom : Math.max(insets.bottom, 10);
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: colors.navBar }]}>
+    <View style={[styles.wrapper, { backgroundColor: colors.navBar }]}> 
       <View
         style={[
           styles.container,
