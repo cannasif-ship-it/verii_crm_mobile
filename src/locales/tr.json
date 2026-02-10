@@ -314,6 +314,10 @@
     "description": "Açıklama",
     "activityType": "Aktivite Tipi",
     "activityDate": "Aktivite Tarihi",
+    "endDate": "Bitiş Tarihi",
+    "isAllDay": "Tüm Gün",
+    "reminders": "Hatırlatmalar",
+    "oneDayBefore": "1 gün önce",
     "status": "Durum",
     "priority": "Öncelik",
     "customer": "Müşteri",
@@ -354,6 +358,17 @@
     "deleteSuccess": "Aktivite başarıyla silindi",
     "createSuccess": "Aktivite başarıyla oluşturuldu",
     "updateSuccess": "Aktivite başarıyla güncellendi"
+  },
+  "activityType": {
+    "title": "Aktivite Tipleri",
+    "list": "Aktivite Tipi Listesi",
+    "create": "Yeni Aktivite Tipi",
+    "edit": "Aktivite Tipi Düzenle",
+    "name": "Ad",
+    "description": "Açıklama",
+    "createSuccess": "Aktivite tipi oluşturuldu",
+    "updateSuccess": "Aktivite tipi güncellendi",
+    "deleteSuccess": "Aktivite tipi silindi"
   },
   "validation": {
     "subjectRequired": "Konu zorunludur",

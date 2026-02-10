@@ -16,6 +16,23 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useActivity, useDeleteActivity, useUpdateActivity } from "../hooks";
 import type { ActivityDto } from "../types";
+import { ACTIVITY_STATUS_NUMERIC, ACTIVITY_PRIORITY_NUMERIC } from "../types";
+
+function normalizeStatusForDisplay(status: ActivityDto["status"]): string {
+  if (status == null) return "";
+  if (typeof status === "number" && ACTIVITY_STATUS_NUMERIC[status as 0 | 1 | 2]) {
+    return ACTIVITY_STATUS_NUMERIC[status as 0 | 1 | 2];
+  }
+  return String(status);
+}
+
+function normalizePriorityForDisplay(priority: ActivityDto["priority"]): string {
+  if (priority == null) return "";
+  if (typeof priority === "number" && ACTIVITY_PRIORITY_NUMERIC[priority as 0 | 1 | 2]) {
+    return ACTIVITY_PRIORITY_NUMERIC[priority as 0 | 1 | 2];
+  }
+  return String(priority);
+}
 
 export function ActivityDetailScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -64,23 +81,25 @@ export function ActivityDetailScreen(): React.ReactElement {
         {
           text: t("common.confirm"),
           onPress: async () => {
-            const activityTypeText = getActivityTypeText(activity.activityType);
             await updateActivity.mutateAsync({
               id: activityId,
               data: {
                 subject: activity.subject,
                 description: activity.description,
-                activityType: activityTypeText === "-" ? "" : activityTypeText,
+                activityTypeId: activity.activityTypeId ?? 0,
+                startDateTime: activity.startDateTime || activity.activityDate || new Date().toISOString(),
+                endDateTime: activity.endDateTime,
+                isAllDay: activity.isAllDay ?? false,
                 potentialCustomerId: activity.potentialCustomerId,
                 erpCustomerCode: activity.erpCustomerCode,
-                productCode: activity.productCode,
-                productName: activity.productName,
-                status: "Completed",
-                isCompleted: true,
-                priority: activity.priority,
+                status: 1,
+                priority: typeof activity.priority === "number" ? activity.priority : 1,
                 contactId: activity.contactId,
-                assignedUserId: activity.assignedUserId,
-                activityDate: activity.activityDate,
+                assignedUserId: activity.assignedUserId ?? 0,
+                reminders: (activity.reminders || []).map((reminder) => ({
+                  offsetMinutes: reminder.offsetMinutes,
+                  channel: typeof reminder.channel === "number" ? reminder.channel : 0,
+                })),
               },
             });
           },
@@ -89,8 +108,8 @@ export function ActivityDetailScreen(): React.ReactElement {
     );
   }, [activity, activityId, updateActivity, t]);
 
-  const getStatusColor = (status: string): string => {
-    const statusLower = status.toLowerCase().replace(/\s+/g, "");
+  const getStatusColor = (status: ActivityDto["status"]): string => {
+    const statusLower = normalizeStatusForDisplay(status).toLowerCase().replace(/\s+/g, "");
     switch (statusLower) {
       case "completed":
         return colors.success;
@@ -108,8 +127,8 @@ export function ActivityDetailScreen(): React.ReactElement {
     }
   };
 
-  const getStatusText = (status: string): string => {
-    const statusLower = status.toLowerCase().replace(/\s+/g, "");
+  const getStatusText = (status: ActivityDto["status"]): string => {
+    const statusLower = normalizeStatusForDisplay(status).toLowerCase().replace(/\s+/g, "");
     switch (statusLower) {
       case "completed":
         return t("activity.statusCompleted");
@@ -123,12 +142,13 @@ export function ActivityDetailScreen(): React.ReactElement {
       case "postponed":
         return t("activity.statusPostponed");
       default:
-        return status;
+        return normalizeStatusForDisplay(status);
     }
   };
 
-  const getPriorityText = (priority?: string): string => {
-    switch (priority?.toLowerCase()) {
+  const getPriorityText = (priority?: ActivityDto["priority"]): string => {
+    const p = normalizePriorityForDisplay(priority);
+    switch (p.toLowerCase()) {
       case "high":
         return t("activity.priorityHigh");
       case "medium":
@@ -136,7 +156,7 @@ export function ActivityDetailScreen(): React.ReactElement {
       case "low":
         return t("activity.priorityLow");
       default:
-        return priority || "-";
+        return p || "-";
     }
   };
 
@@ -225,7 +245,7 @@ export function ActivityDetailScreen(): React.ReactElement {
                   {getStatusText(activity.status)}
                 </Text>
               </View>
-              {activity.priority && (
+              {activity.priority !== undefined && activity.priority !== null && (
                 <View style={[styles.priorityBadge, { backgroundColor: colors.backgroundSecondary }]}>
                   <Text style={[styles.priorityText, { color: colors.textSecondary }]}>
                     {getPriorityText(activity.priority)}
@@ -248,9 +268,18 @@ export function ActivityDetailScreen(): React.ReactElement {
             <View style={styles.row}>
               <Text style={[styles.label, { color: colors.textMuted }]}>{t("activity.activityDate")}</Text>
               <Text style={[styles.value, { color: colors.text }]}>
-                {formatDate(activity.activityDate)}
+                {formatDate(activity.startDateTime || activity.activityDate || activity.createdDate)}
               </Text>
             </View>
+
+            {activity.endDateTime && (
+              <View style={styles.row}>
+                <Text style={[styles.label, { color: colors.textMuted }]}>{t("activity.endDate")}</Text>
+                <Text style={[styles.value, { color: colors.text }]}>
+                  {formatDate(activity.endDateTime)}
+                </Text>
+              </View>
+            )}
 
             {activity.description && (
               <View style={styles.descriptionRow}>

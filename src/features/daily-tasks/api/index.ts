@@ -1,6 +1,6 @@
 import { apiClient } from "../../../lib/axios";
 import type { ApiResponse } from "../../auth/types";
-import type { ActivityDto, PagedResponse, PagedApiResponse } from "../../activity/types";
+import type { ActivityDto } from "../../activity/types";
 import type { DailyTaskFilter } from "../types";
 
 interface PagedFilter {
@@ -9,38 +9,68 @@ interface PagedFilter {
   value: string;
 }
 
+interface RawPagedPayload<T> {
+  items?: T[];
+  data?: T[];
+  totalCount?: number;
+  TotalCount?: number;
+}
+
+function normalizeItems<T>(raw: RawPagedPayload<T> | null | undefined): T[] {
+  const items = raw?.items ?? raw?.data ?? [];
+  return Array.isArray(items) ? items : [];
+}
+
 const buildFilters = (filter: DailyTaskFilter): PagedFilter[] => {
   const filters: PagedFilter[] = [];
+  const startDateOnly =
+    filter.startDate && filter.startDate.includes("T")
+      ? filter.startDate.split("T")[0]
+      : filter.startDate;
+  const endDateOnly =
+    filter.endDate && filter.endDate.includes("T")
+      ? filter.endDate.split("T")[0]
+      : filter.endDate;
 
-  if (filter.startDate) {
+  if (startDateOnly) {
     filters.push({
-      column: "activityDate",
+      column: "StartDateTime",
       operator: "gte",
-      value: filter.startDate,
+      value: startDateOnly,
     });
   }
 
-  if (filter.endDate) {
+  if (endDateOnly) {
     filters.push({
-      column: "activityDate",
+      column: "StartDateTime",
       operator: "lte",
-      value: filter.endDate,
+      value: endDateOnly,
     });
   }
 
-  if (filter.assignedUserId) {
+  if (filter.assignedUserId != null) {
     filters.push({
-      column: "assignedUserId",
-      operator: "equals",
+      column: "AssignedUserId",
+      operator: "eq",
       value: String(filter.assignedUserId),
     });
   }
 
-  if (filter.status) {
+  if (filter.status != null) {
+    const statusValue =
+      typeof filter.status === "number"
+        ? String(filter.status)
+        : filter.status === "Completed"
+          ? "1"
+          : filter.status === "Scheduled"
+            ? "0"
+            : filter.status === "Cancelled"
+              ? "2"
+              : String(filter.status);
     filters.push({
-      column: "status",
-      operator: "equals",
-      value: filter.status,
+      column: "Status",
+      operator: "eq",
+      value: statusValue,
     });
   }
 
@@ -51,11 +81,13 @@ export const dailyTasksApi = {
   getList: async (filter: DailyTaskFilter): Promise<ActivityDto[]> => {
     const filters = buildFilters(filter);
 
-    const response = await apiClient.get<PagedApiResponse<ActivityDto>>("/api/Activity", {
+    const response = await apiClient.get<
+      ApiResponse<RawPagedPayload<ActivityDto>>
+    >("/api/Activity", {
       params: {
         pageNumber: 1,
-        pageSize: 100,
-        sortBy: "activityDate",
+        pageSize: 1000,
+        sortBy: "StartDateTime",
         sortDirection: "asc",
         filters: filters.length > 0 ? JSON.stringify(filters) : undefined,
       },
@@ -67,7 +99,7 @@ export const dailyTasksApi = {
       );
     }
 
-    return response.data.data.items;
+    return normalizeItems(response.data.data);
   },
 
   updateStatus: async (

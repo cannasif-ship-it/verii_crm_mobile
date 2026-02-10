@@ -36,7 +36,9 @@ export function DailyView({ onCreateTask: _onCreateTask }: DailyViewProps): Reac
       if (a.isCompleted !== b.isCompleted) {
         return a.isCompleted ? 1 : -1;
       }
-      return new Date(a.activityDate).getTime() - new Date(b.activityDate).getTime();
+      const aDate = a.startDateTime ?? a.activityDate ?? a.createdDate;
+      const bDate = b.startDateTime ?? b.activityDate ?? b.createdDate;
+      return new Date(aDate).getTime() - new Date(bDate).getTime();
     });
   }, [tasks]);
 

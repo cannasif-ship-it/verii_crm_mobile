@@ -32,9 +32,13 @@ export function useUpdateActivity() {
       await queryClient.cancelQueries({ queryKey: ["activity", "detail", id] });
       const previousData = queryClient.getQueryData<ActivityDto>(["activity", "detail", id]);
       if (previousData) {
-        queryClient.setQueryData<ActivityDto>(["activity", "detail", id], {
+        const optimisticData: ActivityDto = {
           ...previousData,
           ...data,
+          reminders: previousData.reminders,
+        };
+        queryClient.setQueryData<ActivityDto>(["activity", "detail", id], {
+          ...optimisticData,
         });
       }
       return { previousData };

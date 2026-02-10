@@ -31,8 +31,9 @@ function TaskCardComponent({ task, compact = false }: TaskCardProps): React.Reac
   const { completeTask, isPending: isCompleting } = useCompleteTask();
   const { holdTask, isPending: isHolding } = useHoldTask();
 
-  const normalizedStatus = task.status.toLowerCase().replace(/\s+/g, "");
+  const normalizedStatus = String(task.status ?? "").toLowerCase().replace(/\s+/g, "");
   const borderColor = STATUS_BORDER_COLORS[normalizedStatus] || "#6B7280";
+  const activityDateTime = task.startDateTime ?? task.activityDate ?? task.createdDate;
 
   const formatTime = (dateString: string): string => {
     const date = new Date(dateString);
@@ -159,11 +160,11 @@ function TaskCardComponent({ task, compact = false }: TaskCardProps): React.Reac
               {task.subject}
             </Text>
             <Text style={[styles.compactTime, { color: colors.textMuted }]}>
-              {formatTime(task.activityDate)}
+              {formatTime(activityDateTime)}
             </Text>
           </View>
         </View>
-        <StatusBadge status={task.status} />
+        <StatusBadge status={String(task.status)} />
       </TouchableOpacity>
     );
   }
@@ -179,10 +180,10 @@ function TaskCardComponent({ task, compact = false }: TaskCardProps): React.Reac
     >
       <View style={styles.header}>
         <View style={styles.dateTime}>
-          <Text style={[styles.date, { color: colors.text }]}>{formatDate(task.activityDate)}</Text>
-          <Text style={[styles.time, { color: colors.textMuted }]}>{formatTime(task.activityDate)}</Text>
+          <Text style={[styles.date, { color: colors.text }]}>{formatDate(activityDateTime)}</Text>
+          <Text style={[styles.time, { color: colors.textMuted }]}>{formatTime(activityDateTime)}</Text>
         </View>
-        <StatusBadge status={task.status} />
+        <StatusBadge status={String(task.status)} />
       </View>
 
       <Text style={[styles.subject, { color: colors.text }]} numberOfLines={2}>

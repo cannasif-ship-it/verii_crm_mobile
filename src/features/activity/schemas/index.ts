@@ -15,7 +15,10 @@ export const createActivitySchema = () =>
     priority: z.string().optional().nullable(),
     contactId: z.number().optional().nullable(),
     assignedUserId: z.number().optional().nullable(),
-    activityDate: z.string().min(1, i18n.t("validation.dateRequired")),
+    startDateTime: z.string().min(1, i18n.t("validation.dateRequired")),
+    endDateTime: z.string().optional().nullable(),
+    isAllDay: z.boolean(),
+    reminders: z.array(z.number().int().min(1)).optional(),
   });
 
 export const activitySchema = createActivitySchema();

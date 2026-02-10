@@ -35,7 +35,7 @@ export interface CalendarViewProps {
 }
 
 export interface WeeklyViewProps {
-  onCreateTask: (date: string) => void;
+  onCreateTask: (startDateTime: string, endDateTime: string) => void;
 }
 
 export interface DailyViewProps {

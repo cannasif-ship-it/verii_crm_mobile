@@ -4,19 +4,38 @@ import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import type { ActivityDto } from "../types";
+import { ACTIVITY_STATUS_NUMERIC, ACTIVITY_PRIORITY_NUMERIC } from "../types";
 
 interface ActivityCardProps {
   activity: ActivityDto;
   onPress: () => void;
 }
 
+function normalizeStatusForDisplay(status: ActivityDto["status"]): string {
+  if (status == null) return "";
+  if (typeof status === "number" && ACTIVITY_STATUS_NUMERIC[status as 0 | 1 | 2]) {
+    return ACTIVITY_STATUS_NUMERIC[status as 0 | 1 | 2];
+  }
+  return String(status);
+}
+
+function normalizePriorityForDisplay(priority: ActivityDto["priority"]): string {
+  if (priority == null) return "";
+  if (typeof priority === "number" && ACTIVITY_PRIORITY_NUMERIC[priority as 0 | 1 | 2]) {
+    return ACTIVITY_PRIORITY_NUMERIC[priority as 0 | 1 | 2];
+  }
+  return String(priority);
+}
+
 function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.ReactElement {
   const { colors } = useUIStore();
   const { t } = useTranslation();
+  const statusStr = normalizeStatusForDisplay(activity.status);
 
   const getStatusColor = (status?: string | null): string => {
-    if (status == null || typeof status !== "string") return colors.textMuted;
-    const statusLower = status.toLowerCase().replace(/\s+/g, "");
+    const s = status ?? statusStr;
+    if (!s) return colors.textMuted;
+    const statusLower = String(s).toLowerCase().replace(/\s+/g, "");
     switch (statusLower) {
       case "completed":
         return colors.success;
@@ -35,8 +54,9 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
   };
 
   const getStatusText = (status?: string | null): string => {
-    if (status == null || typeof status !== "string") return "";
-    const statusLower = status.toLowerCase().replace(/\s+/g, "");
+    const s = status ?? statusStr;
+    if (!s) return "";
+    const statusLower = String(s).toLowerCase().replace(/\s+/g, "");
     switch (statusLower) {
       case "completed":
         return t("activity.statusCompleted");
@@ -50,12 +70,13 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
       case "postponed":
         return t("activity.statusPostponed");
       default:
-        return status;
+        return status ?? "";
     }
   };
 
-  const getPriorityIcon = (priority?: string): string => {
-    switch (priority?.toLowerCase()) {
+  const getPriorityIcon = (priority?: string | number | null): string => {
+    const p = priority == null ? "" : String(normalizePriorityForDisplay(priority)).toLowerCase();
+    switch (p) {
       case "high":
         return "🔴";
       case "medium":
@@ -66,6 +87,8 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
         return "";
     }
   };
+
+  const priorityStr = normalizePriorityForDisplay(activity.priority);
 
   const getActivityTypeText = (
     activityType: ActivityDto["activityType"]
@@ -146,8 +169,8 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
             <Text style={[styles.subject, { color: colors.text }]} numberOfLines={1}>
               {activity.subject}
             </Text>
-            {activity.priority && (
-              <Text style={styles.priorityIcon}>{getPriorityIcon(activity.priority)}</Text>
+            {priorityStr && (
+              <Text style={styles.priorityIcon}>{getPriorityIcon(priorityStr)}</Text>
             )}
           </View>
           {activity.potentialCustomer?.name && (
@@ -156,9 +179,9 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
             </Text>
           )}
         </View>
-        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(activity.status) + "20" }]}>
-          <Text style={[styles.statusText, { color: getStatusColor(activity.status) }]}>
-            {getStatusText(activity.status)}
+        <View style={[styles.statusBadge, { backgroundColor: getStatusColor(statusStr) + "20" }]}>
+          <Text style={[styles.statusText, { color: getStatusColor(statusStr) }]}>
+            {getStatusText(statusStr)}
           </Text>
         </View>
       </View>
@@ -167,7 +190,7 @@ function ActivityCardComponent({ activity, onPress }: ActivityCardProps): React.
         <View style={styles.detailRow}>
           <Text style={styles.detailIcon}>📅</Text>
           <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-            {formatDate(activity.activityDate)}
+            {formatDate(activity.activityDate ?? activity.startDateTime ?? activity.createdDate)}
           </Text>
         </View>
         {activity.contact?.fullName && (

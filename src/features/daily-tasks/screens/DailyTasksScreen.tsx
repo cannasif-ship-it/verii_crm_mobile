@@ -14,8 +14,11 @@ import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useToastStore } from "../../../store/toast";
+import { useAuthStore } from "../../../store/auth";
 import { WeeklyView, DailyView, CalendarView } from "../views";
 import { useCreateActivity } from "../../activity/hooks";
+import { useActivityTypes } from "../../activity/hooks";
+import { buildCreateActivityPayload } from "../../activity/utils/buildCreateActivityPayload";
 import type { ViewMode } from "../types";
 
 const TAB_ITEMS: { key: ViewMode; labelKey: string }[] = [
@@ -38,6 +41,8 @@ export function DailyTasksScreen(): React.ReactElement {
   const [calendarSelectedDate, setCalendarSelectedDate] = useState<string | null>(null);
   const [quickAddSubject, setQuickAddSubject] = useState("");
 
+  const user = useAuthStore((state) => state.user);
+  const { data: activityTypes } = useActivityTypes();
   const createActivity = useCreateActivity();
 
   const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
@@ -65,9 +70,29 @@ export function DailyTasksScreen(): React.ReactElement {
     (dateString: string) => {
       const date = new Date(dateString);
       date.setHours(9, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(10, 0, 0, 0);
       router.push({
         pathname: "/(tabs)/activities/create",
-        params: { initialDate: date.toISOString() },
+        params: {
+          initialDate: date.toISOString(),
+          initialStartDateTime: date.toISOString(),
+          initialEndDateTime: endDate.toISOString(),
+        },
+      });
+    },
+    [router]
+  );
+
+  const handleCreateTaskForSlot = useCallback(
+    (startDateTime: string, endDateTime: string) => {
+      router.push({
+        pathname: "/(tabs)/activities/create",
+        params: {
+          initialDate: startDateTime,
+          initialStartDateTime: startDateTime,
+          initialEndDateTime: endDateTime,
+        },
       });
     },
     [router]
@@ -79,19 +104,23 @@ export function DailyTasksScreen(): React.ReactElement {
     Keyboard.dismiss();
 
     try {
-      await createActivity.mutateAsync({
-        subject: quickAddSubject.trim(),
-        activityType: "Görev",
-        status: "Scheduled",
-        isCompleted: false,
-        activityDate: new Date().toISOString(),
-      });
+      const payload = buildCreateActivityPayload(
+        {
+          subject: quickAddSubject.trim(),
+          activityType: "Görev",
+          status: "Scheduled",
+          isCompleted: false,
+          activityDate: new Date().toISOString(),
+        },
+        { activityTypes: activityTypes ?? [], assignedUserIdFallback: user?.id }
+      );
+      await createActivity.mutateAsync(payload);
       setQuickAddSubject("");
       showToast("success", t("dailyTasks.quickAddSuccess"));
     } catch {
       showToast("error", t("common.unknownError"));
     }
-  }, [quickAddSubject, createActivity, showToast, t]);
+  }, [quickAddSubject, activityTypes, user?.id, createActivity, showToast, t]);
 
   const handleCalendarDateSelect = useCallback((date: string) => {
     setCalendarSelectedDate(date);
@@ -136,7 +165,7 @@ export function DailyTasksScreen(): React.ReactElement {
   const renderContent = (): React.ReactElement => {
     switch (activeTab) {
       case "weekly":
-        return <WeeklyView onCreateTask={handleCreateTaskWithDate} />;
+        return <WeeklyView onCreateTask={handleCreateTaskForSlot} />;
       case "daily":
         return <DailyView onCreateTask={() => handleCreateTaskWithDate(todayDateString)} />;
       case "calendar":

@@ -73,7 +73,8 @@ export function CalendarView({
     if (!tasks) return map;
 
     tasks.forEach((task) => {
-      const dateKey = formatDateKey(new Date(task.activityDate));
+      const taskDate = task.startDateTime ?? task.activityDate ?? task.createdDate;
+      const dateKey = formatDateKey(new Date(taskDate));
       if (!map[dateKey]) {
         map[dateKey] = [];
       }

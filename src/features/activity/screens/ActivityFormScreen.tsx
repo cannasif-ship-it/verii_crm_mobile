@@ -20,10 +20,20 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { useAuthStore } from "../../../store/auth";
 import { useActivity, useActivityTypes, useCreateActivity, useUpdateActivity } from "../hooks";
 import { FormField, CustomerPicker, ContactPicker } from "../components";
 import { createActivitySchema, type ActivityFormData } from "../schemas";
-import { ACTIVITY_STATUSES, ACTIVITY_PRIORITIES, type ActivityTypeDto, type ActivityDto } from "../types";
+import { buildCreateActivityPayload, buildUpdateActivityPayload } from "../utils/buildCreateActivityPayload";
+import {
+  ACTIVITY_STATUSES,
+  ACTIVITY_PRIORITIES,
+  ACTIVITY_STATUS_NUMERIC,
+  ACTIVITY_PRIORITY_NUMERIC,
+  ReminderChannel,
+  type ActivityTypeDto,
+  type ActivityDto,
+} from "../types";
 import type { CustomerDto } from "../../customer/types";
 import type { ContactDto } from "../../contact/types";
 
@@ -35,26 +45,46 @@ interface PickerOption {
 export function ActivityFormScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id, initialDate } = useLocalSearchParams<{ id: string; initialDate: string }>();
+  const { id, initialDate, initialStartDateTime, initialEndDateTime } = useLocalSearchParams<{
+    id: string;
+    initialDate: string;
+    initialStartDateTime: string;
+    initialEndDateTime: string;
+  }>();
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
 
   const isEditMode = !!id;
   const activityId = id ? Number(id) : undefined;
 
-  const defaultDate = initialDate || new Date().toISOString();
+  const toDefaultStartDateTime = useCallback((): string => {
+    if (initialStartDateTime) return initialStartDateTime;
+    if (initialDate) return initialDate;
+    return new Date().toISOString();
+  }, [initialDate, initialStartDateTime]);
+
+  const toDefaultEndDateTime = useCallback((): string | undefined => {
+    if (initialEndDateTime) return initialEndDateTime;
+    const start = new Date(toDefaultStartDateTime());
+    if (Number.isNaN(start.getTime())) return undefined;
+    start.setHours(start.getHours() + 1);
+    return start.toISOString();
+  }, [initialEndDateTime, toDefaultStartDateTime]);
 
   const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
 
   const [typeModalOpen, setTypeModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [priorityModalOpen, setPriorityModalOpen] = useState(false);
-  const [dateModalOpen, setDateModalOpen] = useState(false);
-  const [tempDate, setTempDate] = useState(new Date());
+  const [startDateModalOpen, setStartDateModalOpen] = useState(false);
+  const [endDateModalOpen, setEndDateModalOpen] = useState(false);
+  const [tempStartDate, setTempStartDate] = useState(new Date());
+  const [tempEndDate, setTempEndDate] = useState(new Date());
 
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDto | undefined>();
   const [selectedContact, setSelectedContact] = useState<ContactDto | undefined>();
 
+  const user = useAuthStore((state) => state.user);
   const { data: existingActivity, isLoading: activityLoading } = useActivity(activityId);
   const { data: activityTypes, isLoading: typesLoading } = useActivityTypes();
   const createActivity = useCreateActivity();
@@ -78,15 +108,21 @@ export function ActivityFormScreen(): React.ReactElement {
       status: "Scheduled",
       isCompleted: false,
       priority: "Medium",
-      activityDate: defaultDate,
+      startDateTime: toDefaultStartDateTime(),
+      endDateTime: toDefaultEndDateTime(),
+      isAllDay: false,
+      reminders: [],
     },
   });
 
   const watchActivityType = watch("activityType");
   const watchStatus = watch("status");
   const watchPriority = watch("priority");
-  const watchActivityDate = watch("activityDate");
+  const watchStartDateTime = watch("startDateTime");
+  const watchEndDateTime = watch("endDateTime");
   const watchCustomerId = watch("potentialCustomerId");
+  const watchIsAllDay = watch("isAllDay");
+  const watchReminders = watch("reminders") || [];
 
   const statusOptions: PickerOption[] = useMemo(
     () =>
@@ -105,6 +141,16 @@ export function ActivityFormScreen(): React.ReactElement {
       })),
     [t]
   );
+
+  const normalizeStatus = useCallback((value: ActivityDto["status"]): string => {
+    if (typeof value === "number") return ACTIVITY_STATUS_NUMERIC[value] || "Scheduled";
+    return value ? String(value) : "Scheduled";
+  }, []);
+
+  const normalizePriority = useCallback((value?: ActivityDto["priority"]): string => {
+    if (typeof value === "number") return ACTIVITY_PRIORITY_NUMERIC[value] || "Medium";
+    return value ? String(value) : "Medium";
+  }, []);
 
   const normalizeActivityType = useCallback(
     (activityType: ActivityDto["activityType"]): string => {
@@ -127,12 +173,15 @@ export function ActivityFormScreen(): React.ReactElement {
         erpCustomerCode: existingActivity.erpCustomerCode || "",
         productCode: existingActivity.productCode || "",
         productName: existingActivity.productName || "",
-        status: existingActivity.status,
+        status: normalizeStatus(existingActivity.status),
         isCompleted: existingActivity.isCompleted,
-        priority: existingActivity.priority || "Medium",
+        priority: normalizePriority(existingActivity.priority),
         contactId: existingActivity.contactId,
         assignedUserId: existingActivity.assignedUserId,
-        activityDate: existingActivity.activityDate,
+        startDateTime: existingActivity.startDateTime || existingActivity.activityDate || toDefaultStartDateTime(),
+        endDateTime: existingActivity.endDateTime || toDefaultEndDateTime(),
+        isAllDay: existingActivity.isAllDay ?? false,
+        reminders: (existingActivity.reminders || []).map((reminder) => reminder.offsetMinutes),
       });
 
       if (existingActivity.potentialCustomer) {
@@ -157,7 +206,7 @@ export function ActivityFormScreen(): React.ReactElement {
         } as unknown as ContactDto);
       }
     }
-  }, [existingActivity, normalizeActivityType, reset]);
+  }, [existingActivity, normalizeActivityType, normalizePriority, normalizeStatus, reset, toDefaultEndDateTime, toDefaultStartDateTime]);
 
   const handleTypeSelect = useCallback(
     (type: ActivityTypeDto) => {
@@ -206,28 +255,71 @@ export function ActivityFormScreen(): React.ReactElement {
     [setValue]
   );
 
-  const handleOpenDateModal = useCallback(() => {
-    setTempDate(new Date(watchActivityDate));
-    setDateModalOpen(true);
-  }, [watchActivityDate]);
+  const handleOpenStartDateModal = useCallback(() => {
+    setTempStartDate(new Date(watchStartDateTime));
+    setStartDateModalOpen(true);
+  }, [watchStartDateTime]);
 
-  const handleDateChange = useCallback(
+  const handleOpenEndDateModal = useCallback(() => {
+    setTempEndDate(new Date(watchEndDateTime || watchStartDateTime));
+    setEndDateModalOpen(true);
+  }, [watchEndDateTime, watchStartDateTime]);
+
+  const handleStartDateChange = useCallback(
     (_: DateTimePickerEvent, selectedDate?: Date) => {
       if (selectedDate) {
-        setTempDate(selectedDate);
+        setTempStartDate(selectedDate);
         if (Platform.OS === "android") {
-          setValue("activityDate", selectedDate.toISOString());
-          setDateModalOpen(false);
+          setValue("startDateTime", selectedDate.toISOString());
+          setStartDateModalOpen(false);
         }
       }
     },
     [setValue]
   );
 
-  const handleConfirmDate = useCallback(() => {
-    setValue("activityDate", tempDate.toISOString());
-    setDateModalOpen(false);
-  }, [tempDate, setValue]);
+  const handleEndDateChange = useCallback(
+    (_: DateTimePickerEvent, selectedDate?: Date) => {
+      if (selectedDate) {
+        setTempEndDate(selectedDate);
+        if (Platform.OS === "android") {
+          setValue("endDateTime", selectedDate.toISOString());
+          setEndDateModalOpen(false);
+        }
+      }
+    },
+    [setValue]
+  );
+
+  const handleConfirmStartDate = useCallback(() => {
+    setValue("startDateTime", tempStartDate.toISOString());
+    if (!watchEndDateTime) {
+      const nextHour = new Date(tempStartDate);
+      nextHour.setHours(nextHour.getHours() + 1);
+      setValue("endDateTime", nextHour.toISOString());
+    }
+    setStartDateModalOpen(false);
+  }, [tempStartDate, watchEndDateTime, setValue]);
+
+  const handleConfirmEndDate = useCallback(() => {
+    setValue("endDateTime", tempEndDate.toISOString());
+    setEndDateModalOpen(false);
+  }, [tempEndDate, setValue]);
+
+  const handleToggleReminder = useCallback(
+    (offsetMinutes: number) => {
+      const exists = watchReminders.includes(offsetMinutes);
+      if (exists) {
+        setValue(
+          "reminders",
+          watchReminders.filter((value) => value !== offsetMinutes)
+        );
+        return;
+      }
+      setValue("reminders", [...watchReminders, offsetMinutes].sort((a, b) => a - b));
+    },
+    [watchReminders, setValue]
+  );
 
   const formatDisplayDate = (dateString: string): string => {
     const date = new Date(dateString);
@@ -243,16 +335,24 @@ export function ActivityFormScreen(): React.ReactElement {
   const onSubmit = useCallback(
     async (data: ActivityFormData) => {
       try {
-        const payload = {
-          ...data,
-          potentialCustomerId: data.potentialCustomerId || undefined,
-          contactId: data.contactId || undefined,
-          assignedUserId: data.assignedUserId || undefined,
-          erpCustomerCode: data.erpCustomerCode || undefined,
-          productCode: data.productCode || undefined,
-          productName: data.productName || undefined,
-          priority: data.priority || undefined,
+        const options = {
+          activityTypes: activityTypes ?? [],
+          assignedUserIdFallback: user?.id,
         };
+        const payloadInput = {
+          ...data,
+          reminders: (data.reminders || []).map((offsetMinutes) => ({
+            offsetMinutes,
+            channel: ReminderChannel.InApp,
+          })),
+        };
+
+        const payload = isEditMode && existingActivity
+          ? buildUpdateActivityPayload(payloadInput, {
+              ...options,
+              existingAssignedUserId: existingActivity.assignedUserId,
+            })
+          : buildCreateActivityPayload(payloadInput, options);
 
         if (isEditMode && activityId) {
           await updateActivity.mutateAsync({ id: activityId, data: payload });
@@ -266,7 +366,17 @@ export function ActivityFormScreen(): React.ReactElement {
         Alert.alert(t("common.error"), t("common.unknownError"));
       }
     },
-    [isEditMode, activityId, createActivity, updateActivity, router, t]
+    [
+      isEditMode,
+      activityId,
+      existingActivity,
+      activityTypes,
+      user?.id,
+      createActivity,
+      updateActivity,
+      router,
+      t,
+    ]
   );
 
   const renderTypeItem = useCallback(
@@ -396,19 +506,53 @@ export function ActivityFormScreen(): React.ReactElement {
             <TouchableOpacity
               style={[
                 styles.pickerField,
-                { backgroundColor: colors.backgroundSecondary, borderColor: errors.activityDate ? colors.error : colors.border },
+                { backgroundColor: colors.backgroundSecondary, borderColor: errors.startDateTime ? colors.error : colors.border },
               ]}
-              onPress={handleOpenDateModal}
+              onPress={handleOpenStartDateModal}
             >
               <Text style={[styles.pickerFieldText, { color: colors.text }]}>
-                {formatDisplayDate(watchActivityDate)}
+                {formatDisplayDate(watchStartDateTime)}
               </Text>
               <Text style={[styles.arrow, { color: colors.textMuted }]}>📅</Text>
             </TouchableOpacity>
-            {errors.activityDate && (
-              <Text style={[styles.errorText, { color: colors.error }]}>{errors.activityDate.message}</Text>
+            {errors.startDateTime && (
+              <Text style={[styles.errorText, { color: colors.error }]}>{errors.startDateTime.message}</Text>
             )}
           </View>
+
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>
+              {t("activity.endDate")}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.pickerField,
+                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+              ]}
+              onPress={handleOpenEndDateModal}
+            >
+              <Text style={[styles.pickerFieldText, { color: colors.text }]}>
+                {watchEndDateTime ? formatDisplayDate(watchEndDateTime) : "-"}
+              </Text>
+              <Text style={[styles.arrow, { color: colors.textMuted }]}>🕒</Text>
+            </TouchableOpacity>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.toggleRow, { borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
+            onPress={() => setValue("isAllDay", !watchIsAllDay)}
+            activeOpacity={0.8}
+          >
+            <Text style={[styles.toggleLabel, { color: colors.text }]}>{t("activity.isAllDay")}</Text>
+            <View
+              style={[
+                styles.toggleIndicator,
+                { backgroundColor: watchIsAllDay ? colors.accent : colors.border },
+              ]}
+            >
+              <Text style={styles.toggleIndicatorText}>{watchIsAllDay ? "✓" : ""}</Text>
+            </View>
+          </TouchableOpacity>
 
           <CustomerPicker
             label={t("activity.customer")}
@@ -492,6 +636,33 @@ export function ActivityFormScreen(): React.ReactElement {
               />
             )}
           />
+
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: colors.textSecondary }]}>{t("activity.reminders")}</Text>
+            <View style={styles.reminderPresetRow}>
+              {[15, 30, 60, 1440].map((offset) => {
+                const selected = watchReminders.includes(offset);
+                const label = offset >= 1440 ? t("activity.oneDayBefore") : `${offset} dk`;
+                return (
+                  <TouchableOpacity
+                    key={String(offset)}
+                    style={[
+                      styles.reminderChip,
+                      {
+                        borderColor: selected ? colors.accent : colors.border,
+                        backgroundColor: selected ? colors.activeBackground : colors.backgroundSecondary,
+                      },
+                    ]}
+                    onPress={() => handleToggleReminder(offset)}
+                  >
+                    <Text style={[styles.reminderChipText, { color: selected ? colors.accent : colors.textSecondary }]}>
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
 
           <TouchableOpacity
             style={[styles.submitButton, { backgroundColor: colors.accent }]}
@@ -618,15 +789,15 @@ export function ActivityFormScreen(): React.ReactElement {
       </Modal>
 
       <Modal
-        visible={dateModalOpen}
+        visible={startDateModalOpen}
         transparent
         animationType="slide"
-        onRequestClose={() => setDateModalOpen(false)}
+        onRequestClose={() => setStartDateModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
           <TouchableOpacity
             style={styles.modalBackdrop}
-            onPress={() => setDateModalOpen(false)}
+            onPress={() => setStartDateModalOpen(false)}
           />
           <View
             style={[
@@ -642,10 +813,10 @@ export function ActivityFormScreen(): React.ReactElement {
             </View>
             <View style={styles.datePickerContainer}>
               <DateTimePicker
-                value={tempDate}
+                value={tempStartDate}
                 mode="datetime"
                 display="spinner"
-                onChange={handleDateChange}
+                onChange={handleStartDateChange}
                 textColor={colors.text}
                 locale="tr-TR"
               />
@@ -653,7 +824,7 @@ export function ActivityFormScreen(): React.ReactElement {
             <View style={styles.dateModalActions}>
               <TouchableOpacity
                 style={[styles.dateModalButton, { borderColor: colors.border }]}
-                onPress={() => setDateModalOpen(false)}
+                onPress={() => setStartDateModalOpen(false)}
               >
                 <Text style={[styles.dateModalButtonText, { color: colors.textSecondary }]}>
                   {t("common.cancel")}
@@ -661,7 +832,62 @@ export function ActivityFormScreen(): React.ReactElement {
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.dateModalButton, styles.dateModalButtonPrimary, { backgroundColor: colors.accent }]}
-                onPress={handleConfirmDate}
+                onPress={handleConfirmStartDate}
+              >
+                <Text style={[styles.dateModalButtonText, { color: "#FFFFFF" }]}>
+                  {t("common.confirm")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={endDateModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEndDateModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            onPress={() => setEndDateModalOpen(false)}
+          />
+          <View
+            style={[
+              styles.dateModalContent,
+              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+            ]}
+          >
+            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                {t("activity.endDate")}
+              </Text>
+            </View>
+            <View style={styles.datePickerContainer}>
+              <DateTimePicker
+                value={tempEndDate}
+                mode="datetime"
+                display="spinner"
+                onChange={handleEndDateChange}
+                textColor={colors.text}
+                locale="tr-TR"
+              />
+            </View>
+            <View style={styles.dateModalActions}>
+              <TouchableOpacity
+                style={[styles.dateModalButton, { borderColor: colors.border }]}
+                onPress={() => setEndDateModalOpen(false)}
+              >
+                <Text style={[styles.dateModalButtonText, { color: colors.textSecondary }]}>
+                  {t("common.cancel")}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.dateModalButton, styles.dateModalButtonPrimary, { backgroundColor: colors.accent }]}
+                onPress={handleConfirmEndDate}
               >
                 <Text style={[styles.dateModalButtonText, { color: "#FFFFFF" }]}>
                   {t("common.confirm")}
@@ -720,6 +946,47 @@ const styles = StyleSheet.create({
   errorText: {
     fontSize: 12,
     marginTop: 4,
+  },
+  toggleRow: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 10,
+    marginBottom: 16,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  toggleLabel: {
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  toggleIndicator: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  toggleIndicatorText: {
+    color: "#FFFFFF",
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  reminderPresetRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  reminderChip: {
+    borderWidth: 1,
+    borderRadius: 16,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  reminderChipText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   submitButton: {
     height: 52,

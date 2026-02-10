@@ -318,6 +318,10 @@
     "description": "Description",
     "activityType": "Activity Type",
     "activityDate": "Activity Date",
+    "endDate": "End Date",
+    "isAllDay": "All Day",
+    "reminders": "Reminders",
+    "oneDayBefore": "1 day before",
     "status": "Status",
     "priority": "Priority",
     "customer": "Customer",
@@ -358,6 +362,17 @@
     "deleteSuccess": "Activity deleted successfully",
     "createSuccess": "Activity created successfully",
     "updateSuccess": "Activity updated successfully"
+  },
+  "activityType": {
+    "title": "Activity Types",
+    "list": "Activity Type List",
+    "create": "New Activity Type",
+    "edit": "Edit Activity Type",
+    "name": "Name",
+    "description": "Description",
+    "createSuccess": "Activity type created",
+    "updateSuccess": "Activity type updated",
+    "deleteSuccess": "Activity type deleted"
   },
   "titleManagement": {
     "title": "Title Management",
