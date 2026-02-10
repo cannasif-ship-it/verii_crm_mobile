@@ -93,7 +93,7 @@ export function CustomerListScreen() {
     <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
       <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
       
-      <ScreenHeader title={t("customer.title", "Müşteriler")} showBackButton={false} />
+      <ScreenHeader title={t("customer.title", "Müşteriler")} showBackButton={true} />
 
       <View style={styles.listContainer}>
         {/* --- KONTROL ALANI --- */}
