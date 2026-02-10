@@ -10,6 +10,44 @@ import type {
   PagedApiResponse,
 } from "../types";
 
+interface RawPagedPayload<T> {
+  items?: T[];
+  data?: T[];
+  Items?: T[];
+  Data?: T[];
+  totalCount?: number;
+  TotalCount?: number;
+  pageNumber?: number;
+  PageNumber?: number;
+  pageSize?: number;
+  PageSize?: number;
+  totalPages?: number;
+  TotalPages?: number;
+  hasPreviousPage?: boolean;
+  HasPreviousPage?: boolean;
+  hasNextPage?: boolean;
+  HasNextPage?: boolean;
+}
+
+function normalizePagedResponse<T>(raw: RawPagedPayload<T> | null | undefined): PagedResponse<T> {
+  const items = raw?.items ?? raw?.data ?? raw?.Items ?? raw?.Data ?? [];
+  const totalCount = raw?.totalCount ?? raw?.TotalCount ?? 0;
+  const pageNumber = raw?.pageNumber ?? raw?.PageNumber ?? 1;
+  const pageSize = raw?.pageSize ?? raw?.PageSize ?? 20;
+  const totalPages = raw?.totalPages ?? raw?.TotalPages ?? Math.max(1, Math.ceil(totalCount / pageSize));
+  const hasPreviousPage = raw?.hasPreviousPage ?? raw?.HasPreviousPage ?? pageNumber > 1;
+  const hasNextPage = raw?.hasNextPage ?? raw?.HasNextPage ?? pageNumber < totalPages;
+  return {
+    items: Array.isArray(items) ? items : [],
+    totalCount,
+    pageNumber,
+    pageSize,
+    totalPages,
+    hasPreviousPage,
+    hasNextPage,
+  };
+}
+
 const buildQueryParams = (params: PagedParams): Record<string, string | number> => {
   const queryParams: Record<string, string | number> = {};
 
@@ -35,7 +73,7 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
 export const activityApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<ActivityDto>> => {
     const queryParams = buildQueryParams(params);
-    const response = await apiClient.get<PagedApiResponse<ActivityDto>>("/api/Activity", {
+    const response = await apiClient.get<ApiResponse<RawPagedPayload<ActivityDto>>>("/api/Activity", {
       params: queryParams,
     });
 
@@ -45,7 +83,7 @@ export const activityApi = {
       );
     }
 
-    return response.data.data;
+    return normalizePagedResponse(response.data.data);
   },
 
   getById: async (id: number): Promise<ActivityDto> => {
@@ -96,10 +134,18 @@ export const activityApi = {
 };
 
 export const activityTypeApi = {
-  getList: async (): Promise<ActivityTypeDto[]> => {
-    const response = await apiClient.get<ApiResponse<PagedResponse<ActivityTypeDto>>>("/api/ActivityType", {
-      params: { pageSize: 100 },
+  getList: async (params: PagedParams = {}): Promise<PagedResponse<ActivityTypeDto>> => {
+    const queryParams = buildQueryParams({
+      pageNumber: 1,
+      pageSize: 10000,
+      sortBy: "Id",
+      sortDirection: "desc",
+      ...params,
     });
+    const response = await apiClient.get<ApiResponse<RawPagedPayload<ActivityTypeDto>>>(
+      "/api/ActivityType",
+      { params: queryParams }
+    );
 
     if (!response.data.success) {
       throw new Error(
@@ -107,6 +153,52 @@ export const activityTypeApi = {
       );
     }
 
-    return response.data.data.items;
+    return normalizePagedResponse(response.data.data);
+  },
+
+  getById: async (id: number): Promise<ActivityTypeDto> => {
+    const response = await apiClient.get<ApiResponse<ActivityTypeDto>>(`/api/ActivityType/${id}`);
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || "Aktivite tipi bulunamadı"
+      );
+    }
+
+    return response.data.data;
+  },
+
+  create: async (data: { name: string; description?: string }): Promise<ActivityTypeDto> => {
+    const response = await apiClient.post<ApiResponse<ActivityTypeDto>>("/api/ActivityType", data);
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || "Aktivite tipi oluşturulamadı"
+      );
+    }
+
+    return response.data.data;
+  },
+
+  update: async (id: number, data: { name: string; description?: string }): Promise<ActivityTypeDto> => {
+    const response = await apiClient.put<ApiResponse<ActivityTypeDto>>(`/api/ActivityType/${id}`, data);
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || "Aktivite tipi güncellenemedi"
+      );
+    }
+
+    return response.data.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<Record<string, never>>>(`/api/ActivityType/${id}`);
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || "Aktivite tipi silinemedi"
+      );
+    }
   },
 };
