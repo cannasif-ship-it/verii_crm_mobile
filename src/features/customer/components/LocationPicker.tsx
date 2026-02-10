@@ -13,6 +13,8 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useCountries, useCities, useDistricts } from "../hooks";
 import type { CountryDto, CityDto, DistrictDto } from "../types";
+// YENİ İKONLAR
+import { ArrowDown01Icon, CheckmarkCircle02Icon } from "hugeicons-react-native";
 
 interface LocationPickerProps {
   countryId?: number;
@@ -41,8 +43,21 @@ export function LocationPicker({
   disabled = false,
 }: LocationPickerProps): React.ReactElement {
   const { t } = useTranslation();
-  const { colors } = useUIStore();
+  const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+
+  const isDark = themeMode === "dark";
+
+  // --- TEMA ---
+  const THEME = {
+    bg: isDark ? "#1a0b2e" : colors.background,
+    cardBg: isDark ? "#1e1b29" : colors.card,
+    text: isDark ? "#FFFFFF" : colors.text,
+    textMute: isDark ? "#94a3b8" : colors.textMuted,
+    border: isDark ? "rgba(255,255,255,0.1)" : colors.border,
+    inputBg: isDark ? "rgba(255,255,255,0.05)" : colors.backgroundSecondary,
+    primary: "#db2777",
+  };
 
   const [activePickerType, setActivePickerType] = useState<PickerType | null>(null);
 
@@ -152,17 +167,17 @@ export function LocationPicker({
         <TouchableOpacity
           style={[
             styles.pickerItem,
-            { borderBottomColor: colors.border },
-            isSelected && { backgroundColor: colors.activeBackground },
+            { borderBottomColor: THEME.border },
+            isSelected && { backgroundColor: isDark ? "rgba(219, 39, 119, 0.1)" : colors.activeBackground },
           ]}
           onPress={() => handleSelect(item)}
         >
-          <Text style={[styles.pickerItemText, { color: colors.text }]}>{item.name}</Text>
-          {isSelected && <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>}
+          <Text style={[styles.pickerItemText, { color: THEME.text }]}>{item.name}</Text>
+          {isSelected && <CheckmarkCircle02Icon size={20} color={THEME.primary} variant="stroke" />}
         </TouchableOpacity>
       );
     },
-    [activePickerType, countryId, cityId, districtId, colors, handleSelect]
+    [activePickerType, countryId, cityId, districtId, THEME, handleSelect, isDark, colors]
   );
 
   const renderField = (
@@ -173,12 +188,12 @@ export function LocationPicker({
     isDisabled: boolean
   ): React.ReactElement => (
     <View style={styles.fieldContainer}>
-      <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[styles.label, { color: THEME.textMute }]}>{label}</Text>
       <TouchableOpacity
         style={[
           styles.field,
-          { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-          isDisabled && styles.fieldDisabled,
+          { backgroundColor: THEME.inputBg, borderColor: THEME.border },
+          (isDisabled || disabled) && styles.fieldDisabled,
         ]}
         onPress={() => !isDisabled && handlePickerOpen(type)}
         disabled={isDisabled || disabled}
@@ -186,13 +201,13 @@ export function LocationPicker({
         <Text
           style={[
             styles.fieldText,
-            { color: value ? colors.text : colors.textMuted },
+            { color: value ? THEME.text : THEME.textMute },
           ]}
           numberOfLines={1}
         >
           {value || placeholder}
         </Text>
-        <Text style={[styles.arrow, { color: colors.textMuted }]}>▼</Text>
+        <ArrowDown01Icon size={16} color={THEME.textMute} />
       </TouchableOpacity>
     </View>
   );
@@ -232,16 +247,16 @@ export function LocationPicker({
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+              { backgroundColor: THEME.cardBg, paddingBottom: insets.bottom + 16 },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[styles.handle, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>{getPickerTitle()}</Text>
+            <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
+              <View style={[styles.handle, { backgroundColor: THEME.border }]} />
+              <Text style={[styles.modalTitle, { color: THEME.text }]}>{getPickerTitle()}</Text>
             </View>
             {isPickerLoading ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.accent} />
+                <ActivityIndicator size="large" color={THEME.primary} />
               </View>
             ) : (
               <FlatList
@@ -261,22 +276,22 @@ export function LocationPicker({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 12,
+    gap: 16, // Elemanlar arası boşluğu biraz artırdım
   },
   fieldContainer: {},
   label: {
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   field: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    height: 48,
+    height: 50, // Inputlarla aynı yükseklik
   },
   fieldDisabled: {
     opacity: 0.5,
@@ -284,22 +299,21 @@ const styles = StyleSheet.create({
   fieldText: {
     fontSize: 15,
     flex: 1,
+    fontWeight: "500",
   },
-  arrow: {
-    fontSize: 10,
-    marginLeft: 8,
-  },
+  
+  // --- MODAL STİLLERİ ---
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: "60%",
   },
   modalHeader: {
@@ -312,6 +326,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     marginBottom: 12,
+    opacity: 0.5,
   },
   modalTitle: {
     fontSize: 17,
@@ -328,16 +343,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
   },
   pickerItemText: {
     fontSize: 16,
+    fontWeight: "500",
     flex: 1,
-  },
-  checkmark: {
-    fontSize: 18,
-    fontWeight: "600",
   },
 });

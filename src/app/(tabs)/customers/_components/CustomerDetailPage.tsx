@@ -29,13 +29,32 @@ import {
   ShippingAddressCard,
   type ShippingAddressDto,
 } from "../../../../features/shipping-address";
+// HugeIcons
+import { 
+  Edit02Icon, 
+  Delete02Icon, 
+  Add01Icon, 
+  Analytics02Icon 
+} from "hugeicons-react-native";
 
 type TabType = "detail" | "contacts" | "addresses";
+
+// --- TEMA ARAYÜZÜ ---
+interface ThemeColors {
+  bg: string;
+  primary: string;
+  text: string;
+  textMute: string;
+  borderColor: string;
+  glassBtn: string;
+  danger: string;
+  tabActiveBg: string; // Tab aktifken arka planı (opsiyonel)
+}
 
 interface TabBarProps {
   activeTab: TabType;
   onTabPress: (tab: TabType) => void;
-  colors: Record<string, string>;
+  theme: ThemeColors; // Temayı prop olarak geçiyoruz
   t: (key: string) => string;
   contactsCount: number;
   addressesCount: number;
@@ -44,7 +63,7 @@ interface TabBarProps {
 function TabBar({
   activeTab,
   onTabPress,
-  colors,
+  theme,
   t,
   contactsCount,
   addressesCount,
@@ -56,31 +75,37 @@ function TabBar({
   ];
 
   return (
-    <View style={[styles.tabBar, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-      {tabs.map((tab) => (
-        <TouchableOpacity
-          key={tab.key}
-          style={[
-            styles.tab,
-            activeTab === tab.key && { borderBottomColor: colors.accent, borderBottomWidth: 2 },
-          ]}
-          onPress={() => onTabPress(tab.key)}
-        >
-          <Text
+    <View style={[styles.tabBar, { borderBottomColor: theme.borderColor }]}>
+      {tabs.map((tab) => {
+        const isActive = activeTab === tab.key;
+        return (
+          <TouchableOpacity
+            key={tab.key}
             style={[
-              styles.tabText,
-              { color: activeTab === tab.key ? colors.accent : colors.textMuted },
+              styles.tab,
+              isActive && { borderBottomColor: theme.primary, borderBottomWidth: 3 },
             ]}
+            onPress={() => onTabPress(tab.key)}
           >
-            {tab.label}
-          </Text>
-          {tab.count !== undefined && tab.count > 0 && (
-            <View style={[styles.tabBadge, { backgroundColor: colors.accent }]}>
-              <Text style={styles.tabBadgeText}>{tab.count}</Text>
-            </View>
-          )}
-        </TouchableOpacity>
-      ))}
+            <Text
+              style={[
+                styles.tabText,
+                { 
+                  color: isActive ? theme.text : theme.textMute, 
+                  fontWeight: isActive ? "700" : "500" 
+                },
+              ]}
+            >
+              {tab.label}
+            </Text>
+            {tab.count !== undefined && tab.count > 0 && (
+              <View style={[styles.tabBadge, { backgroundColor: isActive ? theme.primary : theme.glassBtn }]}>
+                <Text style={styles.tabBadgeText}>{tab.count}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        );
+      })}
     </View>
   );
 }
@@ -89,13 +114,26 @@ function CustomerDetailPage(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
+  
+  // --- DİNAMİK TEMA ---
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+  const isDark = themeMode === "dark";
+
+  // Renkleri moda göre seçiyoruz
+  const THEME: ThemeColors = {
+    bg: isDark ? "#1a0b2e" : colors.background, // Koyu mor veya Beyaz
+    primary: "#db2777", // Neon Pembe (Vurgu rengi her iki modda da aynı kalabilir)
+    text: isDark ? "#FFFFFF" : colors.text,
+    textMute: isDark ? "#94a3b8" : colors.textMuted,
+    borderColor: isDark ? "rgba(255,255,255,0.08)" : colors.border,
+    glassBtn: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
+    danger: "#ef4444",
+    tabActiveBg: isDark ? "rgba(219, 39, 119, 0.1)" : "rgba(219, 39, 119, 0.05)",
+  };
 
   const [isDeleting, setIsDeleting] = useState(false);
   const [activeTab, setActiveTab] = useState<TabType>("detail");
-
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
 
   const customerId = id ? Number(id) : undefined;
   const { data: customer, isLoading, isError, refetch } = useCustomer(customerId);
@@ -137,19 +175,13 @@ function CustomerDetailPage(): React.ReactElement {
     ]);
   }, [t, customerId, deleteCustomer, router]);
 
-  const handleContactPress = useCallback(
-    (contact: ContactDto) => {
+  const handleContactPress = useCallback((contact: ContactDto) => {
       router.push(`/(tabs)/customers/contacts/${contact.id}`);
-    },
-    [router]
-  );
+    }, [router]);
 
-  const handleAddressPress = useCallback(
-    (address: ShippingAddressDto) => {
+  const handleAddressPress = useCallback((address: ShippingAddressDto) => {
       router.push(`/(tabs)/customers/shipping/${address.id}`);
-    },
-    [router]
-  );
+    }, [router]);
 
   const handleAddContactPress = useCallback(() => {
     router.push({
@@ -165,19 +197,13 @@ function CustomerDetailPage(): React.ReactElement {
     });
   }, [router, customerId]);
 
-  const renderContactItem = useCallback(
-    ({ item }: { item: ContactDto }) => (
+  const renderContactItem = useCallback(({ item }: { item: ContactDto }) => (
       <ContactCard contact={item} onPress={() => handleContactPress(item)} />
-    ),
-    [handleContactPress]
-  );
+    ), [handleContactPress]);
 
-  const renderAddressItem = useCallback(
-    ({ item }: { item: ShippingAddressDto }) => (
+  const renderAddressItem = useCallback(({ item }: { item: ShippingAddressDto }) => (
       <ShippingAddressCard address={item} onPress={() => handleAddressPress(item)} />
-    ),
-    [handleAddressPress]
-  );
+    ), [handleAddressPress]);
 
   const keyExtractorContact = useCallback((item: ContactDto) => String(item.id), []);
   const keyExtractorAddress = useCallback((item: ShippingAddressDto) => String(item.id), []);
@@ -186,11 +212,11 @@ function CustomerDetailPage(): React.ReactElement {
     <View style={styles.tabContent}>
       {isLoadingContacts ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <ActivityIndicator size="large" color={THEME.primary} />
         </View>
       ) : contacts.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+          <Text style={[styles.emptyText, { color: THEME.textMute }]}>
             {t("contact.noContacts")}
           </Text>
         </View>
@@ -204,10 +230,10 @@ function CustomerDetailPage(): React.ReactElement {
         />
       )}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.accent }]}
+        style={[styles.fab, { backgroundColor: THEME.primary }]}
         onPress={handleAddContactPress}
       >
-        <Text style={styles.fabIcon}>+</Text>
+        <Add01Icon size={28} color="#FFFFFF" variant="stroke" />
       </TouchableOpacity>
     </View>
   );
@@ -216,11 +242,11 @@ function CustomerDetailPage(): React.ReactElement {
     <View style={styles.tabContent}>
       {isLoadingAddresses ? (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.accent} />
+          <ActivityIndicator size="large" color={THEME.primary} />
         </View>
       ) : addresses.length === 0 ? (
         <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+          <Text style={[styles.emptyText, { color: THEME.textMute }]}>
             {t("shippingAddress.noAddresses")}
           </Text>
         </View>
@@ -234,10 +260,10 @@ function CustomerDetailPage(): React.ReactElement {
         />
       )}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: colors.accent }]}
+        style={[styles.fab, { backgroundColor: THEME.primary }]}
         onPress={handleAddAddressPress}
       >
-        <Text style={styles.fabIcon}>+</Text>
+        <Add01Icon size={28} color="#FFFFFF" variant="stroke" />
       </TouchableOpacity>
     </View>
   );
@@ -252,7 +278,7 @@ function CustomerDetailPage(): React.ReactElement {
         return (
           <CustomerDetailContent
             customer={customer}
-            colors={colors}
+            colors={colors} // Detay içeriği kendi içinde temayı halledebilir veya buradan alabilir
             insets={insets}
             t={t}
           />
@@ -262,60 +288,73 @@ function CustomerDetailPage(): React.ReactElement {
 
   return (
     <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
-        <ScreenHeader
-          title={t("customer.detail")}
-          showBackButton
-          rightElement={
-            customer ? (
-              <View style={styles.headerActions}>
-                <TouchableOpacity
-                  onPress={handleCustomer360Press}
-                  style={styles.headerButton}
-                >
-                  <Text style={styles.headerButtonText}>360</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={handleEditPress} style={styles.headerButton}>
-                  <Text style={styles.headerButtonText}>✏️</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleDeletePress}
-                  style={styles.headerButton}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.headerButtonText}>🗑️</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            ) : undefined
-          }
-        />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}>
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={THEME.bg} />
+      
+      <View style={[styles.container, { backgroundColor: THEME.bg }]}>
+        
+        {/* HEADER BÖLÜMÜ */}
+        <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.borderColor }}>
+            <ScreenHeader
+            title={t("customer.detail")}
+            showBackButton
+            // ScreenHeader içinde tema desteği yoksa style prop ile geçmek gerekebilir
+            // style={{ backgroundColor: THEME.bg }} 
+            rightElement={
+                customer ? (
+                <View style={styles.headerActions}>
+                    {/* --- 360 GÖRÜNÜM BUTONU --- */}
+                    <TouchableOpacity onPress={handleCustomer360Press} style={[styles.headerButton, { backgroundColor: THEME.glassBtn }]}>
+                       <Analytics02Icon size={20} color={THEME.text} variant="stroke" />
+                    </TouchableOpacity>
+                    
+                    {/* Düzenle Butonu */}
+                    <TouchableOpacity onPress={handleEditPress} style={[styles.headerButton, { backgroundColor: THEME.glassBtn }]}>
+                       <Edit02Icon size={20} color={THEME.text} variant="stroke" />
+                    </TouchableOpacity>
+                    
+                    {/* Sil Butonu */}
+                    <TouchableOpacity
+                        onPress={handleDeletePress}
+                        style={[styles.headerButton, { backgroundColor: "rgba(239, 68, 68, 0.15)" }]}
+                        disabled={isDeleting}
+                    >
+                    {isDeleting ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                        <Delete02Icon size={20} color={THEME.danger} variant="stroke" />
+                    )}
+                    </TouchableOpacity>
+                </View>
+                ) : undefined
+            }
+            />
+        </View>
+
+        <View style={[styles.content, { backgroundColor: THEME.bg }]}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
+              <ActivityIndicator size="large" color={THEME.primary} />
             </View>
           ) : isError ? (
             <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{t("common.error")}</Text>
+              <Text style={[styles.errorText, { color: THEME.danger }]}>{t("common.error")}</Text>
               <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-                <Text style={[styles.retryText, { color: colors.accent }]}>{t("common.retry")}</Text>
+                <Text style={[styles.retryText, { color: THEME.primary }]}>{t("common.retry")}</Text>
               </TouchableOpacity>
             </View>
           ) : customer ? (
             <>
+              {/* TAB BAR */}
               <TabBar
                 activeTab={activeTab}
                 onTabPress={setActiveTab}
-                colors={colors}
+                theme={THEME} // Temayı TabBar'a iletiyoruz
                 t={t}
                 contactsCount={contacts.length}
                 addressesCount={addresses.length}
               />
+              
+              {/* İÇERİK */}
               {renderTabContent()}
             </>
           ) : null}
@@ -331,28 +370,22 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
+  // --- TAB BAR ---
   tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,
-    marginHorizontal: 20,
-    marginTop: 16,
-    borderRadius: 12,
-    overflow: "hidden",
   },
   tab: {
     flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
+    paddingVertical: 14,
     gap: 6,
   },
   tabText: {
     fontSize: 14,
-    fontWeight: "500",
   },
   tabBadge: {
     minWidth: 20,
@@ -363,15 +396,16 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   tabBadgeText: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 10,
+    fontWeight: "700",
     color: "#FFFFFF",
   },
+  // ----------------
   tabContent: {
     flex: 1,
   },
   listContent: {
-    padding: 20,
+    padding: 16,
   },
   loadingContainer: {
     flex: 1,
@@ -392,6 +426,8 @@ const styles = StyleSheet.create({
   retryButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 8,
   },
   retryText: {
     fontSize: 16,
@@ -410,7 +446,7 @@ const styles = StyleSheet.create({
   fab: {
     position: "absolute",
     right: 20,
-    bottom: 100,
+    bottom: 40,
     width: 56,
     height: 56,
     borderRadius: 28,
@@ -418,29 +454,25 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     elevation: 4,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
     shadowRadius: 4,
-  },
-  fabIcon: {
-    fontSize: 28,
-    color: "#FFFFFF",
-    fontWeight: "300",
   },
   headerActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
   headerButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
   },
   headerButtonText: {
-    fontSize: 16,
+    fontSize: 14, 
+    color: "#FFF",
+    fontWeight: "600"
   },
 });
 

@@ -14,6 +14,16 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useCustomers } from "../hooks";
 import type { CustomerGetDto } from "../types";
+// YENİ İKONLAR (Stroke Varyantı)
+import { 
+  Search01Icon, 
+  Cancel01Icon, 
+  Call02Icon, 
+  Mail01Icon, 
+  Location01Icon, 
+  ArrowRight01Icon,
+  Add01Icon 
+} from "hugeicons-react-native";
 
 export interface CustomerSelectionResult {
   customerId: number;
@@ -43,8 +53,8 @@ interface CustomerSelectDialogProps {
 }
 
 const PAGE_SIZE = 50;
-const BADGE_ERP = "#8B5CF6";
-const BADGE_POTENTIAL = "#EC4899";
+const BADGE_ERP = "#8B5CF6";      // Mor (ERP)
+const BADGE_POTENTIAL = "#db2777"; // Pembe (Potansiyel) - Temaya uyduruldu
 
 export function CustomerSelectDialog({
   open,
@@ -54,8 +64,21 @@ export function CustomerSelectDialog({
   onNewCustomer,
 }: CustomerSelectDialogProps): React.ReactElement {
   const { t } = useTranslation();
-  const { colors } = useUIStore();
+  const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+
+  const isDark = themeMode === "dark";
+
+  // --- TEMA ---
+  const THEME = {
+    bg: isDark ? "#1a0b2e" : colors.background,
+    cardBg: isDark ? "#1e1b29" : colors.card,
+    text: isDark ? "#FFFFFF" : colors.text,
+    textMute: isDark ? "#94a3b8" : colors.textMuted,
+    border: isDark ? "rgba(255,255,255,0.1)" : colors.border,
+    inputBg: isDark ? "rgba(255,255,255,0.05)" : colors.backgroundSecondary,
+    primary: "#db2777",
+  };
 
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState<"erp" | "potential" | "all">("all");
@@ -145,23 +168,23 @@ export function CustomerSelectDialog({
       <CustomerSelectRow
         item={item}
         onPress={() => handleSelect(item)}
-        colors={colors}
+        theme={THEME}
         t={t}
       />
     ),
-    [handleSelect, colors, t]
+    [handleSelect, THEME, t]
   );
 
   const renderEmpty = useCallback((): React.ReactElement | null => {
     if (isLoading) return null;
     return (
       <View style={styles.emptyContainer}>
-        <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+        <Text style={[styles.emptyText, { color: THEME.textMute }]}>
           {emptyMessage}
         </Text>
       </View>
     );
-  }, [isLoading, emptyMessage, colors.textMuted]);
+  }, [isLoading, emptyMessage, THEME]);
 
   const keyExtractor = useCallback((item: CustomerWithType) => String(item.id), []);
 
@@ -177,43 +200,46 @@ export function CustomerSelectDialog({
         <View
           style={[
             styles.modalContent,
-            { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+            { backgroundColor: THEME.cardBg, paddingBottom: insets.bottom + 16 },
           ]}
         >
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <View style={[styles.handle, { backgroundColor: colors.border }]} />
+          {/* HEADER */}
+          <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
+            <View style={[styles.handle, { backgroundColor: THEME.border }]} />
             <View style={styles.headerContent}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
+              <Text style={[styles.modalTitle, { color: THEME.text }]}>
                 {t("customer.selectCustomer")}
               </Text>
-              <Text style={[styles.modalDescription, { color: colors.textSecondary }]}>
+              <Text style={[styles.modalDescription, { color: THEME.textMute }]}>
                 {t("customer.searchPlaceholder")}
               </Text>
             </View>
             <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-              <Text style={[styles.closeButtonText, { color: colors.text }]}>✕</Text>
+              <Cancel01Icon size={24} color={THEME.text} variant="stroke" />
             </TouchableOpacity>
           </View>
 
-          <View style={[styles.searchContainer, { backgroundColor: colors.backgroundSecondary }]}>
-            <Text style={styles.searchIcon}>🔍</Text>
+          {/* ARAMA */}
+          <View style={[styles.searchContainer, { backgroundColor: THEME.inputBg }]}>
+            <Search01Icon size={18} color={THEME.textMute} variant="stroke" />
             <TextInput
-              style={[styles.searchInput, { color: colors.text }]}
+              style={[styles.searchInput, { color: THEME.text }]}
               placeholder={t("customer.searchPlaceholder")}
-              placeholderTextColor={colors.textMuted}
+              placeholderTextColor={THEME.textMute}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoFocus
             />
           </View>
 
-          <View style={[styles.tabRow, { borderBottomColor: colors.border }]}>
+          {/* TABS */}
+          <View style={[styles.tabRow, { borderBottomColor: THEME.border }]}>
             <TouchableOpacity
               style={[
                 styles.tab,
                 activeTab === "erp" && [
                   styles.tabActive,
-                  { backgroundColor: BADGE_ERP },
+                  { backgroundColor: BADGE_ERP + "20", borderColor: BADGE_ERP, borderWidth: 1 },
                 ],
               ]}
               onPress={() => setActiveTab("erp")}
@@ -222,19 +248,21 @@ export function CustomerSelectDialog({
                 style={[
                   styles.tabText,
                   {
-                    color: activeTab === "erp" ? "#FFFFFF" : colors.textSecondary,
+                    color: activeTab === "erp" ? BADGE_ERP : THEME.textMute,
+                    fontWeight: activeTab === "erp" ? "700" : "500"
                   },
                 ]}
               >
                 {t("customer.selectTabErp")}
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.tab,
                 activeTab === "potential" && [
                   styles.tabActive,
-                  { backgroundColor: BADGE_POTENTIAL },
+                  { backgroundColor: BADGE_POTENTIAL + "20", borderColor: BADGE_POTENTIAL, borderWidth: 1 },
                 ],
               ]}
               onPress={() => setActiveTab("potential")}
@@ -243,22 +271,21 @@ export function CustomerSelectDialog({
                 style={[
                   styles.tabText,
                   {
-                    color:
-                      activeTab === "potential"
-                        ? "#FFFFFF"
-                        : colors.textSecondary,
+                    color: activeTab === "potential" ? BADGE_POTENTIAL : THEME.textMute,
+                    fontWeight: activeTab === "potential" ? "700" : "500"
                   },
                 ]}
               >
                 {t("customer.selectTabPotential")}
               </Text>
             </TouchableOpacity>
+
             <TouchableOpacity
               style={[
                 styles.tab,
                 activeTab === "all" && [
                   styles.tabActive,
-                  { backgroundColor: colors.accent },
+                  { backgroundColor: THEME.primary + "20", borderColor: THEME.primary, borderWidth: 1 },
                 ],
               ]}
               onPress={() => setActiveTab("all")}
@@ -267,19 +294,21 @@ export function CustomerSelectDialog({
                 style={[
                   styles.tabText,
                   {
-                    color:
-                      activeTab === "all" ? "#FFFFFF" : colors.textSecondary,
+                    color: activeTab === "all" ? THEME.primary : THEME.textMute,
+                    fontWeight: activeTab === "all" ? "700" : "500"
                   },
                 ]}
               >
                 {t("customer.selectTabAll")}
               </Text>
             </TouchableOpacity>
+
             {showNewCustomerButton && onNewCustomer ? (
               <TouchableOpacity
-                style={[styles.newCustomerButton, { backgroundColor: colors.accent }]}
+                style={[styles.newCustomerButton, { backgroundColor: THEME.primary }]}
                 onPress={onNewCustomer}
               >
+                <Add01Icon size={16} color="#FFFFFF" variant="stroke" style={{marginRight: 4}} />
                 <Text style={styles.newCustomerButtonText}>
                   {t("customer.create")}
                 </Text>
@@ -287,10 +316,11 @@ export function CustomerSelectDialog({
             ) : null}
           </View>
 
+          {/* LISTE */}
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              <ActivityIndicator size="large" color={THEME.primary} />
+              <Text style={[styles.loadingText, { color: THEME.textMute }]}>
                 {t("common.loading")}
               </Text>
             </View>
@@ -309,7 +339,7 @@ export function CustomerSelectDialog({
               ListFooterComponent={
                 isFetchingNextPage ? (
                   <View style={styles.footerLoading}>
-                    <ActivityIndicator size="small" color={colors.accent} />
+                    <ActivityIndicator size="small" color={THEME.primary} />
                   </View>
                 ) : null
               }
@@ -324,14 +354,14 @@ export function CustomerSelectDialog({
 interface CustomerSelectRowProps {
   item: CustomerWithType;
   onPress: () => void;
-  colors: Record<string, string>;
+  theme: any;
   t: (key: string) => string;
 }
 
 function CustomerSelectRow({
   item,
   onPress,
-  colors,
+  theme,
   t,
 }: CustomerSelectRowProps): React.ReactElement {
   const badgeColor = item.type === "erp" ? BADGE_ERP : BADGE_POTENTIAL;
@@ -348,55 +378,59 @@ function CustomerSelectRow({
       style={[
         styles.row,
         {
-          backgroundColor: colors.backgroundSecondary,
-          borderColor: colors.border,
+          backgroundColor: theme.inputBg, // Kart arka planı
+          borderColor: theme.border,
         },
       ]}
       onPress={onPress}
       activeOpacity={0.7}
     >
       <View style={styles.rowHeader}>
-        <View style={[styles.badge, { backgroundColor: badgeColor + "25" }]}>
+        <View style={[styles.badge, { backgroundColor: badgeColor + "20", borderColor: badgeColor + "40", borderWidth: 1 }]}>
           <Text style={[styles.badgeText, { color: badgeColor }]}>
             {badgeLabel}
           </Text>
         </View>
-        <Text style={styles.arrowIcon}>›</Text>
+        <ArrowRight01Icon size={20} color={theme.textMute} variant="stroke" />
       </View>
-      <Text style={[styles.rowCode, { color: colors.textMuted }]} numberOfLines={1}>
+      
+      <Text style={[styles.rowCode, { color: theme.textMute }]} numberOfLines={1}>
         {item.customerCode ?? "—"}
       </Text>
-      <Text style={[styles.rowName, { color: colors.text }]} numberOfLines={2}>
+      <Text style={[styles.rowName, { color: theme.text }]} numberOfLines={2}>
         {item.name}
       </Text>
+      
       <View style={styles.rowDetails}>
         {item.phone ? (
           <View style={styles.detailRow}>
-            <Text style={styles.detailIcon}>📞</Text>
+            <Call02Icon size={14} color={theme.textMute} variant="stroke" />
             <Text
-              style={[styles.detailText, { color: colors.textSecondary }]}
+              style={[styles.detailText, { color: theme.textMute }]}
               numberOfLines={1}
             >
               {item.phone}
             </Text>
           </View>
         ) : null}
+        
         {item.email ? (
           <View style={styles.detailRow}>
-            <Text style={styles.detailIcon}>✉️</Text>
+            <Mail01Icon size={14} color={theme.textMute} variant="stroke" />
             <Text
-              style={[styles.detailText, { color: colors.textSecondary }]}
+              style={[styles.detailText, { color: theme.textMute }]}
               numberOfLines={1}
             >
               {item.email}
             </Text>
           </View>
         ) : null}
+        
         {location ? (
           <View style={styles.detailRow}>
-            <Text style={styles.detailIcon}>📍</Text>
+            <Location01Icon size={14} color={theme.textMute} variant="stroke" />
             <Text
-              style={[styles.detailText, { color: colors.textSecondary }]}
+              style={[styles.detailText, { color: theme.textMute }]}
               numberOfLines={1}
             >
               {location}
@@ -415,11 +449,11 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: "90%",
   },
   modalHeader: {
@@ -435,6 +469,7 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: 2,
+    opacity: 0.3,
   },
   headerContent: {
     marginTop: 8,
@@ -450,13 +485,9 @@ const styles = StyleSheet.create({
   },
   closeButton: {
     position: "absolute",
-    top: 12,
+    top: 16,
     right: 20,
     padding: 4,
-  },
-  closeButtonText: {
-    fontSize: 20,
-    fontWeight: "300",
   },
   searchContainer: {
     flexDirection: "row",
@@ -465,45 +496,48 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginHorizontal: 16,
     marginTop: 12,
-    borderRadius: 10,
-    gap: 8,
-  },
-  searchIcon: {
-    fontSize: 18,
+    borderRadius: 12,
+    gap: 10,
   },
   searchInput: {
     flex: 1,
     fontSize: 15,
+    padding: 0,
   },
   tabRow: {
     flexDirection: "row",
     alignItems: "center",
     flexWrap: "wrap",
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
     gap: 8,
   },
   tab: {
     paddingVertical: 8,
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    borderWidth: 1,
+    borderColor: "transparent",
   },
   tabActive: {
-    borderRadius: 8,
+    // Active style handled inline
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "500",
   },
   newCustomerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingVertical: 8,
-    paddingHorizontal: 16,
+    paddingHorizontal: 12,
     borderRadius: 8,
+    marginLeft: 'auto', // Sağa yasla
   },
   newCustomerButtonText: {
-    fontSize: 14,
-    fontWeight: "600",
+    fontSize: 13,
+    fontWeight: "700",
     color: "#FFFFFF",
   },
   loadingContainer: {
@@ -531,7 +565,7 @@ const styles = StyleSheet.create({
   },
   row: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     marginBottom: 12,
   },
@@ -548,12 +582,7 @@ const styles = StyleSheet.create({
   },
   badgeText: {
     fontSize: 11,
-    fontWeight: "600",
-  },
-  arrowIcon: {
-    fontSize: 20,
-    fontWeight: "300",
-    color: "#9CA3AF",
+    fontWeight: "700",
   },
   rowCode: {
     fontSize: 12,
@@ -562,8 +591,8 @@ const styles = StyleSheet.create({
   },
   rowName: {
     fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontWeight: "700",
+    marginBottom: 10,
   },
   rowDetails: {
     gap: 6,
@@ -572,10 +601,6 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-  },
-  detailIcon: {
-    fontSize: 14,
-    width: 20,
   },
   detailText: {
     fontSize: 13,

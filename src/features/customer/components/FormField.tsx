@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import { View, TextInput, StyleSheet } from "react-native";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
@@ -32,21 +32,43 @@ export function FormField({
   editable = true,
   maxLength,
 }: FormFieldProps): React.ReactElement {
-  const { colors } = useUIStore();
+  const { colors, themeMode } = useUIStore();
+  const [isFocused, setIsFocused] = useState(false);
+
+  const isDark = themeMode === "dark";
+
+  // --- TEMA AYARLARI ---
+  const THEME = {
+    label: isDark ? "#94a3b8" : colors.textSecondary, // Slate-400
+    inputBg: isDark ? "rgba(255,255,255,0.05)" : colors.backgroundSecondary,
+    border: isDark ? "rgba(255,255,255,0.1)" : colors.border,
+    focusBorder: "#db2777", // Neon Pembe (Focus Rengi)
+    text: isDark ? "#FFFFFF" : colors.text,
+    placeholder: isDark ? "#64748B" : colors.textMuted,
+    error: "#ef4444"
+  };
+
+  // Kenarlık Rengi Belirleme (Hata > Focus > Normal)
+  const getBorderColor = () => {
+    if (error) return THEME.error;
+    if (isFocused) return THEME.focusBorder;
+    return THEME.border;
+  };
 
   return (
     <View style={styles.container}>
       <View style={styles.labelContainer}>
-        <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>
-        {required && <Text style={[styles.required, { color: colors.error }]}>*</Text>}
+        <Text style={[styles.label, { color: THEME.label }]}>{label}</Text>
+        {required && <Text style={[styles.required, { color: THEME.error }]}>*</Text>}
       </View>
+      
       <TextInput
         style={[
           styles.input,
           {
-            backgroundColor: colors.backgroundSecondary,
-            borderColor: error ? colors.error : colors.border,
-            color: colors.text,
+            backgroundColor: THEME.inputBg,
+            borderColor: getBorderColor(),
+            color: THEME.text,
           },
           multiline && { height: numberOfLines * 24 + 24, textAlignVertical: "top" },
           !editable && styles.inputDisabled,
@@ -54,15 +76,19 @@ export function FormField({
         value={value}
         onChangeText={onChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={THEME.placeholder}
         multiline={multiline}
         numberOfLines={numberOfLines}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         editable={editable}
         maxLength={maxLength}
+        // Focus Olayları
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       />
-      {error && <Text style={[styles.error, { color: colors.error }]}>{error}</Text>}
+      
+      {error && <Text style={[styles.error, { color: THEME.error }]}>{error}</Text>}
     </View>
   );
 }
@@ -74,7 +100,7 @@ const styles = StyleSheet.create({
   labelContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 8, // Biraz daha boşluk
   },
   label: {
     fontSize: 14,
@@ -86,16 +112,18 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12, // Modern Squircle
     paddingHorizontal: 14,
-    paddingVertical: 12,
+    paddingVertical: 14, // Biraz daha yüksek (Touch target için)
     fontSize: 15,
+    fontWeight: "500",
   },
   inputDisabled: {
-    opacity: 0.6,
+    opacity: 0.5,
   },
   error: {
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 6,
+    fontWeight: "500",
   },
 });

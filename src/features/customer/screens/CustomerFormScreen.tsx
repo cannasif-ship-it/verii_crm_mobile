@@ -23,6 +23,8 @@ import { useCustomer, useCreateCustomer, useUpdateCustomer, useCustomerTypes, us
 import { FormField, LocationPicker } from "../components";
 import { createCustomerSchema, type CustomerFormData } from "../schemas";
 import type { CountryDto, CityDto, DistrictDto, CustomerTypeDto } from "../types";
+// YENİ İKONLAR
+import { Camera01Icon, ArrowDown01Icon, CheckmarkCircle02Icon } from "hugeicons-react-native";
 
 export function CustomerFormScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -34,8 +36,18 @@ export function CustomerFormScreen(): React.ReactElement {
 
   const isEditMode = !!id;
   const customerId = id ? Number(id) : undefined;
+  const isDark = themeMode === "dark";
 
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
+  // --- TEMA ---
+  const THEME = {
+    bg: isDark ? "#1a0b2e" : colors.background,
+    cardBg: isDark ? "#1e1b29" : colors.card,
+    text: isDark ? "#FFFFFF" : colors.text,
+    textMute: isDark ? "#94a3b8" : colors.textMuted,
+    border: isDark ? "rgba(255,255,255,0.1)" : colors.border,
+    primary: "#db2777",
+    inputBg: isDark ? "rgba(255,255,255,0.05)" : colors.backgroundSecondary,
+  };
 
   const [customerTypeModalOpen, setCustomerTypeModalOpen] = useState(false);
 
@@ -108,43 +120,18 @@ export function CustomerFormScreen(): React.ReactElement {
     }
   }, [existingCustomer, reset]);
 
-  const handleCountryChange = useCallback(
-    (country: CountryDto | undefined) => {
-      setValue("countryId", country?.id);
-    },
-    [setValue]
-  );
+  const handleCountryChange = useCallback((country: CountryDto | undefined) => { setValue("countryId", country?.id); }, [setValue]);
+  const handleCityChange = useCallback((city: CityDto | undefined) => { setValue("cityId", city?.id); }, [setValue]);
+  const handleDistrictChange = useCallback((district: DistrictDto | undefined) => { setValue("districtId", district?.id); }, [setValue]);
 
-  const handleCityChange = useCallback(
-    (city: CityDto | undefined) => {
-      setValue("cityId", city?.id);
-    },
-    [setValue]
-  );
-
-  const handleDistrictChange = useCallback(
-    (district: DistrictDto | undefined) => {
-      setValue("districtId", district?.id);
-    },
-    [setValue]
-  );
-
-  const handleCustomerTypeSelect = useCallback(
-    (type: CustomerTypeDto) => {
+  const handleCustomerTypeSelect = useCallback((type: CustomerTypeDto) => {
       setValue("customerTypeId", type.id);
       setCustomerTypeModalOpen(false);
-    },
-    [setValue]
-  );
+    }, [setValue]);
 
-  const onSubmit = useCallback(
-    async (data: CustomerFormData) => {
+  const onSubmit = useCallback(async (data: CustomerFormData) => {
       try {
-        const payload = {
-          ...data,
-          email: data.email || undefined,
-        };
-
+        const payload = { ...data, email: data.email || undefined };
         if (isEditMode && customerId) {
           await updateCustomer.mutateAsync({ id: customerId, data: payload });
           Alert.alert("", t("customer.updateSuccess"));
@@ -156,14 +143,10 @@ export function CustomerFormScreen(): React.ReactElement {
       } catch {
         Alert.alert(t("common.error"), t("common.error"));
       }
-    },
-    [isEditMode, customerId, createCustomer, updateCustomer, router, t]
-  );
+    }, [isEditMode, customerId, createCustomer, updateCustomer, router, t]);
 
   useEffect(() => {
-    if (scanError) {
-      Alert.alert("Kartvizit Tarama", scanError);
-    }
+    if (scanError) Alert.alert("Kartvizit Tarama", scanError);
   }, [scanError]);
 
   const handleScanBusinessCard = useCallback(() => {
@@ -176,35 +159,32 @@ export function CustomerFormScreen(): React.ReactElement {
     });
   }, [scanBusinessCard, setValue]);
 
-  const renderCustomerTypeItem = useCallback(
-    ({ item }: { item: CustomerTypeDto }) => {
+  const renderCustomerTypeItem = useCallback(({ item }: { item: CustomerTypeDto }) => {
       const isSelected = watchCustomerTypeId === item.id;
       return (
         <TouchableOpacity
           style={[
             styles.pickerItem,
-            { borderBottomColor: colors.border },
-            isSelected && { backgroundColor: colors.activeBackground },
+            { borderBottomColor: THEME.border },
+            isSelected && { backgroundColor: isDark ? "rgba(219, 39, 119, 0.1)" : colors.activeBackground },
           ]}
           onPress={() => handleCustomerTypeSelect(item)}
         >
-          <Text style={[styles.pickerItemText, { color: colors.text }]}>{item.name}</Text>
-          {isSelected && <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>}
+          <Text style={[styles.pickerItemText, { color: THEME.text }]}>{item.name}</Text>
+          {isSelected && <CheckmarkCircle02Icon size={20} color={THEME.primary} variant="stroke" />}
         </TouchableOpacity>
       );
-    },
-    [watchCustomerTypeId, colors, handleCustomerTypeSelect]
-  );
+    }, [watchCustomerTypeId, THEME, handleCustomerTypeSelect, isDark, colors]);
 
   if (isEditMode && customerLoading) {
     return (
       <>
-        <StatusBar style="light" />
-        <View style={[styles.container, { backgroundColor: colors.header }]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={[styles.container, { backgroundColor: THEME.bg }]}>
           <ScreenHeader title={t("customer.edit")} showBackButton />
-          <View style={[styles.content, { backgroundColor: contentBackground }]}>
+          <View style={[styles.content, { backgroundColor: THEME.bg }]}>
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
+              <ActivityIndicator size="large" color={THEME.primary} />
             </View>
           </View>
         </View>
@@ -214,32 +194,41 @@ export function CustomerFormScreen(): React.ReactElement {
 
   return (
     <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
-        <ScreenHeader
-          title={isEditMode ? t("customer.edit") : t("customer.create")}
-          showBackButton
-        />
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={THEME.bg} />
+      <View style={[styles.container, { backgroundColor: THEME.bg }]}>
+        
+        {/* --- DÜZELTME BURADA --- */}
+        {/* ScreenHeader 'style' almadığı için onu bir View ile sarmaladık */}
+        <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.border, backgroundColor: THEME.bg }}>
+            <ScreenHeader
+              title={isEditMode ? t("customer.edit") : t("customer.create")}
+              showBackButton
+            />
+        </View>
+        {/* ----------------------- */}
+        
         <FlatListScrollView
-          style={[styles.content, { backgroundColor: contentBackground }]}
+          style={[styles.content, { backgroundColor: THEME.bg }]}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
         >
           {!isEditMode && (
-            <View style={[styles.businessCardRow, { borderColor: colors.border }]}>
-              <Text style={[styles.businessCardLabel, { color: colors.textSecondary }]}>
-                Kartvizit tara
-              </Text>
+            <View style={[styles.businessCardRow, { borderColor: THEME.border }]}>
+              <View>
+                 <Text style={[styles.businessCardLabel, { color: THEME.text }]}>Kartvizit Tara</Text>
+                 <Text style={{fontSize: 12, color: THEME.textMute, marginTop: 4}}>Kamerayla bilgileri otomatik doldur</Text>
+              </View>
+              
               <TouchableOpacity
-                style={[styles.cameraButton, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
+                style={[styles.cameraButton, { backgroundColor: THEME.inputBg, borderColor: THEME.border }]}
                 onPress={handleScanBusinessCard}
                 disabled={isScanning}
               >
                 {isScanning ? (
-                  <ActivityIndicator size="small" color={colors.accent} />
+                  <ActivityIndicator size="small" color={THEME.primary} />
                 ) : (
-                  <Text style={styles.cameraIcon}>📷</Text>
+                  <Camera01Icon size={24} color={THEME.primary} variant="stroke" />
                 )}
               </TouchableOpacity>
             </View>
@@ -275,25 +264,25 @@ export function CustomerFormScreen(): React.ReactElement {
           />
 
           <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
+            <Text style={[styles.label, { color: THEME.textMute }]}>
               {t("customer.customerType")}
             </Text>
             <TouchableOpacity
               style={[
                 styles.pickerField,
-                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                { backgroundColor: THEME.inputBg, borderColor: THEME.border },
               ]}
               onPress={() => setCustomerTypeModalOpen(true)}
             >
               <Text
                 style={[
                   styles.pickerFieldText,
-                  { color: selectedCustomerType ? colors.text : colors.textMuted },
+                  { color: selectedCustomerType ? THEME.text : THEME.textMute },
                 ]}
               >
                 {selectedCustomerType?.name || t("lookup.selectCustomerType")}
               </Text>
-              <Text style={[styles.arrow, { color: colors.textMuted }]}>▼</Text>
+              <ArrowDown01Icon size={16} color={THEME.textMute} />
             </TouchableOpacity>
           </View>
 
@@ -371,7 +360,7 @@ export function CustomerFormScreen(): React.ReactElement {
           />
 
           <View style={styles.locationSection}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("lookup.location")}</Text>
+            <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("lookup.location")}</Text>
             <LocationPicker
               countryId={watchCountryId}
               cityId={watchCityId}
@@ -439,7 +428,7 @@ export function CustomerFormScreen(): React.ReactElement {
           />
 
           <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: colors.accent }]}
+            style={[styles.submitButton, { backgroundColor: THEME.primary }]}
             onPress={handleSubmit(onSubmit)}
             disabled={isSubmitting}
           >
@@ -468,12 +457,12 @@ export function CustomerFormScreen(): React.ReactElement {
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+              { backgroundColor: THEME.cardBg, paddingBottom: insets.bottom + 16 },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[styles.handle, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
+              <View style={[styles.handle, { backgroundColor: THEME.border }]} />
+              <Text style={[styles.modalTitle, { color: THEME.text }]}>
                 {t("lookup.selectCustomerType")}
               </Text>
             </View>
@@ -497,8 +486,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
   contentContainer: {
     padding: 20,
@@ -512,19 +499,16 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   businessCardLabel: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 16,
+    fontWeight: "600",
   },
   cameraButton: {
     width: 48,
     height: 48,
-    borderRadius: 24,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-  },
-  cameraIcon: {
-    fontSize: 24,
   },
   loadingContainer: {
     flex: 1,
@@ -537,27 +521,24 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   pickerField: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    height: 48,
+    height: 50,
   },
   pickerFieldText: {
     fontSize: 15,
     flex: 1,
   },
-  arrow: {
-    fontSize: 10,
-    marginLeft: 8,
-  },
   locationSection: {
     marginBottom: 16,
+    marginTop: 8,
   },
   sectionTitle: {
     fontSize: 16,
@@ -565,16 +546,21 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   submitButton: {
-    height: 52,
-    borderRadius: 12,
+    height: 54,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    marginTop: 20,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
   },
   submitButtonText: {
     color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "700",
   },
   modalOverlay: {
     flex: 1,
@@ -582,11 +568,11 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: "60%",
   },
   modalHeader: {
@@ -599,6 +585,7 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     marginBottom: 12,
+    opacity: 0.5,
   },
   modalTitle: {
     fontSize: 17,
@@ -611,16 +598,13 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 14,
+    paddingVertical: 16,
     paddingHorizontal: 20,
     borderBottomWidth: 1,
   },
   pickerItemText: {
     fontSize: 16,
+    fontWeight: "500",
     flex: 1,
-  },
-  checkmark: {
-    fontSize: 18,
-    fontWeight: "600",
   },
 });

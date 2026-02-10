@@ -14,6 +14,8 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useCustomers } from "../hooks";
 import type { CustomerDto, PagedFilter } from "../types";
+// YENİ İKONLAR
+import { ArrowDown01Icon, Cancel01Icon, CheckmarkCircle02Icon, Search01Icon } from "hugeicons-react-native";
 
 interface CustomerPickerProps {
   value?: number;
@@ -31,8 +33,21 @@ export function CustomerPicker({
   label,
 }: CustomerPickerProps): React.ReactElement {
   const { t } = useTranslation();
-  const { colors } = useUIStore();
+  const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+
+  const isDark = themeMode === "dark";
+
+  // --- TEMA ---
+  const THEME = {
+    bg: isDark ? "#1a0b2e" : colors.background,
+    cardBg: isDark ? "#1e1b29" : colors.card,
+    text: isDark ? "#FFFFFF" : colors.text,
+    textMute: isDark ? "#94a3b8" : colors.textMuted,
+    border: isDark ? "rgba(255,255,255,0.1)" : colors.border,
+    primary: "#db2777",
+    inputBg: isDark ? "rgba(255,255,255,0.05)" : colors.backgroundSecondary,
+  };
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -90,44 +105,45 @@ export function CustomerPicker({
         <TouchableOpacity
           style={[
             styles.customerItem,
-            { borderBottomColor: colors.border },
-            isSelected && { backgroundColor: colors.activeBackground },
+            { borderBottomColor: THEME.border },
+            isSelected && { backgroundColor: isDark ? "rgba(219, 39, 119, 0.1)" : colors.activeBackground },
           ]}
           onPress={() => handleSelect(item)}
         >
           <View style={styles.customerInfo}>
-            <Text style={[styles.customerName, { color: colors.text }]} numberOfLines={1}>
+            <Text style={[styles.customerName, { color: THEME.text }]} numberOfLines={1}>
               {item.name}
             </Text>
             {item.customerCode && (
-              <Text style={[styles.customerCode, { color: colors.textMuted }]}>
+              <Text style={[styles.customerCode, { color: THEME.textMute }]}>
                 {item.customerCode}
               </Text>
             )}
           </View>
-          {isSelected && <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>}
+          {isSelected && <CheckmarkCircle02Icon size={20} color={THEME.primary} variant="stroke" />}
         </TouchableOpacity>
       );
     },
-    [value, colors, handleSelect]
+    [value, THEME, handleSelect, isDark, colors]
   );
 
   const renderFooter = useCallback(() => {
     if (!isFetchingNextPage) return null;
     return (
       <View style={styles.footerLoading}>
-        <ActivityIndicator size="small" color={colors.accent} />
+        <ActivityIndicator size="small" color={THEME.primary} />
       </View>
     );
-  }, [isFetchingNextPage, colors]);
+  }, [isFetchingNextPage, THEME]);
 
   return (
     <View style={styles.container}>
-      {label && <Text style={[styles.label, { color: colors.textSecondary }]}>{label}</Text>}
+      {label && <Text style={[styles.label, { color: THEME.textMute }]}>{label}</Text>}
+      
       <TouchableOpacity
         style={[
           styles.field,
-          { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+          { backgroundColor: THEME.inputBg, borderColor: THEME.border },
           disabled && styles.fieldDisabled,
         ]}
         onPress={handleOpen}
@@ -136,59 +152,64 @@ export function CustomerPicker({
         <Text
           style={[
             styles.fieldText,
-            { color: customerName ? colors.text : colors.textMuted },
+            { color: customerName ? THEME.text : THEME.textMute },
           ]}
           numberOfLines={1}
         >
           {customerName || t("customer.selectCustomer")}
         </Text>
+        
         {value ? (
           <TouchableOpacity onPress={handleClear} hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}>
-            <Text style={[styles.clearIcon, { color: colors.textMuted }]}>✕</Text>
+            <Cancel01Icon size={16} color={THEME.textMute} variant="stroke" />
           </TouchableOpacity>
         ) : (
-          <Text style={[styles.arrow, { color: colors.textMuted }]}>▼</Text>
+          <ArrowDown01Icon size={16} color={THEME.textMute} />
         )}
       </TouchableOpacity>
 
       <Modal visible={isOpen} transparent animationType="slide" onRequestClose={handleClose}>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={styles.modalBackdrop} onPress={handleClose} />
+          
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+              { backgroundColor: THEME.cardBg, paddingBottom: insets.bottom + 16 },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[styles.handle, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
+            {/* Modal Header */}
+            <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
+              <View style={[styles.handle, { backgroundColor: THEME.border }]} />
+              <Text style={[styles.modalTitle, { color: THEME.text }]}>
                 {t("customer.selectCustomer")}
               </Text>
             </View>
 
-            <View style={[styles.searchContainer, { borderBottomColor: colors.border }]}>
-              <TextInput
-                style={[
-                  styles.searchInput,
-                  { backgroundColor: colors.backgroundSecondary, color: colors.text },
-                ]}
-                value={searchText}
-                onChangeText={setSearchText}
-                placeholder={t("customer.searchCustomer")}
-                placeholderTextColor={colors.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-              />
+            {/* Arama Inputu */}
+            <View style={[styles.searchContainer, { borderBottomColor: THEME.border }]}>
+              <View style={[styles.searchInputWrapper, { backgroundColor: THEME.inputBg }]}>
+                 <Search01Icon size={18} color={THEME.textMute} style={{ marginLeft: 10 }} />
+                 <TextInput
+                    style={[styles.searchInput, { color: THEME.text }]}
+                    value={searchText}
+                    onChangeText={setSearchText}
+                    placeholder={t("customer.searchCustomer")}
+                    placeholderTextColor={THEME.textMute}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
+              </View>
             </View>
 
+            {/* Liste */}
             {isLoading && customers.length === 0 ? (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.accent} />
+                <ActivityIndicator size="large" color={THEME.primary} />
               </View>
             ) : customers.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                <Text style={[styles.emptyText, { color: THEME.textMute }]}>
                   {t("common.noResults")}
                 </Text>
               </View>
@@ -212,20 +233,22 @@ export function CustomerPicker({
 }
 
 const styles = StyleSheet.create({
-  container: {},
+  container: {
+    marginBottom: 16,
+  },
   label: {
     fontSize: 14,
     fontWeight: "500",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   field: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 12,
     paddingHorizontal: 14,
-    height: 48,
+    height: 50, // Diğer inputlarla aynı yükseklik
   },
   fieldDisabled: {
     opacity: 0.5,
@@ -233,26 +256,21 @@ const styles = StyleSheet.create({
   fieldText: {
     fontSize: 15,
     flex: 1,
+    fontWeight: "500",
   },
-  arrow: {
-    fontSize: 10,
-    marginLeft: 8,
-  },
-  clearIcon: {
-    fontSize: 14,
-    padding: 4,
-  },
+  
+  // --- MODAL STİLLERİ ---
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     maxHeight: "70%",
   },
   modalHeader: {
@@ -265,22 +283,33 @@ const styles = StyleSheet.create({
     height: 4,
     borderRadius: 2,
     marginBottom: 12,
+    opacity: 0.5,
   },
   modalTitle: {
     fontSize: 17,
     fontWeight: "600",
   },
+  
+  // --- ARAMA ALANI ---
   searchContainer: {
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
   },
+  searchInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 12,
+    height: 44,
+  },
   searchInput: {
-    borderRadius: 10,
-    paddingHorizontal: 14,
+    flex: 1,
+    paddingHorizontal: 10,
     height: 44,
     fontSize: 15,
   },
+  
+  // --- LİSTE ---
   loadingContainer: {
     padding: 40,
     alignItems: "center",
@@ -313,11 +342,7 @@ const styles = StyleSheet.create({
   customerCode: {
     fontSize: 13,
     marginTop: 2,
-  },
-  checkmark: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginLeft: 12,
+    opacity: 0.7,
   },
   footerLoading: {
     padding: 16,

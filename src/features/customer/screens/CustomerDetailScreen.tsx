@@ -12,20 +12,30 @@ import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
-import { useUIStore } from "../../../store/ui";
+import { useUIStore } from "../../../store/ui"; 
 import { useCustomer, useDeleteCustomer } from "../hooks";
 import { CustomerDetailContent } from "../components/CustomerDetailContent";
+// İKONLAR (Emoji yerine)
+import { Edit02Icon, Delete02Icon } from "hugeicons-react-native";
 
 export function CustomerDetailScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors, themeMode } = useUIStore();
+  const { colors } = useUIStore(); 
   const insets = useSafeAreaInsets();
 
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
+  // --- TEMA (SABİT DEEP PURPLE) ---
+  const THEME = {
+    bg: "#1a0b2e", // Ana Arka Plan
+    headerButtonBg: "rgba(255, 255, 255, 0.1)", 
+    text: "#FFFFFF",
+    primary: "#db2777", // Pembe Vurgu
+    error: "#ef4444",
+    borderColor: "rgba(255,255,255,0.05)"
+  };
 
   const customerId = id ? Number(id) : undefined;
   const { data: customer, isLoading, isError, refetch } = useCustomer(customerId);
@@ -61,48 +71,59 @@ export function CustomerDetailScreen(): React.ReactElement {
 
   return (
     <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
-        <ScreenHeader
-          title={t("customer.detail")}
-          showBackButton
-          rightElement={
-            customer ? (
-              <View style={styles.headerActions}>
-                <TouchableOpacity onPress={handleEditPress} style={styles.headerButton}>
-                  <Text style={styles.headerButtonText}>✏️</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={handleDeletePress}
-                  style={styles.headerButton}
-                  disabled={isDeleting}
-                >
-                  {isDeleting ? (
-                    <ActivityIndicator size="small" color="#FFFFFF" />
-                  ) : (
-                    <Text style={styles.headerButtonText}>🗑️</Text>
-                  )}
-                </TouchableOpacity>
-              </View>
-            ) : undefined
-          }
-        />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}>
+      <StatusBar style="light" backgroundColor={THEME.bg} />
+      
+      {/* Container Arka Planı Güncellendi */}
+      <View style={[styles.container, { backgroundColor: THEME.bg }]}>
+        
+        {/* Header Stili */}
+        <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.borderColor }}>
+            <ScreenHeader
+              title={t("customer.detail")}
+              showBackButton
+              rightElement={
+                customer ? (
+                  <View style={styles.headerActions}>
+                    {/* DÜZENLE BUTONU */}
+                    <TouchableOpacity onPress={handleEditPress} style={[styles.headerButton, { backgroundColor: THEME.headerButtonBg }]}>
+                      <Edit02Icon size={20} color="#FFFFFF" variant="stroke" />
+                    </TouchableOpacity>
+                    
+                    {/* SİL BUTONU */}
+                    <TouchableOpacity
+                      onPress={handleDeletePress}
+                      style={[styles.headerButton, { backgroundColor: "rgba(239, 68, 68, 0.15)" }]} 
+                      disabled={isDeleting}
+                    >
+                      {isDeleting ? (
+                        <ActivityIndicator size="small" color="#FFFFFF" />
+                      ) : (
+                        <Delete02Icon size={20} color="#ef4444" variant="stroke" />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                ) : undefined
+              }
+            />
+        </View>
+
+        {/* İçerik Alanı */}
+        <View style={styles.content}>
           {isLoading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
+              <ActivityIndicator size="large" color={THEME.primary} />
             </View>
           ) : isError ? (
             <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{t("common.error")}</Text>
+              <Text style={[styles.errorText, { color: THEME.error }]}>{t("common.error")}</Text>
               <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-                <Text style={[styles.retryText, { color: colors.accent }]}>{t("common.retry")}</Text>
+                <Text style={[styles.retryText, { color: THEME.primary }]}>{t("common.retry")}</Text>
               </TouchableOpacity>
             </View>
           ) : customer ? (
             <CustomerDetailContent
               customer={customer}
-              colors={colors}
+              colors={colors} 
               insets={insets}
               t={t}
             />
@@ -119,8 +140,7 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    // Eski yuvarlak köşeleri kaldırdık, tam ekran bütünlüğü için
   },
   loadingContainer: {
     flex: 1,
@@ -141,6 +161,8 @@ const styles = StyleSheet.create({
   retryButton: {
     paddingHorizontal: 20,
     paddingVertical: 10,
+    backgroundColor: "rgba(255,255,255,0.05)",
+    borderRadius: 8,
   },
   retryText: {
     fontSize: 16,
@@ -148,17 +170,14 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: 12, 
+    alignItems: 'center',
   },
   headerButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
+    width: 40,
+    height: 40,
+    borderRadius: 12, 
     alignItems: "center",
     justifyContent: "center",
-  },
-  headerButtonText: {
-    fontSize: 16,
   },
 });
