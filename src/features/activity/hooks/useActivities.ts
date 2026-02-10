@@ -12,10 +12,10 @@ interface UseActivitiesParams {
 }
 
 export function useActivities(params: UseActivitiesParams = {}) {
-  const { filters, sortBy = "activityDate", sortDirection = "desc", pageSize = DEFAULT_PAGE_SIZE } = params;
+  const { filters, sortBy = "Id", sortDirection = "desc", pageSize = DEFAULT_PAGE_SIZE } = params;
 
   return useInfiniteQuery<PagedResponse<ActivityDto>, Error>({
-    queryKey: ["activity", "list", { filters, sortBy, sortDirection }],
+    queryKey: ["activity", "list", { filters, sortBy, sortDirection, pageSize }],
     queryFn: ({ pageParam }) =>
       activityApi.getList({
         pageNumber: pageParam as number,

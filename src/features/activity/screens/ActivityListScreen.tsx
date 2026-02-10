@@ -31,6 +31,7 @@ export function ActivityListScreen(): React.ReactElement {
 
   const {
     data,
+    error,
     isLoading,
     isError,
     refetch,
@@ -64,12 +65,6 @@ export function ActivityListScreen(): React.ReactElement {
     router.push("/(tabs)/activities/create");
   }, [router]);
 
-  const handleEndReached = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
   const renderItem = useCallback(
     ({ item }: { item: ActivityDto }) => {
       if (!item) return null;
@@ -79,25 +74,34 @@ export function ActivityListScreen(): React.ReactElement {
   );
 
   const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return null;
+    if (!hasNextPage && !isFetchingNextPage) {
+      return <View style={styles.footerSpacer} />;
+    }
+
     return (
-      <View style={styles.footerLoading}>
-        <ActivityIndicator size="small" color={colors.accent} />
-      </View>
+      <TouchableOpacity
+        onPress={() => fetchNextPage()}
+        disabled={!hasNextPage || isFetchingNextPage}
+        style={styles.loadMoreButton}
+      >
+        {isFetchingNextPage ? (
+          <ActivityIndicator size="small" color={colors.accent} />
+        ) : (
+          <Text style={[styles.loadMoreText, { color: colors.accent }]}>{t("common.loadMore")}</Text>
+        )}
+      </TouchableOpacity>
     );
-  }, [isFetchingNextPage, colors]);
+  }, [colors.accent, fetchNextPage, hasNextPage, isFetchingNextPage, t]);
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null;
     return (
       <View style={styles.emptyContainer}>
         <Text style={styles.emptyIcon}>📅</Text>
-        <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-          {t("activity.noActivities")}
-        </Text>
+        <Text style={[styles.emptyText, { color: colors.textMuted }]}>{t("activity.noActivities")}</Text>
       </View>
     );
-  }, [isLoading, colors, t]);
+  }, [isLoading, colors.textMuted, t]);
 
   const keyExtractor = useCallback((item: ActivityDto, index: number) => String(item?.id ?? index), []);
 
@@ -137,7 +141,7 @@ export function ActivityListScreen(): React.ReactElement {
             </View>
           ) : isError ? (
             <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{t("common.error")}</Text>
+              <Text style={[styles.errorText, { color: colors.error }]}>{error?.message || t("common.error")}</Text>
               <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
                 <Text style={[styles.retryText, { color: colors.accent }]}>{t("common.retry")}</Text>
               </TouchableOpacity>
@@ -147,13 +151,8 @@ export function ActivityListScreen(): React.ReactElement {
               data={activities}
               keyExtractor={keyExtractor}
               renderItem={renderItem}
-              contentContainerStyle={[
-                styles.listContent,
-                { paddingBottom: insets.bottom + 100 },
-              ]}
+              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
               showsVerticalScrollIndicator={false}
-              onEndReached={handleEndReached}
-              onEndReachedThreshold={0.3}
               ListFooterComponent={renderFooter}
               ListEmptyComponent={renderEmpty}
               refreshControl={
@@ -218,8 +217,9 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   errorText: {
-    fontSize: 16,
+    fontSize: 14,
     marginBottom: 16,
+    textAlign: "center",
   },
   retryButton: {
     paddingHorizontal: 20,
@@ -242,9 +242,16 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 16,
   },
-  footerLoading: {
-    paddingVertical: 20,
+  loadMoreButton: {
+    paddingVertical: 16,
     alignItems: "center",
+  },
+  loadMoreText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  footerSpacer: {
+    height: 36,
   },
   addButton: {
     width: 32,
@@ -258,6 +265,5 @@ const styles = StyleSheet.create({
     fontSize: 24,
     color: "#FFFFFF",
     fontWeight: "300",
-    marginTop: -2,
   },
 });
