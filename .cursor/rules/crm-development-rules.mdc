@@ -1,199 +1,217 @@
 ---
+description: CRM Expo (React Native) Cursor Rules — architecture, UI, data fetching, performance
 alwaysApply: true
 ---
 
-# 📘 CRM Mobile Enterprise Cursor Rules (React Native + TypeScript)
+# 🚀 CRM Expo Cursor Rules (React Native + TypeScript + Expo)
 
-Bu proje %100 **React Native + TypeScript** ile geliştirilmiştir.
-Cursor, aşağıdaki kurallara HER DOSYADA, OTOMATİK ve ZORUNLU olarak uyar.
+Bu proje **Expo + React Native + TypeScript** ile geliştirilir.
+Cursor aşağıdaki kurallara **her dosyada** otomatik ve eksiksiz uyar.
 
 AMAÇ:
-- Feature-first mimari
-- Screen / Hook ayrımı
-- Service / Component / Model standardı
-- Tip güvenli API kullanımı
-- ApiResponse<T> ve PagedResponse<T> ile otomatik listeleme & pagination
-- UI ve business logic kesin ayrımı
+- Feature-first mimari + co-location
+- UI / business logic / network ayrımı
+- TanStack Query ile tip güvenli server state
+- Performanslı listeleme (ScrollView yerine FlatList/SectionList)
+- Ortak UI standardı (Gluestack UI v3) + merkezi tema
 
 ================================================================================
 
-1. TEMEL UI KURALLARI
+## 1) TEMEL KURALLAR (KIRMIZI ÇİZGİ)
 
-KULLANILABİLECEK BİLEŞENLER:
-- View
-- Text
-- TextInput
-- Pressable / TouchableOpacity
-- FlatList
-- ScrollView
-- Modal
-- ActivityIndicator
-
-KESİN YASAKLAR:
-- div, span, table, className
-- css, tailwind, shadcn
-- inline style (StyleSheet.create ZORUNLU)
-- screen veya component içinde API çağrısı
-- map ile liste render (FlatList ZORUNLU)
+- Asla yorum satırı kullanma
+- `any` kesin yasak, gerekirse `unknown` + type-guard
+- Component içinde doğrudan `fetch/axios` çağrısı yapma
+- API istekleri **TanStack Query** ile yapılır
+- Her query için **özel `staleTime`** zorunludur (global default’a güvenme)
+- Feature dışından feature içi dosyaya direkt import yasak (sadece `index.ts` üzerinden)
+- “God component/screen” yasak, küçük ve okunabilir parçalara böl
 
 ================================================================================
 
-2. MİMARİ – FEATURE FIRST (ZORUNLU)
+## 2) UI KÜTÜPHANESİ / COMPONENT STANDARDI
+
+- Temel UI kütüphanesi: **Gluestack UI v3**
+- Gluestack componentleri **`@/components/ui`** altından import edilir
+- `src/components/ui` sadece presentational bileşenlerdir, business logic içermez
+
+KULLANIM PRENSİBİ:
+- Feature’a özel görsel bileşenler ilgili feature altında yaşar
+- Yeni UI bileşeni eklemek için: `npx gluestack-ui add <component-name>`
+
+================================================================================
+
+## 3) MİMARİ — FEATURE FIRST (ZORUNLU)
 
 Klasör yapısı:
 
 src/
+  app/
+    (auth)/
+    (tabs)/
+    _layout.tsx
   features/
-    auth/
-    customer/
-    order/
-    stock/
-
-Her feature içinde:
-- api/
-- hooks/
-- screens/
-- components/
-- types/
-- index.ts
+    <feature>/
+      api/
+      hooks/
+      screens/
+      components/
+      types/
+      index.ts
+  components/
+    ui/
+  lib/
+    axios.ts
+    queryClient.ts
+    storage.ts
+  store/
+    ui.ts
+  locales/
+    tr.json
+    en.json
+  constants/
+    env.ts
 
 KURALLAR:
-- Başka feature’dan direkt import YASAK
-- Sadece index.ts üzerinden erişim serbest
+- Başka feature’dan direkt import yasak
+- Dış dünya feature’a sadece `features/<feature>/index.ts` ile erişir
+- Bir feature ile ilgili her şey aynı feature klasöründe bulunur (co-location)
 
 ================================================================================
 
-3. SCREEN – HOOK AYRIMI (KATİ)
+## 4) SCREEN — HOOK AYRIMI (KATI)
 
 SCREEN:
 - Sadece UI render eder
-- API çağrısı YASAK
-- Navigation YASAK
-- State yönetimi YASAK
+- API çağrısı yasak
+- Navigation yasak
+- İş kuralı / validasyon yasak
+- Liste renderı için yalnızca hazır item componentlerini kullanır
 
 HOOK:
-- Tüm business logic burada olur
-- ApiResponse<T> kontrolü
-- Loading / Error / Success yönetimi
-- Navigation
-- Form validation
-- Pagination kontrolü
+- Tüm business logic burada
+- Navigation burada
+- Form state + validation burada
+- Query/mutation yönetimi burada
+- Loading/error/success state burada
+- Pagination / infinite scroll burada
+
+Akış:
+Screen → Hook → (Query/Mutation) → Service → API
 
 ================================================================================
 
-4. API & SERVICE PATTERN
+## 5) DATA FETCHING — TANSTACK QUERY (ZORUNLU)
 
-- Tüm servisler feature/api altında
-- Axios veya fetch tabanlı client
-- Service → SADECE HTTP çağrısı yapar
-- Service içinde state veya logic YASAK
+- Query ve mutation’lar hook içinde tanımlanır
+- Her query için `staleTime` açıkça yazılır
+- Query key standardı:
+  ['feature', 'entity', params]
 
-AKIŞ:
-Screen → Hook → Service → API
-
-Query key standardı:
-['feature', 'entity', params]
-
-================================================================================
-
-5. RESPONSE & TYPE STANDARTLARI
-
-ZORUNLU RESPONSE TİPLERİ:
-- ApiResponse<T>
-- PagedResponse<T>
-
-Örnek:
-ApiResponse<PagedResponse<CustomerDto>>
-
-KURALLAR:
-- any YASAK
-- unknown sadece zorunlu durumlarda
-- Tüm fonksiyonlarda explicit return type
-- Tüm DTO ve type’lar feature/types altında
+Component içinde:
+- Query client’a erişme
+- Cache invalidation yapma
+- Network logic yazma
 
 ================================================================================
 
-6. STATE YÖNETİMİ
+## 6) API & SERVICE PATTERN
 
-Server State:
-- @tanstack/react-query
+- Tüm servisler `src/features/<feature>/api` altında
+- Saf axios import yasak, sadece `src/lib/axios.ts` instance kullanılır
+- Service sadece HTTP çağrısı yapar, state/logic içermez
 
-Form State:
-- react-hook-form
-- zod (zorunlu)
-
-Global UI State:
-- Zustand veya Context API
-
-Redux KESİN YASAK
+ZORUNLU:
+- Response tipleri:
+  - `ApiResponse<T>`
+  - `PagedResponse<T>`
+- DTO/type’lar sadece `src/features/<feature>/types` altında
 
 ================================================================================
 
-7. LİSTELEME & PAGINATION
+## 7) LİSTELEME — SCROLLVIEW KURAL SETİ (PERFORMANS)
 
-- SADECE FlatList kullanılır
-- renderItem ayrı component olur
-- map ile render KESİN YASAK
+ALTIN KURAL:
+- Liste renderı **map ile asla yapılmaz**
+- Liste renderı için **FlatList / SectionList zorunlu**
 
-Cursor OTOMATİK OLARAK:
-- PagedResponse.items render eder
-- hasNextPage kontrolü yapar
-- Infinite scroll (onEndReached) uygular
-- pageNumber / pageSize query param gönderir
+ScrollView KULLANIMI:
+- `ScrollView` sadece **kısa ve statik** içerik (form, 5-10 eleman gibi) için kullanılabilir
+- Dinamik, uzun, büyüyen veri (müşteri listesi, siparişler, stok vb.) için **ScrollView yasak**
+- `ScrollView + .map` kombinasyonu kesin yasak
 
-================================================================================
+FlatList ZORUNLULUKLARI:
+- `keyExtractor` zorunlu
+- `renderItem` ayrı component olmalı (örn: `CustomerRow`)
+- Item component `memo` ile sarmalanmalı (gerektiğinde)
+- Infinite scroll gerekiyorsa `onEndReached` hook tarafından yönetilir
 
-8. COMPONENT KURALLARI
-
-- Component sadece props alır
-- Logic component içinde YASAK
-- Memoized component tercih edilir
-- Props destructuring zorunlu
-
-================================================================================
-
-9. STYLE KURALLARI
-
-- StyleSheet.create zorunlu
-- Inline style YASAK
-- Theme / color sabitleri merkezi dosyada tutulur
+Paged liste standardı:
+- Hook, `PagedResponse.items` render eder
+- Hook, `hasNextPage` / `pageNumber` / `pageSize` kontrolünü yapar
+- Screen sadece `data`, `onEndReached`, `isFetchingNextPage` gibi props alır
 
 ================================================================================
 
-10. NAVIGATION
+## 8) FORM STANDARDI
 
-- Navigation SADECE hook içinde
-- Screen içinde navigation KESİN YASAK
-- react-navigation (native-stack) kullanılır
-
-================================================================================
-
-11. ÖRNEK FEATURE AKIŞI
-
-LOGIN:
-LoginScreen
- → useLoginScreen
-   → useLoginMutation
-     → AuthService
-
-CUSTOMER (PAGED):
-CustomerListScreen
- → useCustomerListScreen
-   → useCustomerListQuery
-     → CustomerService
+- Form state: `react-hook-form`
+- Validation: `zod` zorunlu
+- `useState` ile form yönetimi yasak
+- Validasyon logic’i component/screen içine yazılmaz, hook + schema ile yapılır
 
 ================================================================================
 
-12. GENEL YASAKLAR
+## 9) STATE YÖNETİMİ
 
-- Screen içinde API çağrısı
-- Component içinde logic
-- map ile liste render
-- any kullanımı
-- inline style
-- feature dışı type kullanımı
+- Server state: TanStack Query
+- Global UI state: Zustand veya Context API
+- Redux kesin yasak
 
 ================================================================================
 
-Cursor bu kurallara uymayan KOD ÜRETMEMELİDİR.
+## 10) STYLE / THEME KURALLARI
+
+- Inline style yasak
+- Stil tanımları merkezi theme yaklaşımıyla yapılır (Gluestack + merkezi sabitler)
+- Renkler proje standardına uygun olmalı (primary/accent/text/background/border/success/error/warning)
+- Gereksiz yeni renk tanımlama yapma, mevcut palette kullan
+
+================================================================================
+
+## 11) i18n (ÇOKLU DİL) ZORUNLU
+
+- `i18next` + `react-i18next` kullanılır
+- Dil dosyaları `src/locales/` altında (`tr.json`, `en.json`)
+- Tüm statik metinler `t()` ile çağrılır
+- Hardcoded string yasak
+- Dil tercihi storage ile persist edilir
+
+================================================================================
+
+## 12) İSİMLENDİRME
+
+- Klasörler: kebab-case (customer-list)
+- Component dosyaları: PascalCase (CustomerRow.tsx)
+- Hook dosyaları: camelCase ve `use` ile başlar (useCustomerList.ts)
+- Utility: camelCase (formatPrice.ts)
+- Types/Interfaces: PascalCase (CustomerDto)
+- Constants: UPPER_SNAKE_CASE (API_TIMEOUT)
+
+================================================================================
+
+## 13) GENEL YASAKLAR ÖZET
+
+- Comment satırı
+- Component/screen içinde API çağrısı
+- Feature dışından direkt import
+- `any`
+- Listeyi `.map` ile render
+- Uzun/dinamik listeleri ScrollView ile yapmak
+- Screen içinde navigation / business logic
+- Inline style
+
+================================================================================
+
+Cursor bu kurallara uymayan kod üretmemelidir.
 Bu kurallar HER ZAMAN ve HER DOSYADA geçerlidir.
