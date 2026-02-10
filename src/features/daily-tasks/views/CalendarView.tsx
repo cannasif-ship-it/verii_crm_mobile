@@ -4,7 +4,6 @@ import {
   FlatList,
   StyleSheet,
   ActivityIndicator,
-  ScrollView,
   TouchableOpacity,
 } from "react-native";
 import { Calendar, LocaleConfig } from "react-native-calendars";
@@ -122,10 +121,14 @@ export function CalendarView({
   }, []);
 
   const renderTaskItem = ({ item }: { item: ActivityDto }): React.ReactElement => {
-    return <TaskCard task={item} compact />;
+    return (
+      <View style={styles.taskItemContainer}>
+        <TaskCard task={item} compact />
+      </View>
+    );
   };
 
-  const renderTaskList = (): React.ReactElement => {
+  const renderEmptyTasks = (): React.ReactElement => {
     if (!selectedDate) {
       return (
         <View style={styles.hintContainer}>
@@ -135,52 +138,30 @@ export function CalendarView({
         </View>
       );
     }
+    return (
+      <View style={styles.emptyContainer}>
+        <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+          {t("dailyTasks.noTasksForDate")}
+        </Text>
+        <TouchableOpacity
+          style={[styles.addForDateButton, { backgroundColor: colors.accent }]}
+          onPress={handleAddForSelectedDate}
+        >
+          <Text style={styles.addForDateButtonIcon}>+</Text>
+          <Text style={styles.addForDateButtonText}>{t("dailyTasks.addForDate")}</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
-    const formattedDate = new Date(selectedDate).toLocaleDateString("tr-TR", {
+  const selectedDateTitle = useMemo(() => {
+    if (!selectedDate) return null;
+    return new Date(selectedDate).toLocaleDateString("tr-TR", {
       day: "numeric",
       month: "long",
       year: "numeric",
     });
-
-    if (selectedTasks.length === 0) {
-      return (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.dateTitle, { color: colors.text }]}>{formattedDate}</Text>
-          <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-            {t("dailyTasks.noTasksForDate")}
-          </Text>
-          <TouchableOpacity
-            style={[styles.addForDateButton, { backgroundColor: colors.accent }]}
-            onPress={handleAddForSelectedDate}
-          >
-            <Text style={styles.addForDateButtonIcon}>+</Text>
-            <Text style={styles.addForDateButtonText}>{t("dailyTasks.addForDate")}</Text>
-          </TouchableOpacity>
-        </View>
-      );
-    }
-
-    return (
-      <View style={styles.taskListContainer}>
-        <View style={styles.taskListHeader}>
-          <Text style={[styles.taskListTitle, { color: colors.text }]}>{formattedDate}</Text>
-          <TouchableOpacity
-            style={[styles.addForDateButtonSmall, { backgroundColor: colors.accent }]}
-            onPress={handleAddForSelectedDate}
-          >
-            <Text style={styles.addForDateButtonSmallText}>+</Text>
-          </TouchableOpacity>
-        </View>
-        <FlatList
-          data={selectedTasks}
-          keyExtractor={(item) => String(item.id)}
-          renderItem={renderTaskItem}
-          showsVerticalScrollIndicator={false}
-          scrollEnabled={false}
-        />
-      </View>
-    );
-  };
+  }, [selectedDate]);
 
   const calendarTheme = useMemo(
     () => ({
@@ -206,30 +187,72 @@ export function CalendarView({
     [colors, themeMode]
   );
 
+  const renderListHeader = useCallback((): React.ReactElement => {
+    return (
+      <>
+        {isLoading && (
+          <View style={styles.loadingOverlay}>
+            <ActivityIndicator size="small" color={colors.accent} />
+          </View>
+        )}
+        <Calendar
+          markedDates={markedDates}
+          onDayPress={handleDayPress}
+          onMonthChange={handleMonthChange}
+          theme={calendarTheme}
+          enableSwipeMonths
+          style={styles.calendar}
+        />
+        <View style={[styles.divider, { backgroundColor: colors.border }]} />
+        {selectedDateTitle && (
+          <View style={styles.taskListContainer}>
+            <View style={styles.taskListHeader}>
+              <Text style={[styles.taskListTitle, { color: colors.text }]}>{selectedDateTitle}</Text>
+              <TouchableOpacity
+                style={[styles.addForDateButtonSmall, { backgroundColor: colors.accent }]}
+                onPress={handleAddForSelectedDate}
+              >
+                <Text style={styles.addForDateButtonSmallText}>+</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        )}
+      </>
+    );
+  }, [
+    isLoading,
+    colors.accent,
+    colors.border,
+    colors.text,
+    markedDates,
+    handleDayPress,
+    handleMonthChange,
+    calendarTheme,
+    selectedDateTitle,
+    handleAddForSelectedDate,
+  ]);
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {isLoading && (
-        <View style={styles.loadingOverlay}>
-          <ActivityIndicator size="small" color={colors.accent} />
-        </View>
-      )}
-      <Calendar
-        markedDates={markedDates}
-        onDayPress={handleDayPress}
-        onMonthChange={handleMonthChange}
-        theme={calendarTheme}
-        enableSwipeMonths
-        style={styles.calendar}
-      />
-      <View style={[styles.divider, { backgroundColor: colors.border }]} />
-      {renderTaskList()}
-    </ScrollView>
+    <FlatList
+      style={styles.container}
+      data={selectedTasks}
+      keyExtractor={(item) => String(item.id)}
+      renderItem={renderTaskItem}
+      showsVerticalScrollIndicator={false}
+      ListHeaderComponent={renderListHeader}
+      ListEmptyComponent={renderEmptyTasks}
+      contentContainerStyle={styles.listContent}
+    />
   );
+
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  listContent: {
+    paddingBottom: 100,
   },
   calendar: {
     paddingHorizontal: 10,
@@ -289,7 +312,9 @@ const styles = StyleSheet.create({
   },
   taskListContainer: {
     paddingHorizontal: 20,
-    paddingBottom: 100,
+  },
+  taskItemContainer: {
+    paddingHorizontal: 20,
   },
   taskListHeader: {
     flexDirection: "row",

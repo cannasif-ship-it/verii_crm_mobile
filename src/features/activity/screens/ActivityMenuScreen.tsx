@@ -1,5 +1,5 @@
 import React, { useCallback } from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, FlatList } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -39,6 +39,37 @@ export function ActivityMenuScreen(): React.ReactElement {
     router.push("/(tabs)/activities/daily-tasks");
   }, [router]);
 
+  const menuItems = [
+    {
+      key: "activities",
+      title: t("activityMenu.activities", "Aktiviteler"),
+      description: t("activityMenu.activitiesDesc", "Toplantı, ziyaret ve aramalarınızı yönetin"),
+      icon: (
+        <Calendar03Icon
+          size={24}
+          color={THEME_PINK}
+          variant="stroke"
+          strokeWidth={1.5}
+        />
+      ),
+      onPress: handleActivitiesPress,
+    },
+    {
+      key: "dailyTasks",
+      title: t("activityMenu.dailyTasks", "Günlük İşler"),
+      description: t("activityMenu.dailyTasksDesc", "Günlük görevlerinizi takip edin"),
+      icon: (
+        <TaskDaily01Icon
+          size={24}
+          color={THEME_PINK}
+          variant="stroke"
+          strokeWidth={1.5}
+        />
+      ),
+      onPress: handleDailyTasksPress,
+    },
+  ];
+
   return (
     <>
       <StatusBar style={isDark ? "light" : "dark"} backgroundColor={headerBg} />
@@ -49,47 +80,25 @@ export function ActivityMenuScreen(): React.ReactElement {
         <ScreenHeader title={t("activityMenu.title", "Aktivite Yönetimi")} showBackButton />
         
         {/* İÇERİK ALANI (Modern Yuvarlak Köşeler) */}
-        <ScrollView
+        <FlatList
           style={[styles.content, { backgroundColor: contentBg }]}
           contentContainerStyle={[
             styles.contentContainer, 
             { paddingBottom: insets.bottom + 100 }
           ]}
+          data={menuItems}
+          keyExtractor={(item) => item.key}
+          renderItem={({ item }) => (
+            <MenuCard
+              title={item.title}
+              description={item.description}
+              icon={item.icon}
+              rightIcon={<ArrowRight01Icon size={20} color={arrowColor} />}
+              onPress={item.onPress}
+            />
+          )}
           showsVerticalScrollIndicator={false}
-        >
-          {/* 1. AKTİVİTELER */}
-          <MenuCard
-            title={t("activityMenu.activities", "Aktiviteler")}
-            description={t("activityMenu.activitiesDesc", "Toplantı, ziyaret ve aramalarınızı yönetin")}
-            icon={
-              <Calendar03Icon 
-                size={24} 
-                color={THEME_PINK} 
-                variant="stroke" 
-                strokeWidth={1.5}
-              />
-            }
-            rightIcon={<ArrowRight01Icon size={20} color={arrowColor} />}
-            onPress={handleActivitiesPress}
-          />
-
-          {/* 2. GÜNLÜK İŞLER */}
-          <MenuCard
-            title={t("activityMenu.dailyTasks", "Günlük İşler")}
-            description={t("activityMenu.dailyTasksDesc", "Günlük görevlerinizi takip edin")}
-            icon={
-              <TaskDaily01Icon 
-                size={24} 
-                color={THEME_PINK} 
-                variant="stroke" 
-                strokeWidth={1.5}
-              />
-            }
-            rightIcon={<ArrowRight01Icon size={20} color={arrowColor} />}
-            onPress={handleDailyTasksPress}
-          />
-
-        </ScrollView>
+        />
       </View>
     </>
   );
