@@ -24,7 +24,6 @@ import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "../ui/text";
 import { useUIStore } from "../../store/ui";
 import { useAuthStore } from "../../store/auth";
-import { GRADIENT } from "../../constants/theme";
 
 import { 
   Cancel01Icon,
@@ -46,7 +45,7 @@ import {
 
 const LOCAL_LOGO = require("../../../assets/veriicrmlogo.png");
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 const SIDEBAR_WIDTH = width * 0.8;
 
 const ACTIVE_COLOR = "#fb923c"; 
@@ -74,26 +73,21 @@ export function Sidebar(): React.ReactElement {
 
   const MENU_ITEMS = [
     { key: "home", title: t("nav.home", "Ana Sayfa"), icon: DashboardSquare01Icon, route: "/(tabs)" },
-
     { key: "cust_header", title: t("customerMenu.title", "MÜŞTERİ YÖNETİMİ"), isHeader: true },
     { key: "customers", title: t("customerMenu.customers", "Müşteriler"), icon: UserGroupIcon, route: "/customers" },
     { key: "contacts", title: t("customerMenu.contacts", "İletişim Kişileri"), icon: ContactIcon, route: "/customers/contacts" },
     { key: "shipping", title: t("customerMenu.shippingAddresses", "Sevkiyat Adresleri"), icon: TruckIcon, route: "/customers/shipping" },
     { key: "titles", title: t("customerMenu.titles", "Ünvanlar"), icon: LicenseIcon, route: "/customers/titles" },
     { key: "erp", title: t("customerMenu.erpCustomers", "ERP Bağlantıları"), icon: Globe02Icon, route: "/customers/erp" },
-
     { key: "sales_header", title: t("modules.sales", "SATIŞ & SİPARİŞ"), isHeader: true },
     { key: "orders", title: t("sales.orderList", "Sipariş Listesi"), icon: ShoppingCart01Icon, route: "/sales/orders" },
     { key: "quotations", title: t("sales.quotationList", "Teklifler"), icon: Invoice01Icon, route: "/sales/quotations" },
     { key: "demands", title: t("sales.demandList", "Talepler"), icon: Note01Icon, route: "/sales/demands" },
-
     { key: "stock_header", title: t("stockMenu.title", "STOK & DEPO"), isHeader: true },
     { key: "stocks", title: t("stockMenu.stockMovements", "Stok Hareketleri"), icon: PackageIcon, route: "/stock" },
-
     { key: "act_header", title: t("activityMenu.title", "AKTİVİTELER"), isHeader: true },
     { key: "activities", title: t("activityMenu.activities", "Tüm Aktiviteler"), icon: Calendar03Icon, route: "/activities/list" },
     { key: "dailytasks", title: t("activityMenu.dailyTasks", "Günlük Görevler"), icon: TaskDaily01Icon, route: "/activities/daily-tasks" },
-
     { key: "settings_header", title: t("common.settings", "SİSTEM"), isHeader: true },
     { key: "settings", title: t("common.settings", "Ayarlar"), icon: Settings01Icon, route: "/settings" },
   ];
@@ -121,12 +115,6 @@ export function Sidebar(): React.ReactElement {
     }, 150);
   };
 
-  const handleLogout = async () => {
-    closeSidebar();
-    if(clearAuth) await clearAuth();
-    router.replace("/(auth)/login" as never);
-  };
-
   const animatedStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
   }));
@@ -138,17 +126,16 @@ export function Sidebar(): React.ReactElement {
   if (!isSidebarOpen) return <View />;
   if (isAuthScreen) return <View />;
 
-  const sidebarHeight = height - insets.top;
-
   return (
     <Modal
       transparent
       visible={isSidebarOpen}
       animationType="none"
       onRequestClose={closeSidebar}
-      statusBarTranslucent
+      statusBarTranslucent={true} 
     >
       <View style={styles.container}>
+        {/* Backdrop (Arka Plan) */}
         <Pressable style={StyleSheet.absoluteFill} onPress={closeSidebar}>
           <AnimatedBlurView
             intensity={Platform.OS === "android" ? 50 : 20}
@@ -157,19 +144,26 @@ export function Sidebar(): React.ReactElement {
           />
         </Pressable>
 
+        {/* Sidebar Container */}
         <Animated.View
           style={[
             styles.sidebar,
             {
               width: SIDEBAR_WIDTH,
-              marginTop: insets.top,
-              height: sidebarHeight,
               backgroundColor: colors.background,
               borderRightColor: colors.border,
+              
+              // --- DÜZELTME BURADA ---
+              top: insets.top, // 1. Üstten bildirim çubuğu kadar boşluk bırak
+              bottom: 0,       // 2. Aşağıya kadar full uzat
+              
+              // İçerik için sadece alt güvenli alan (Home bar vb.)
+              paddingBottom: insets.bottom, 
             },
             animatedStyle,
           ]}
         >
+          {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoWrapper}>
               <Image 
@@ -194,6 +188,7 @@ export function Sidebar(): React.ReactElement {
             style={styles.separator}
           />
 
+          {/* Menü İçeriği */}
           <FlatListScrollView
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
@@ -234,7 +229,6 @@ export function Sidebar(): React.ReactElement {
                           <item.icon
                             size={20}
                             color={(pressed || isActive) ? ACTIVE_COLOR : TEXT_COLOR}
-                            
                           />
                         )}
                       </View>
@@ -283,18 +277,22 @@ export function Sidebar(): React.ReactElement {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: "flex-start",
   },
   sidebar: {
+    position: 'absolute', // Mutlak pozisyon önemli
+    left: 0,
+    // top ve bottom değerleri inline style ile dinamik veriliyor
+    
     borderRightWidth: 1,
     borderTopRightRadius: 24, 
-    borderBottomRightRadius: 0, 
+    borderBottomRightRadius: 24, // Altta da radius istiyorsan kalsın, yoksa 0 yapabilirsin
+    
     shadowColor: "#000",
     shadowOffset: { width: 5, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 20,
-    overflow: "hidden",
+    
     justifyContent: "space-between",
   },
   header: {
@@ -303,7 +301,7 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingLeft: 75,  
     paddingRight: 16, 
-    paddingTop: 25,   
+    paddingTop: 10,   
     paddingBottom: 4, 
     height: 80,       
   },

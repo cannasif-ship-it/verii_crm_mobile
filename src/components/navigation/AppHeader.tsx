@@ -15,8 +15,20 @@ export function AppHeader(): React.ReactElement {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
-  const { colors, openSidebar } = useUIStore();
+  // Get theme colors and mode
+  const { colors, openSidebar, themeMode } = useUIStore();
   const { user, branch, clearAuth } = useAuthStore(); 
+
+  const isDark = themeMode === "dark";
+
+  // Define dynamic styles based on theme
+  const THEME = {
+    bg: isDark ? "#0f0518" : colors.card, // Dark purple for dark mode, card color for light
+    border: isDark ? "rgba(255, 255, 255, 0.1)" : colors.border,
+    iconColor: isDark ? "#E2E8F0" : colors.text, // Light icons for dark mode, dark icons for light
+    buttonBg: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)",
+    avatarInnerBg: isDark ? "#0f0518" : colors.background,
+  };
 
   const [isProfileOpen, setProfileOpen] = useState(false);
 
@@ -36,24 +48,27 @@ export function AppHeader(): React.ReactElement {
         style={[
           styles.container, 
           { 
-            backgroundColor: colors.header || "#0f0518",
+            backgroundColor: THEME.bg,
             paddingTop: insets.top + 10,
-            borderBottomColor: colors.border || "rgba(255, 255, 255, 0.1)",
+            borderBottomColor: THEME.border,
           }
         ]}
       >
+        {/* Left: Menu Button */}
         <View style={styles.leftContainer}>
           <TouchableOpacity 
             onPress={openSidebar} 
-            style={styles.iconButton}
+            style={[styles.iconButton, { backgroundColor: THEME.buttonBg }]}
             activeOpacity={0.7}
           >
-            <Menu01Icon size={24} color="#E2E8F0" />
+            <Menu01Icon size={24} color={THEME.iconColor} />
           </TouchableOpacity>
         </View>
 
+        {/* Center: Spacer (Title removed as per original design) */}
         <View style={styles.centerContainer} pointerEvents="none" />
 
+        {/* Right: Profile Avatar */}
         <View style={styles.rightContainer}>
           <TouchableOpacity onPress={handleProfilePress} activeOpacity={0.8}>
             <LinearGradient
@@ -62,8 +77,8 @@ export function AppHeader(): React.ReactElement {
               end={{ x: 1, y: 1 }}
               style={styles.avatarBorder}
             >
-              <View style={[styles.avatarInner, { backgroundColor: colors.header || "#0f0518" }]}>
-                <UserIcon size={20} color="#E2E8F0" />
+              <View style={[styles.avatarInner, { backgroundColor: THEME.avatarInnerBg }]}>
+                <UserIcon size={20} color={THEME.iconColor} />
               </View>
             </LinearGradient>
           </TouchableOpacity>
@@ -91,11 +106,12 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     zIndex: 50,
+    // Shadow logic mostly applies to light mode or elevated dark surfaces
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 5,
+    elevation: 4,
     minHeight: 80, 
   },
   leftContainer: {
@@ -119,7 +135,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderRadius: 20,
-    backgroundColor: "rgba(255, 255, 255, 0.05)",
+    // Background color is handled in component
   },
   avatarBorder: {
     width: 38,
@@ -135,5 +151,6 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     alignItems: "center",
     justifyContent: "center",
+    // Background color is handled in component
   },
 });

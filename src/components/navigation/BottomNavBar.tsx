@@ -32,7 +32,24 @@ export function BottomNavBar(): React.ReactElement {
   const router = useRouter();
   const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  const { colors } = useUIStore();
+  const { colors, themeMode } = useUIStore();
+
+  const isDark = themeMode === "dark";
+
+  // --- TEMA AYARLARI ---
+  const THEME = {
+    bg: isDark ? "#0f0518" : colors.navBar || "#FFFFFF",
+    
+    // AYDINLIK MOD DÜZELTMESİ:
+    // Koyu modda silik beyaz, aydınlık modda ise daha belirgin bir gri (#CBD5E1) kullandık.
+    borderTop: isDark ? "rgba(255,255,255,0.1)" : "#CBD5E1", 
+    
+    activeColor: "#db2777", 
+    inactiveColor: isDark ? "#94a3b8" : colors.textSecondary,
+    
+    // Aydınlık modda gölgeyi biraz daha belirgin yapalım
+    shadowOpacity: isDark ? 0.1 : 0.08, 
+  };
 
   const isActive = (route: string): boolean => {
     if (route === "/(tabs)") {
@@ -48,23 +65,33 @@ export function BottomNavBar(): React.ReactElement {
     router.replace(route as never);
   };
 
-  const paddingBottom = Platform.OS === "ios" ? insets.bottom : Math.max(insets.bottom, 10);
+  const paddingBottom = Platform.OS === "ios" ? insets.bottom : Math.max(insets.bottom, 12);
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: colors.navBar }]}> 
+    <View 
+      style={[
+        styles.wrapper, 
+        { 
+          backgroundColor: THEME.bg,
+          borderTopColor: THEME.borderTop,
+          shadowOpacity: THEME.shadowOpacity, // Dinamik gölge opaklığı
+        }
+      ]}
+    > 
       <View
         style={[
           styles.container,
           {
             paddingBottom,
-            backgroundColor: colors.navBar,
-            borderTopColor: colors.navBarBorder,
+            backgroundColor: THEME.bg, 
           },
         ]}
       >
         {NAV_ITEMS.map((item) => {
           const IconComponent = item.icon;
           const active = isActive(item.route);
+          const iconColor = active ? THEME.activeColor : THEME.inactiveColor;
+
           return (
             <TouchableOpacity
               key={item.key}
@@ -73,16 +100,14 @@ export function BottomNavBar(): React.ReactElement {
               activeOpacity={0.7}
             >
               <View style={styles.iconRow}>
-                <View
-                  style={[
-                    styles.activeIndicator,
-                    active && { backgroundColor: colors.accent },
-                  ]}
-                />
+                {active && (
+                   <View style={[styles.activeIndicator, { backgroundColor: THEME.activeColor }]} />
+                )}
+                
                 <View style={styles.iconContainer}>
                   <IconComponent
-                    size={22}
-                    color={active ? colors.accent : colors.textSecondary}
+                    size={24}
+                    color={iconColor}
                     strokeWidth={active ? 2.5 : 1.5}
                   />
                 </View>
@@ -90,7 +115,7 @@ export function BottomNavBar(): React.ReactElement {
               <Text
                 style={[
                   styles.label,
-                  { color: active ? colors.accent : colors.textSecondary },
+                  { color: iconColor },
                   active && styles.labelActive,
                 ]}
               >
@@ -111,34 +136,42 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     zIndex: 50,
+    
+    // Border (Üst Çizgi)
+    borderTopWidth: 1, 
+    
+    // Gölge (Sayfadan ayırma efekti)
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: -3 }, // Gölgeyi yukarı doğru verdik
+    shadowRadius: 6,
+    elevation: 10, // Android için daha yüksek elevation
   },
   container: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-around",
-    borderTopWidth: 1,
-    paddingTop: 8,
-    paddingHorizontal: 4,
-    minHeight: 56,
+    paddingTop: 12,
+    paddingHorizontal: 8,
+    minHeight: 60,
   },
   navItem: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 6,
+    paddingVertical: 4,
   },
   iconRow: {
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: 2,
+    marginBottom: 4,
+    position: 'relative',
   },
   activeIndicator: {
     position: "absolute",
-    top: -8,
-    width: 4,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "transparent",
+    top: -12, 
+    width: 32, 
+    height: 3,
+    borderRadius: 1.5,
   },
   iconContainer: {
     width: 28,
@@ -147,10 +180,10 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   label: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: "500",
   },
   labelActive: {
-    fontWeight: "600",
+    fontWeight: "700",
   },
 });

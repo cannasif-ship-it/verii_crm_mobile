@@ -39,7 +39,7 @@ import { GRADIENT } from "../../constants/theme";
 import { useUIStore } from "../../store/ui";
 import { setLanguage, getCurrentLanguage } from "../../locales";
 
-const { width, height } = Dimensions.get("window");
+const { width } = Dimensions.get("window");
 const PANEL_WIDTH = width * 0.85;
 
 const ACTIVE_COLOR = "#fb923c";
@@ -69,9 +69,9 @@ const ProfilePanel = ({
   const { t } = useTranslation();
 
   const { colors, themeMode, toggleTheme } = useUIStore();
+  const isDarkMode = themeMode === "dark";
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
 
-  const isDarkMode = themeMode === "dark";
   const translateX = useSharedValue(PANEL_WIDTH);
   const backdropOpacity = useSharedValue(0);
 
@@ -119,8 +119,6 @@ const ProfilePanel = ({
 
   if (!isOpen && translateX.value === PANEL_WIDTH) return null;
 
-  const panelHeight = height - insets.top;
-
   return (
     <Modal
       transparent
@@ -133,7 +131,7 @@ const ProfilePanel = ({
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose}>
           <AnimatedBlurView
             intensity={Platform.OS === "android" ? 50 : 20}
-            tint={themeMode === "dark" ? "dark" : "light"}
+            tint={isDarkMode ? "dark" : "light"}
             style={[StyleSheet.absoluteFill, backdropStyle]}
           />
         </Pressable>
@@ -143,10 +141,15 @@ const ProfilePanel = ({
             styles.panel,
             {
               width: PANEL_WIDTH,
-              marginTop: insets.top,
-              height: panelHeight,
               backgroundColor: colors.background,
               borderLeftColor: colors.border,
+              
+              // --- POZİSYONLAMA ---
+              top: insets.top, // Üstten bildirim çubuğu kadar boşluk
+              bottom: 0,       // Aşağıya kadar uzat
+              
+              // İçerik güvenliği (Home bar için)
+              paddingBottom: insets.bottom, 
               paddingTop: 10,
             },
             animatedStyle,
@@ -168,7 +171,7 @@ const ProfilePanel = ({
             contentContainerStyle={styles.scrollContent}
             showsVerticalScrollIndicator={false}
           >
-            {/* User Info Section */}
+            {/* User Info */}
             <View style={styles.userInfoContainer}>
               <LinearGradient
                 colors={[...GRADIENT.primary]}
@@ -209,7 +212,6 @@ const ProfilePanel = ({
             {/* Menu Items */}
             <View style={styles.menuContainer}>
               
-              {/* Profil Ayarları */}
               <Pressable
                 onPress={() => handleMenuItemPress("settings")}
                 style={({ pressed }) => [styles.menuItem, pressed && { backgroundColor: ACTIVE_BG_COLOR }]}
@@ -227,7 +229,6 @@ const ProfilePanel = ({
                 )}
               </Pressable>
 
-              {/* Tema Değiştirme (Switch) */}
               <View style={styles.menuItem}>
                 <View style={styles.menuItemInner}>
                   <View style={[styles.iconBox, { backgroundColor: colors.card }]}>
@@ -256,7 +257,6 @@ const ProfilePanel = ({
                 style={styles.separator}
               />
 
-              {/* Dil Seçimi (Badge Yapısı) */}
               <View style={{ paddingHorizontal: 12, marginTop: 10 }}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
                   <GlobalIcon size={18} color={colors.textMuted} style={{ marginRight: 8 }} />
@@ -295,8 +295,8 @@ const ProfilePanel = ({
             </View>
           </FlatListScrollView>
 
-          {/* Footer - Çıkış Yap */}
-          <View style={[styles.footer, { paddingBottom: insets.bottom + 10 }]}>
+          {/* Footer */}
+          <View style={styles.footer}>
             <Pressable
               style={({ pressed }) => [
                 styles.menuItem,
@@ -327,18 +327,23 @@ const ProfilePanel = ({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    flexDirection: "row",
-    justifyContent: "flex-end",
+    // flex-direction row gerekmiyor, absolute ile çözdük
   },
   panel: {
+    position: 'absolute',
+    right: 0,
+    // top ve bottom inline style ile geliyor
+    
     borderLeftWidth: 1,
     borderTopLeftRadius: 24,
+    borderBottomLeftRadius: 24,
+    
     shadowColor: "#000",
     shadowOffset: { width: -5, height: 0 },
     shadowOpacity: 0.2,
     shadowRadius: 15,
     elevation: 20,
-    overflow: "hidden",
+    
     justifyContent: "space-between",
   },
   header: {
