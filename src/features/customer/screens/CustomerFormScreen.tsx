@@ -20,6 +20,7 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
 import { useCustomer, useCreateCustomer, useUpdateCustomer, useCustomerTypes, useBusinessCardScan } from "../hooks";
+import { useCustomerShippingAddresses } from "../../shipping-address/hooks/useShippingAddresses";
 import { FormField, LocationPicker } from "../components";
 import { createCustomerSchema, type CustomerFormData } from "../schemas";
 import type { CountryDto, CityDto, DistrictDto, CustomerTypeDto } from "../types";
@@ -29,7 +30,7 @@ import { Camera01Icon, ArrowDown01Icon, CheckmarkCircle02Icon } from "hugeicons-
 export function CustomerFormScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id } = useLocalSearchParams<{ id?: string }>();
   const { colors, themeMode } = useUIStore();
   const { branch } = useAuthStore();
   const insets = useSafeAreaInsets();
@@ -50,9 +51,11 @@ export function CustomerFormScreen(): React.ReactElement {
   };
 
   const [customerTypeModalOpen, setCustomerTypeModalOpen] = useState(false);
+  const [shippingAddressModalOpen, setShippingAddressModalOpen] = useState(false);
 
   const { data: existingCustomer, isLoading: customerLoading } = useCustomer(customerId);
   const { data: customerTypes } = useCustomerTypes();
+  const { data: customerShippingAddresses = [] } = useCustomerShippingAddresses(customerId);
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
   const { scanBusinessCard, isScanning, error: scanError } = useBusinessCardScan();
@@ -82,6 +85,8 @@ export function CustomerFormScreen(): React.ReactElement {
       notes: "",
       salesRepCode: "",
       groupCode: "",
+      creditLimit: 0,
+      defaultShippingAddressId: null,
       branchCode: branch?.code ? Number(branch.code) : 1,
       businessUnitCode: 1,
     },
@@ -90,8 +95,10 @@ export function CustomerFormScreen(): React.ReactElement {
   const watchCountryId = watch("countryId");
   const watchCityId = watch("cityId");
   const watchCustomerTypeId = watch("customerTypeId");
+  const watchDefaultShippingAddressId = watch("defaultShippingAddressId");
 
   const selectedCustomerType = customerTypes?.find((ct) => ct.id === watchCustomerTypeId);
+  const selectedShippingAddress = customerShippingAddresses.find((address) => address.id === watchDefaultShippingAddressId);
 
   useEffect(() => {
     if (existingCustomer) {
@@ -114,14 +121,28 @@ export function CustomerFormScreen(): React.ReactElement {
         salesRepCode: existingCustomer.salesRepCode || "",
         groupCode: existingCustomer.groupCode || "",
         creditLimit: existingCustomer.creditLimit,
+        defaultShippingAddressId: existingCustomer.defaultShippingAddressId ?? null,
         branchCode: existingCustomer.branchCode,
         businessUnitCode: existingCustomer.businessUnitCode,
       });
     }
   }, [existingCustomer, reset]);
 
-  const handleCountryChange = useCallback((country: CountryDto | undefined) => { setValue("countryId", country?.id); }, [setValue]);
-  const handleCityChange = useCallback((city: CityDto | undefined) => { setValue("cityId", city?.id); }, [setValue]);
+  const handleCountryChange = useCallback(
+    (country: CountryDto | undefined) => {
+      setValue("countryId", country?.id);
+      setValue("cityId", undefined);
+      setValue("districtId", undefined);
+    },
+    [setValue]
+  );
+  const handleCityChange = useCallback(
+    (city: CityDto | undefined) => {
+      setValue("cityId", city?.id);
+      setValue("districtId", undefined);
+    },
+    [setValue]
+  );
   const handleDistrictChange = useCallback((district: DistrictDto | undefined) => { setValue("districtId", district?.id); }, [setValue]);
 
   const handleCustomerTypeSelect = useCallback((type: CustomerTypeDto) => {
@@ -129,21 +150,63 @@ export function CustomerFormScreen(): React.ReactElement {
       setCustomerTypeModalOpen(false);
     }, [setValue]);
 
-  const onSubmit = useCallback(async (data: CustomerFormData) => {
+  const handleShippingAddressSelect = useCallback((shippingAddressId: number) => {
+      setValue("defaultShippingAddressId", shippingAddressId);
+      setShippingAddressModalOpen(false);
+    }, [setValue]);
+
+  const toNumber = useCallback((v: number | undefined): number => {
+    if (v === undefined || v === null) return 0;
+    const n = Number(v);
+    return Number.isNaN(n) ? 0 : n;
+  }, []);
+  const toNumberOptional = useCallback((v: number | undefined): number | undefined => {
+    if (v === undefined || v === null) return undefined;
+    const n = Number(v);
+    return Number.isNaN(n) ? undefined : n;
+  }, []);
+
+  const onSubmit = useCallback(
+    async (data: CustomerFormData) => {
       try {
-        const payload = { ...data, email: data.email || undefined };
+        const base = {
+          name: data.name,
+          customerCode: data.customerCode || undefined,
+          customerTypeId: data.customerTypeId,
+          defaultShippingAddressId: data.defaultShippingAddressId ?? undefined,
+          salesRepCode: data.salesRepCode || undefined,
+          groupCode: data.groupCode || undefined,
+          creditLimit: toNumberOptional(data.creditLimit),
+          branchCode: toNumber(data.branchCode) || 1,
+          businessUnitCode: toNumber(data.businessUnitCode) || 1,
+          phone: data.phone || undefined,
+          phone2: data.phone2 || undefined,
+          email: data.email?.trim() ? data.email : undefined,
+          website: data.website || undefined,
+          address: data.address || undefined,
+          taxNumber: data.taxNumber || undefined,
+          taxOffice: data.taxOffice || undefined,
+          tcknNumber: data.tcknNumber || undefined,
+          notes: data.notes || undefined,
+          countryId: data.countryId,
+          cityId: data.cityId,
+          districtId: data.districtId,
+        };
         if (isEditMode && customerId) {
-          await updateCustomer.mutateAsync({ id: customerId, data: payload });
+          const updatePayload = { ...base, completedDate: existingCustomer?.completionDate };
+          await updateCustomer.mutateAsync({ id: customerId, data: updatePayload });
           Alert.alert("", t("customer.updateSuccess"));
         } else {
-          await createCustomer.mutateAsync(payload);
+          await createCustomer.mutateAsync(base);
           Alert.alert("", t("customer.createSuccess"));
         }
         router.back();
       } catch {
         Alert.alert(t("common.error"), t("common.error"));
       }
-    }, [isEditMode, customerId, createCustomer, updateCustomer, router, t]);
+    },
+    [isEditMode, customerId, existingCustomer?.completionDate, createCustomer, updateCustomer, router, t, toNumber, toNumberOptional]
+  );
 
   useEffect(() => {
     if (scanError) Alert.alert("Kartvizit Tarama", scanError);
@@ -286,6 +349,95 @@ export function CustomerFormScreen(): React.ReactElement {
             </TouchableOpacity>
           </View>
 
+          <View style={styles.fieldContainer}>
+            <Text style={[styles.label, { color: THEME.textMute }]}>
+              {t("customer.defaultShippingAddress", "Varsayılan Sevk Adresi")}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.pickerField,
+                { backgroundColor: THEME.inputBg, borderColor: THEME.border },
+              ]}
+              onPress={() => setShippingAddressModalOpen(true)}
+              disabled={!isEditMode || !customerId}
+            >
+              <Text
+                style={[
+                  styles.pickerFieldText,
+                  { color: selectedShippingAddress ? THEME.text : THEME.textMute },
+                ]}
+              >
+                {selectedShippingAddress?.address || t("customer.defaultShippingAddressPlaceholder", "Seçiniz")}
+              </Text>
+              <ArrowDown01Icon size={16} color={THEME.textMute} />
+            </TouchableOpacity>
+          </View>
+
+          <Controller
+            control={control}
+            name="salesRepCode"
+            render={({ field: { onChange, value } }) => (
+              <FormField
+                label={t("customer.salesRepCode", "Satış Temsilci Kodu")}
+                value={value || ""}
+                onChangeText={onChange}
+                maxLength={50}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="groupCode"
+            render={({ field: { onChange, value } }) => (
+              <FormField
+                label={t("customer.groupCode", "Grup Kodu")}
+                value={value || ""}
+                onChangeText={onChange}
+                maxLength={50}
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="creditLimit"
+            render={({ field: { onChange, value } }) => (
+              <FormField
+                label={t("customer.creditLimit", "Kredi Limiti")}
+                value={value !== undefined && value !== null ? String(value) : ""}
+                onChangeText={(text) => onChange(text ? Number(text) : undefined)}
+                keyboardType="numeric"
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="branchCode"
+            render={({ field: { onChange, value } }) => (
+              <FormField
+                label={t("customer.branchCode", "Şube Kodu")}
+                value={value !== undefined && value !== null ? String(value) : ""}
+                onChangeText={(text) => onChange(text ? Number(text) : 0)}
+                keyboardType="numeric"
+              />
+            )}
+          />
+
+          <Controller
+            control={control}
+            name="businessUnitCode"
+            render={({ field: { onChange, value } }) => (
+              <FormField
+                label={t("customer.businessUnitCode", "İşletme Kodu")}
+                value={value !== undefined && value !== null ? String(value) : ""}
+                onChangeText={(text) => onChange(text ? Number(text) : 0)}
+                keyboardType="numeric"
+              />
+            )}
+          />
+
           <Controller
             control={control}
             name="phone"
@@ -407,7 +559,7 @@ export function CustomerFormScreen(): React.ReactElement {
                 value={value || ""}
                 onChangeText={onChange}
                 keyboardType="numeric"
-                maxLength={20}
+                maxLength={11}
               />
             )}
           />
@@ -472,6 +624,60 @@ export function CustomerFormScreen(): React.ReactElement {
               renderItem={renderCustomerTypeItem}
               style={styles.list}
               showsVerticalScrollIndicator={false}
+            />
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={shippingAddressModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShippingAddressModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity
+            style={styles.modalBackdrop}
+            onPress={() => setShippingAddressModalOpen(false)}
+          />
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: THEME.cardBg, paddingBottom: insets.bottom + 16 },
+            ]}
+          >
+            <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
+              <View style={[styles.handle, { backgroundColor: THEME.border }]} />
+              <Text style={[styles.modalTitle, { color: THEME.text }]}>
+                {t("customer.defaultShippingAddress", "Varsayılan Sevk Adresi")}
+              </Text>
+            </View>
+            <FlatList
+              data={customerShippingAddresses}
+              keyExtractor={(item) => String(item.id)}
+              renderItem={({ item }) => {
+                const isSelected = watchDefaultShippingAddressId === item.id;
+                return (
+                  <TouchableOpacity
+                    style={[
+                      styles.pickerItem,
+                      { borderBottomColor: THEME.border },
+                      isSelected && { backgroundColor: isDark ? "rgba(219, 39, 119, 0.1)" : colors.activeBackground },
+                    ]}
+                    onPress={() => handleShippingAddressSelect(item.id)}
+                  >
+                    <Text style={[styles.pickerItemText, { color: THEME.text }]}>{item.address}</Text>
+                    {isSelected && <CheckmarkCircle02Icon size={20} color={THEME.primary} variant="stroke" />}
+                  </TouchableOpacity>
+                );
+              }}
+              style={styles.list}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={() => (
+                <View style={{ padding: 20 }}>
+                  <Text style={{ color: THEME.textMute }}>{t("customer.noShippingAddress", "Sevk adresi bulunamadı")}</Text>
+                </View>
+              )}
             />
           </View>
         </View>

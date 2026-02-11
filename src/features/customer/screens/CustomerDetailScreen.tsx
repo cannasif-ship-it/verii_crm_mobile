@@ -43,7 +43,7 @@ export function CustomerDetailScreen(): React.ReactElement {
 
   const handleEditPress = useCallback(() => {
     if (customer) {
-      router.push(`/(tabs)/customers/edit/${customer.id}`);
+      router.push(`/customers/edit/${customer.id}`);
     }
   }, [router, customer]);
 

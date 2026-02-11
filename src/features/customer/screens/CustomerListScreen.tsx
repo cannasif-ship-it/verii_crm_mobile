@@ -1,12 +1,13 @@
 import React, { useCallback, useMemo, useState, useEffect } from "react";
-import { 
-  View, 
-  StyleSheet, 
-  ActivityIndicator, 
-  FlatList, 
-  TouchableWithoutFeedback, 
-  Text, 
-  Dimensions 
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  FlatList,
+  TouchableWithoutFeedback,
+  TouchableOpacity,
+  Text,
+  Dimensions,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -76,7 +77,7 @@ export function CustomerListScreen() {
   }, [data, debouncedQuery]);
 
   const handleCreatePress = () => {
-    router.push("/(tabs)/customers/create");
+    router.push("/customers/create");
   };
 
   const renderItem = useCallback(({ item }: { item: CustomerDto }) => (
@@ -84,7 +85,7 @@ export function CustomerListScreen() {
         <CustomerCard 
           customer={item} 
           viewMode={viewMode}
-          onPress={() => router.push(`/(tabs)/customers/${item.id}`)}
+          onPress={() => router.push(`/customers/${item.id}`)}
         />
     </View>
   ), [viewMode, router]);
@@ -104,12 +105,16 @@ export function CustomerListScreen() {
              <SearchInput value={searchText} onSearch={setSearchText} placeholder={t("customer.search", "Müşteri Ara...")} />
           </View>
           
-          {/* Ekle Butonu */}
-           <TouchableWithoutFeedback onPress={handleCreatePress}>
-              <View style={[styles.iconBtn, { backgroundColor: theme.primary, marginRight: 8 }]}>
-                 <Add01Icon size={18} color="#FFF" variant="stroke" />
-              </View>
-           </TouchableWithoutFeedback>
+          {/* Ekle Butonu - Yeni Müşteri */}
+          <TouchableOpacity
+            onPress={handleCreatePress}
+            style={[styles.iconBtn, { backgroundColor: theme.primary, marginRight: 8 }]}
+            activeOpacity={0.8}
+            accessibilityLabel={t("customer.create")}
+            accessibilityRole="button"
+          >
+            <Add01Icon size={18} color="#FFF" variant="stroke" />
+          </TouchableOpacity>
 
           {/* Grid/List Değiştirici */}
           <View style={[styles.viewSwitcher, { backgroundColor: theme.switchBg }]}>
@@ -171,7 +176,7 @@ export function CustomerListScreen() {
               <View style={styles.center}>
                 <Text style={{ fontSize: 40 }}>👥</Text>
                 <Text style={{ color: theme.textMute, marginTop: 10 }}>
-                   {debouncedQuery.length > 0 ? "Kayıt bulunamadı." : "Müşteri listeniz boş."}
+                  {debouncedQuery.length > 0 ? t("common.noResults") : t("customer.noCustomers")}
                 </Text>
               </View>
             }

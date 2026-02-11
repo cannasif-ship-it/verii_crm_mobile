@@ -7,6 +7,6 @@ export function useCustomer(id: number | undefined) {
     queryKey: ["customer", "detail", id],
     queryFn: () => customerApi.getById(id!),
     enabled: !!id,
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
   });
 }

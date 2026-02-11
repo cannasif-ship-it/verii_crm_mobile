@@ -46,7 +46,7 @@ export function CustomerMenuScreen(): React.ReactElement {
   }, [router]);
 
   const handleContactsPress = useCallback(() => {
-    router.push("/(tabs)/customers/contacts");
+    router.push("/customers/contacts");
   }, [router]);
 
   const handleShippingPress = useCallback(() => {

@@ -22,6 +22,7 @@ export interface CustomerGetDto {
   salesRepCode?: string;
   groupCode?: string;
   creditLimit?: number;
+  defaultShippingAddressId?: number;
   branchCode?: number;
   businessUnitCode?: number;
   isERPIntegrated?: boolean;
@@ -66,6 +67,7 @@ export interface CreateCustomerDto {
   salesRepCode?: string;
   groupCode?: string;
   creditLimit?: number;
+  defaultShippingAddressId?: number;
   branchCode: number;
   businessUnitCode: number;
   isCompleted?: boolean;
@@ -90,6 +92,7 @@ export interface UpdateCustomerDto {
   salesRepCode?: string;
   groupCode?: string;
   creditLimit?: number;
+  defaultShippingAddressId?: number;
   branchCode: number;
   businessUnitCode: number;
   completedDate?: string;

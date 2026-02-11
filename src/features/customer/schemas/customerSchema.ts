@@ -7,7 +7,7 @@ export const createCustomerSchema = () =>
     name: z.string().min(1, i18n.t("validation.nameRequired")).max(250),
     taxNumber: z.string().max(15).optional(),
     taxOffice: z.string().max(100).optional(),
-    tcknNumber: z.string().max(20).optional(),
+    tcknNumber: z.string().max(11).optional(),
     address: z.string().max(500).optional(),
     phone: z.string().max(100).optional(),
     phone2: z.string().max(100).optional(),
@@ -21,6 +21,7 @@ export const createCustomerSchema = () =>
     salesRepCode: z.string().max(50).optional(),
     groupCode: z.string().max(50).optional(),
     creditLimit: z.number().optional(),
+    defaultShippingAddressId: z.number().optional().nullable(),
     branchCode: z.number(),
     businessUnitCode: z.number(),
   });

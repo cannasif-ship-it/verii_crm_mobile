@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { lookupApi } from "../api/lookupApi";
 import type { CountryDto, CityDto, DistrictDto, CustomerTypeDto, TitleDto } from "../types";
 
-const LOOKUP_STALE_TIME = 5 * 60 * 1000;
+const LOOKUP_STALE_TIME = 10 * 60 * 1000;
 
 export function useCountries() {
   return useQuery<CountryDto[], Error>({
