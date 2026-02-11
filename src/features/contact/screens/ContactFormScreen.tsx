@@ -18,7 +18,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
-import { FormField, CustomerPicker, useTitles } from "../../customer";
+import { FormField, CustomerPicker, useTitles, useCustomer } from "../../customer";
 import { useContact, useCreateContact, useUpdateContact } from "../hooks";
 import { createContactSchema, type ContactFormData } from "../schemas";
 import type { CustomerDto, TitleDto } from "../../customer";
@@ -26,12 +26,15 @@ import type { CustomerDto, TitleDto } from "../../customer";
 export function ContactFormScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const params = useLocalSearchParams<{ id?: string; customerId?: string }>();
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
 
+  const id = params.id;
   const isEditMode = !!id;
   const contactId = id ? Number(id) : undefined;
+  const paramCustomerId = params.customerId ? Number(params.customerId) : undefined;
+  const isCreateWithCustomer = !isEditMode && paramCustomerId != null && !Number.isNaN(paramCustomerId);
 
   const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
 
@@ -39,6 +42,7 @@ export function ContactFormScreen(): React.ReactElement {
   const [selectedCustomerName, setSelectedCustomerName] = useState<string | undefined>();
 
   const { data: existingContact, isLoading: contactLoading } = useContact(contactId);
+  const { data: preselectedCustomer } = useCustomer(isCreateWithCustomer ? paramCustomerId : undefined);
   const { data: titles } = useTitles();
   const createContact = useCreateContact();
   const updateContact = useUpdateContact();
@@ -84,6 +88,15 @@ export function ContactFormScreen(): React.ReactElement {
       setSelectedCustomerName(existingContact.customerName);
     }
   }, [existingContact, reset]);
+
+  useEffect(() => {
+    if (isCreateWithCustomer && paramCustomerId != null) {
+      setValue("customerId", paramCustomerId);
+      if (preselectedCustomer?.name) {
+        setSelectedCustomerName(preselectedCustomer.name);
+      }
+    }
+  }, [isCreateWithCustomer, paramCustomerId, preselectedCustomer?.name, setValue]);
 
   const handleCustomerChange = useCallback(
     (customer: CustomerDto | undefined) => {

@@ -48,6 +48,6 @@ export function useCustomerContacts(customerId: number | undefined) {
     queryKey: ["contact", "byCustomer", customerId],
     queryFn: () => contactApi.getByCustomerId(customerId!),
     enabled: !!customerId,
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
   });
 }

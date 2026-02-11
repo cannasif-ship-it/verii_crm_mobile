@@ -63,13 +63,13 @@ export function ContactListScreen(): React.ReactElement {
   const handleContactPress = useCallback(
     (contact: ContactDto) => {
       if (!contact?.id) return;
-      router.push(`/(tabs)/customers/contacts/${contact.id}`);
+      router.push(`/customers/contacts/${contact.id}`);
     },
     [router]
   );
 
   const handleCreatePress = useCallback(() => {
-    router.push("/(tabs)/customers/contacts/create");
+    router.push("/customers/contacts/create");
   }, [router]);
 
   const handleLoadMore = useCallback(() => {

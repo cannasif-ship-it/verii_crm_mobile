@@ -7,6 +7,6 @@ export function useContact(id: number | undefined) {
     queryKey: ["contact", "detail", id],
     queryFn: () => contactApi.getById(id!),
     enabled: !!id,
-    staleTime: 60 * 1000,
+    staleTime: 30 * 1000,
   });
 }
