@@ -44,6 +44,8 @@ import {
   useDeleteQuotationLine,
   useCreateQuotationLines,
   useUpdateQuotationLines,
+  useQuotationNotes,
+  useUpdateQuotationNotes,
 } from "../hooks";
 import {
   ExchangeRateDialog,
@@ -55,6 +57,9 @@ import {
   QuotationReportTab,
   ProductPicker,
   RejectModal,
+  QuotationNotesModal,
+  notesFromDto,
+  notesToPutPayload,
 } from "../components";
 import { CustomerSelectDialog, type CustomerSelectionResult } from "../../customer";
 import type { CustomerDto } from "../../customer/types";
@@ -71,6 +76,7 @@ import {
   APPROVAL_WAITING,
   APPROVAL_APPROVED,
   APPROVAL_REJECTED,
+  PricingRuleType,
 } from "../types";
 import type { StockRelationDto } from "../../stocks/types";
 import {
@@ -118,6 +124,9 @@ export function QuotationDetailScreen(): React.ReactElement {
     refetch,
   } = useQuotationDetail(quotationId);
 
+  const { data: notesData } = useQuotationNotes(quotationId);
+  const updateQuotationNotesMutation = useUpdateQuotationNotes();
+
   const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
 
   const formInitRef = useRef(false);
@@ -149,6 +158,8 @@ export function QuotationDetailScreen(): React.ReactElement {
   const [deleteLineDialogVisible, setDeleteLineDialogVisible] = useState(false);
   const [deleteLineId, setDeleteLineId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<"detail" | "approval" | "report">("detail");
+  const [notes, setNotes] = useState<string[]>(Array(15).fill(""));
+  const [notesModalVisible, setNotesModalVisible] = useState(false);
 
   const schema = useMemo(() => createQuotationSchema(), []);
 
@@ -164,7 +175,7 @@ export function QuotationDetailScreen(): React.ReactElement {
     resolver: zodResolver(schema),
     defaultValues: {
       quotation: {
-        offerType: "Domestic",
+        offerType: "YURTICI",
         currency: "",
         offerDate: new Date().toISOString().split("T")[0],
         deliveryDate: new Date().toISOString().split("T")[0],
@@ -291,6 +302,27 @@ export function QuotationDetailScreen(): React.ReactElement {
   useEffect(() => {
     if (lines.length > 0) clearErrors("root");
   }, [lines.length, clearErrors]);
+
+  useEffect(() => {
+    if (notesData) setNotes(notesFromDto(notesData as Record<string, string | null | undefined>));
+  }, [notesData]);
+
+  const handleSaveNotes = useCallback(
+    (savedNotes: string[]) => {
+      if (!quotationId) return;
+      const payload = notesToPutPayload(savedNotes);
+      updateQuotationNotesMutation.mutate(
+        { quotationId, data: { notes: payload } },
+        {
+          onSuccess: () => {
+            setNotes(savedNotes);
+            setNotesModalVisible(false);
+          },
+        }
+      );
+    },
+    [quotationId, updateQuotationNotesMutation]
+  );
 
   const handleCustomerSelect = useCallback(
     (result: CustomerSelectionResult) => {
@@ -603,15 +635,24 @@ export function QuotationDetailScreen(): React.ReactElement {
 
   const handleStartApproval = useCallback(() => {
     if (!quotationId) return;
+    const totalAmount = apiTotals.grandTotal;
     Alert.alert(
       t("quotation.sendForApproval"),
       t("quotation.sendForApprovalConfirm"),
       [
         { text: t("common.cancel"), style: "cancel" as const },
-        { text: t("common.confirm"), onPress: () => startApproval.mutate(quotationId) },
+        {
+          text: t("common.confirm"),
+          onPress: () =>
+            startApproval.mutate({
+              entityId: quotationId,
+              documentType: PricingRuleType.Quotation,
+              totalAmount,
+            }),
+        },
       ]
     );
-  }, [quotationId, startApproval, t]);
+  }, [quotationId, apiTotals.grandTotal, startApproval, t]);
 
   const pageTitle = header?.offerNo ?? (quotationId != null ? `#${quotationId}` : t("quotation.detail"));
   const isReadonly = header?.status === APPROVAL_APPROVED || header?.status === APPROVAL_REJECTED;
@@ -995,6 +1036,26 @@ export function QuotationDetailScreen(): React.ReactElement {
               numberOfLines={3}
               maxLength={500}
               editable={!isReadonly}
+            />
+
+            {!isReadonly && (
+              <TouchableOpacity
+                style={[styles.notesButton, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
+                onPress={() => setNotesModalVisible(true)}
+              >
+                <Text style={[styles.notesButtonText, { color: colors.text }]}>
+                  📝 {t("quotation.notesSection", "Teklif Notları")}
+                  {notes.some((n) => n.trim()) ? ` (${notes.filter((n) => n.trim()).length})` : ""}
+                </Text>
+              </TouchableOpacity>
+            )}
+
+            <QuotationNotesModal
+              visible={notesModalVisible}
+              notes={notes}
+              onSave={handleSaveNotes}
+              onClose={() => setNotesModalVisible(false)}
+              isSaving={updateQuotationNotesMutation.isPending}
             />
           </View>
 
@@ -1498,6 +1559,14 @@ const styles = StyleSheet.create({
   sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
   addButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
   addButtonText: { color: "#FFF", fontSize: 14, fontWeight: "600" },
+  notesButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  notesButtonText: { fontSize: 15, fontWeight: "500" },
   lineCardWrapper: { marginBottom: 12 },
   lineCard: { padding: 16, borderRadius: 12, borderWidth: 1 },
   lineCardHeader: { flexDirection: "row", justifyContent: "space-between" },

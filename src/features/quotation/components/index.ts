@@ -13,3 +13,11 @@ export { PickerModal } from "./PickerModal";
 export { DocumentSerialTypePicker } from "./DocumentSerialTypePicker";
 export { OfferTypePicker } from "./OfferTypePicker";
 export { VoiceSearchButton } from "./VoiceSearchButton";
+export {
+  QuotationNotesForm,
+  notesToDto,
+  notesFromDto,
+  notesToPutPayload,
+  validateNotesMaxLength,
+} from "./QuotationNotesForm";
+export { QuotationNotesModal } from "./QuotationNotesModal";

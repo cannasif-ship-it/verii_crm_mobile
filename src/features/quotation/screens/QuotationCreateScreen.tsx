@@ -9,6 +9,7 @@ import {
   Modal,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
@@ -39,6 +40,8 @@ import {
   useCurrencyOptions,
   usePaymentTypes,
   useRelatedUsers,
+  useErpProjects,
+  useSalesTypeList,
 } from "../hooks";
 import {
   QuotationLineForm,
@@ -47,14 +50,18 @@ import {
   DocumentSerialTypePicker,
   OfferTypePicker,
   ProductPicker,
+  QuotationNotesModal,
+  notesToDto,
+  validateNotesMaxLength,
 } from "../components";
 import { CustomerSelectDialog, type CustomerSelectionResult } from "../../customer";
 import type { CustomerDto } from "../../customer/types";
 import { createQuotationSchema, type CreateQuotationSchema } from "../schemas";
-import type {
-  QuotationLineFormState,
-  QuotationExchangeRateFormState,
-  StockGetDto,
+import {
+  type QuotationLineFormState,
+  type QuotationExchangeRateFormState,
+  type StockGetDto,
+  normalizeOfferType,
 } from "../types";
 import type { StockRelationDto } from "../../stocks/types";
 import { calculateLineTotals, calculateTotals } from "../utils";
@@ -99,9 +106,13 @@ export function QuotationCreateScreen(): React.ReactElement {
   const [shippingAddressModalVisible, setShippingAddressModalVisible] = useState(false);
   const [customerSelectDialogOpen, setCustomerSelectDialogOpen] = useState(false);
   const [representativeModalVisible, setRepresentativeModalVisible] = useState(false);
+  const [projectCodeModalVisible, setProjectCodeModalVisible] = useState(false);
+  const [salesTypeModalVisible, setSalesTypeModalVisible] = useState(false);
   const [pendingStockForRelated, setPendingStockForRelated] = useState<
     (StockGetDto & { parentRelations: StockRelationDto[] }) | null
   >(null);
+  const [notes, setNotes] = useState<string[]>(Array(15).fill(""));
+  const [notesModalVisible, setNotesModalVisible] = useState(false);
 
   const schema = useMemo(() => createQuotationSchema(), []);
 
@@ -117,7 +128,7 @@ export function QuotationCreateScreen(): React.ReactElement {
     resolver: zodResolver(schema),
     defaultValues: {
       quotation: {
-        offerType: "Domestic",
+        offerType: "YURTICI",
         currency: "",
         offerDate: new Date().toISOString().split("T")[0],
         deliveryDate: new Date().toISOString().split("T")[0],
@@ -157,6 +168,11 @@ export function QuotationCreateScreen(): React.ReactElement {
   const { data: currencyOptions } = useCurrencyOptions(exchangeRateParamsOnce);
   const { data: paymentTypes } = usePaymentTypes();
   const { data: relatedUsers = [] } = useRelatedUsers(user?.id);
+  const { data: projects = [] } = useErpProjects();
+  const watchedOfferType = watch("quotation.offerType");
+  const { data: salesTypeList = [] } = useSalesTypeList({
+    offerType: watchedOfferType || undefined,
+  });
 
   useEffect(() => {
     if (exchangeRatesData && exchangeRatesData.length > 0 && !hasFilledErpRates.current) {
@@ -205,6 +221,14 @@ export function QuotationCreateScreen(): React.ReactElement {
       clearErrors("root");
     }
   }, [lines.length, clearErrors]);
+
+  const prevOfferTypeRef = useRef(watchedOfferType);
+  useEffect(() => {
+    if (prevOfferTypeRef.current !== watchedOfferType) {
+      prevOfferTypeRef.current = watchedOfferType;
+      setValue("quotation.salesTypeDefinitionId", null);
+    }
+  }, [watchedOfferType, setValue]);
 
   useEffect(() => {
     if (customer) {
@@ -532,19 +556,28 @@ export function QuotationCreateScreen(): React.ReactElement {
         setError("root", { type: "manual", message: "En az 1 satır eklenmelidir." });
         return;
       }
+      const notesError = validateNotesMaxLength(notes);
+      if (notesError) {
+        setError("root", { type: "manual", message: notesError });
+        return;
+      }
 
       const cleanedLines = lines.map((line) => {
         const { id, isEditing, relatedLines, relationQuantity, ...rest } = line;
         return {
           ...rest,
           quotationId: 0,
-          productId: rest.productId || null,
+          productId: rest.productId ?? null,
+          productCode: rest.productCode ?? "",
+          productName: rest.productName ?? "",
           pricingRuleHeaderId:
             rest.pricingRuleHeaderId != null && rest.pricingRuleHeaderId > 0
               ? rest.pricingRuleHeaderId
               : null,
           relatedStockId:
             rest.relatedStockId != null && rest.relatedStockId > 0 ? rest.relatedStockId : null,
+          erpProjectCode: rest.erpProjectCode ?? null,
+          approvalStatus: rest.approvalStatus ?? 0,
         };
       });
 
@@ -557,13 +590,27 @@ export function QuotationCreateScreen(): React.ReactElement {
         };
       });
 
+      const quotationPayload = {
+        ...formData.quotation,
+        offerType: normalizeOfferType(formData.quotation.offerType),
+        documentSerialTypeId: formData.quotation.documentSerialTypeId ?? 0,
+        generalDiscountRate: formData.quotation.generalDiscountRate ?? null,
+        generalDiscountAmount: formData.quotation.generalDiscountAmount ?? null,
+        erpProjectCode: formData.quotation.erpProjectCode ?? null,
+        salesTypeDefinitionId: formData.quotation.salesTypeDefinitionId ?? null,
+      };
+
+      const quotationNotes = notesToDto(notes);
+      const hasNotes = Object.keys(quotationNotes).length > 0;
+
       createQuotation.mutate({
-        quotation: formData.quotation,
+        quotation: quotationPayload,
         lines: cleanedLines,
         exchangeRates: cleanedExchangeRates.length > 0 ? cleanedExchangeRates : undefined,
+        quotationNotes: hasNotes ? quotationNotes : undefined,
       });
     },
-    [lines, exchangeRates, createQuotation, setError]
+    [lines, exchangeRates, notes, createQuotation, setError]
   );
 
   return (
@@ -790,6 +837,113 @@ export function QuotationCreateScreen(): React.ReactElement {
               disabled={customerTypeId === undefined || !watchedRepresentativeId}
             />
 
+            {watchedOfferType && (
+              <Controller
+                control={control}
+                name="quotation.salesTypeDefinitionId"
+                render={({ field: { onChange, value } }) => (
+                  <View style={styles.fieldContainer}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>
+                      {t("quotation.deliveryMethod", "Gönderim/Teslim Şekli")}
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.pickerButton,
+                        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                      ]}
+                      onPress={() => setSalesTypeModalVisible(true)}
+                    >
+                      <Text style={[styles.pickerText, { color: colors.text }]}>
+                        {value
+                          ? salesTypeList.find((s) => s.id === value)?.name ?? t("common.select")
+                          : t("common.select")}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              />
+            )}
+
+            <Controller
+              control={control}
+              name="quotation.erpProjectCode"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.fieldContainer}>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>
+                    {t("quotation.projectCode", "Proje Kodu")}
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.pickerButton,
+                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                    ]}
+                    onPress={() => setProjectCodeModalVisible(true)}
+                  >
+                    <Text style={[styles.pickerText, { color: colors.text }]}>
+                      {value
+                        ? (() => {
+                            const p = projects.find((pr) => pr.projeKod === value);
+                            return p ? (p.projeAciklama ? `${p.projeKod} - ${p.projeAciklama}` : p.projeKod) : value;
+                          })()
+                        : t("common.select")}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="quotation.generalDiscountRate"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.fieldContainer}>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>
+                    {t("quotation.generalDiscountRate", "Genel İskonto Oranı (%)")}
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: colors.backgroundSecondary,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
+                    value={value != null ? String(value) : ""}
+                    onChangeText={(v) => onChange(v === "" ? null : parseFloat(v) || 0)}
+                    placeholder="0"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              )}
+            />
+
+            <Controller
+              control={control}
+              name="quotation.generalDiscountAmount"
+              render={({ field: { onChange, value } }) => (
+                <View style={styles.fieldContainer}>
+                  <Text style={[styles.label, { color: colors.textSecondary }]}>
+                    {t("quotation.generalDiscountAmount", "Genel İskonto Tutarı")}
+                  </Text>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: colors.backgroundSecondary,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
+                    value={value != null ? String(value) : ""}
+                    onChangeText={(v) => onChange(v === "" ? null : parseFloat(v) || 0)}
+                    placeholder="0"
+                    keyboardType="decimal-pad"
+                  />
+                </View>
+              )}
+            />
+
             <FormField
               label="Açıklama"
               value={watch("quotation.description") || ""}
@@ -798,6 +952,26 @@ export function QuotationCreateScreen(): React.ReactElement {
               multiline
               numberOfLines={3}
               maxLength={500}
+            />
+
+            <TouchableOpacity
+              style={[styles.notesButton, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
+              onPress={() => setNotesModalVisible(true)}
+            >
+              <Text style={[styles.notesButtonText, { color: colors.text }]}>
+                📝 {t("quotation.notesSection", "Teklif Notları")}
+                {notes.some((n) => n.trim()) ? ` (${notes.filter((n) => n.trim()).length})` : ""}
+              </Text>
+            </TouchableOpacity>
+
+            <QuotationNotesModal
+              visible={notesModalVisible}
+              notes={notes}
+              onSave={(n) => {
+                setNotes(n);
+                setNotesModalVisible(false);
+              }}
+              onClose={() => setNotesModalVisible(false)}
             />
           </View>
 
@@ -1360,6 +1534,41 @@ export function QuotationCreateScreen(): React.ReactElement {
         />
 
         <PickerModal
+          visible={projectCodeModalVisible}
+          options={projects.map((p) => ({
+            id: p.projeKod,
+            name: p.projeAciklama ? `${p.projeKod} - ${p.projeAciklama}` : p.projeKod,
+            code: p.projeKod,
+          }))}
+          selectedValue={watch("quotation.erpProjectCode") ?? undefined}
+          onSelect={(option) => {
+            setValue("quotation.erpProjectCode", (option.code ?? option.id) as string ?? null);
+            setProjectCodeModalVisible(false);
+          }}
+          onClose={() => setProjectCodeModalVisible(false)}
+          title={t("quotation.projectCode", "Proje Kodu")}
+          searchPlaceholder={t("quotation.projectCodeSearch", "Proje ara...")}
+        />
+
+        {watchedOfferType && (
+          <PickerModal
+            visible={salesTypeModalVisible}
+            options={salesTypeList.map((s) => ({
+              id: s.id,
+              name: s.name,
+            }))}
+            selectedValue={watch("quotation.salesTypeDefinitionId") ?? undefined}
+            onSelect={(option) => {
+              setValue("quotation.salesTypeDefinitionId", option.id as number);
+              setSalesTypeModalVisible(false);
+            }}
+            onClose={() => setSalesTypeModalVisible(false)}
+            title={t("quotation.deliveryMethod", "Gönderim/Teslim Şekli")}
+            searchPlaceholder={t("common.search", "Ara...")}
+          />
+        )}
+
+        <PickerModal
           visible={representativeModalVisible}
           options={relatedUsers.map((u) => ({
             id: u.userId,
@@ -1694,6 +1903,17 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: "300",
     marginLeft: 8,
+  },
+  notesButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    marginBottom: 16,
+  },
+  notesButtonText: {
+    fontSize: 15,
+    fontWeight: "500",
   },
   emptyText: {
     fontSize: 14,
