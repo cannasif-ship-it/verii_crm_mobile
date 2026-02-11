@@ -143,7 +143,7 @@ function CustomerDetailPage(): React.ReactElement {
 
   const handleEditPress = useCallback(() => {
     if (customer) {
-      router.push(`/(tabs)/customers/edit/${customer.id}`);
+      router.push(`/customers/edit/${customer.id}`);
     }
   }, [router, customer]);
 
@@ -176,7 +176,7 @@ function CustomerDetailPage(): React.ReactElement {
   }, [t, customerId, deleteCustomer, router]);
 
   const handleContactPress = useCallback((contact: ContactDto) => {
-      router.push(`/(tabs)/customers/contacts/${contact.id}`);
+      router.push(`/customers/contacts/${contact.id}`);
     }, [router]);
 
   const handleAddressPress = useCallback((address: ShippingAddressDto) => {
@@ -184,10 +184,14 @@ function CustomerDetailPage(): React.ReactElement {
     }, [router]);
 
   const handleAddContactPress = useCallback(() => {
-    router.push({
-      pathname: "/(tabs)/customers/contacts/create",
-      params: { customerId: customerId?.toString() },
-    });
+    if (customerId != null) {
+      router.push({
+        pathname: "/customers/contacts/create",
+        params: { customerId: String(customerId) },
+      });
+    } else {
+      router.push("/customers/contacts/create");
+    }
   }, [router, customerId]);
 
   const handleAddAddressPress = useCallback(() => {
