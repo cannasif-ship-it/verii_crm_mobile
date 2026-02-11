@@ -13,9 +13,11 @@ import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { ProductPicker, type ProductPickerRef } from "./ProductPicker";
+import { PickerModal } from "./PickerModal";
 import type { StockRelationDto } from "../../stocks/types";
 import { quotationApi } from "../api";
 import { stockApi } from "../../stocks/api";
+import { useErpProjects } from "../hooks";
 import { useStock } from "../../stocks/hooks";
 import type {
   QuotationLineFormState,
@@ -77,7 +79,11 @@ export function QuotationLineForm({
   const [approvalStatus, setApprovalStatus] = useState<number>(0);
   const [approvalMessage, setApprovalMessage] = useState<string>("");
   const [relatedLinesDisplay, setRelatedLinesDisplay] = useState<QuotationLineFormState[]>([]);
+  const [erpProjectCode, setErpProjectCode] = useState<string | null>(null);
+  const [projectCodeModalVisible, setProjectCodeModalVisible] = useState(false);
   const productPickerRef = useRef<ProductPickerRef>(null);
+
+  const { data: projects = [] } = useErpProjects();
 
   const currentLine: QuotationLineFormState = useMemo(() => {
     const qty = parseFloat(quantity) || 0;
@@ -106,6 +112,7 @@ export function QuotationLineForm({
       lineTotal: 0,
       lineGrandTotal: 0,
       description: description || null,
+      erpProjectCode: erpProjectCode || null,
       isEditing: false,
       approvalStatus,
       relatedStockId: line?.relatedStockId ?? selectedStock?.id ?? null,
@@ -124,6 +131,7 @@ export function QuotationLineForm({
     discountRate3,
     vatRate,
     description,
+    erpProjectCode,
     approvalStatus,
   ]);
 
@@ -136,6 +144,7 @@ export function QuotationLineForm({
       setDiscountRate3(String(line.discountRate3));
       setVatRate(String(line.vatRate));
       setDescription(line.description || "");
+      setErpProjectCode(line.erpProjectCode ?? null);
       setApprovalStatus(line.approvalStatus || 0);
       setRelatedLinesDisplay(line.relatedLines ?? []);
       if (line.productCode || line.productName) {
@@ -179,6 +188,7 @@ export function QuotationLineForm({
     setDiscountRate3("0");
     setVatRate("18");
     setDescription("");
+    setErpProjectCode(null);
     setApprovalStatus(0);
     setApprovalMessage("");
     setRelatedLinesDisplay([]);
@@ -574,6 +584,35 @@ export function QuotationLineForm({
             </View>
 
             <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>
+                {t("quotation.projectCode", "Proje Kodu")}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerButton,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                ]}
+                onPress={() => setProjectCodeModalVisible(true)}
+              >
+                <Text
+                  style={[styles.pickerText, { color: erpProjectCode ? colors.text : colors.textMuted }]}
+                  numberOfLines={1}
+                >
+                  {erpProjectCode
+                    ? (() => {
+                        const p = projects.find((pr) => pr.projeKod === erpProjectCode);
+                        return p
+                          ? p.projeAciklama
+                            ? `${p.projeKod} - ${p.projeAciklama}`
+                            : p.projeKod
+                          : erpProjectCode;
+                      })()
+                    : t("common.select", "Seçiniz")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Açıklama</Text>
               <TextInput
                 style={[
@@ -667,6 +706,23 @@ export function QuotationLineForm({
         </View>
       </View>
     </Modal>
+
+    <PickerModal
+      visible={projectCodeModalVisible}
+      options={projects.map((p) => ({
+        id: p.projeKod,
+        name: p.projeAciklama ? `${p.projeKod} - ${p.projeAciklama}` : p.projeKod,
+        code: p.projeKod,
+      }))}
+      selectedValue={erpProjectCode ?? undefined}
+      onSelect={(option) => {
+        setErpProjectCode((option.code ?? option.id) as string ?? null);
+        setProjectCodeModalVisible(false);
+      }}
+      onClose={() => setProjectCodeModalVisible(false)}
+      title={t("quotation.projectCode", "Proje Kodu")}
+      searchPlaceholder={t("quotation.projectCodeSearch", "Proje ara...")}
+    />
   </>
   );
 }
@@ -755,6 +811,16 @@ const styles = StyleSheet.create({
   },
   inputReadOnly: {
     opacity: 0.9,
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 15,
+  },
+  pickerText: {
+    fontSize: 15,
   },
   textArea: {
     borderWidth: 1,

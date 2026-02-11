@@ -24,8 +24,8 @@ export function OfferTypePicker({
 
   const offerTypeOptions = React.useMemo(
     () => [
-      { id: OfferType.Domestic, name: t("quotation.offerType.domestic", "Yurtiçi") },
-      { id: OfferType.Export, name: t("quotation.offerType.export", "Yurtdışı") },
+      { id: OfferType.YURTICI, name: t("quotation.offerType.domestic", "Yurtiçi") },
+      { id: OfferType.YURTDISI, name: t("quotation.offerType.export", "Yurtdışı") },
     ],
     [t]
   );
