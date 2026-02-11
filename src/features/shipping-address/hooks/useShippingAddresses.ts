@@ -48,6 +48,6 @@ export function useCustomerShippingAddresses(customerId: number | undefined) {
     queryKey: ["shippingAddress", "byCustomer", customerId],
     queryFn: () => shippingAddressApi.getByCustomerId(customerId!),
     enabled: !!customerId,
-    staleTime: 60 * 1000,
+    staleTime: 1 * 60 * 1000,
   });
 }
