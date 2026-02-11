@@ -40,33 +40,58 @@ const toNumber = (value: unknown): number | undefined => {
   return undefined;
 };
 
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined || value === "") return null;
+  const n = toNumber(value);
+  return n !== undefined ? n : null;
+};
+
+const getString = (value: unknown): string =>
+  typeof value === "string" ? value : String(value ?? "").trim();
+const getOptionalString = (value: unknown): string | undefined => {
+  const s = getString(value);
+  return s.length > 0 ? s : undefined;
+};
+
 const normalizeContact = (raw: unknown): ContactDto | null => {
   if (!raw || typeof raw !== "object") return null;
 
   const item = raw as Record<string, unknown>;
   const id = toNumber(item.id ?? item.Id);
   const customerId = toNumber(item.customerId ?? item.CustomerId);
-  const titleId = toNumber(item.titleId ?? item.TitleId);
 
-  if (id == null || customerId == null || titleId == null) return null;
+  if (id == null || customerId == null) return null;
+
+  const firstName = getString(item.firstName ?? item.FirstName);
+  const middleName = getOptionalString(item.middleName ?? item.MiddleName);
+  const lastName = getString(item.lastName ?? item.LastName);
+  const fullNameRaw = getString(item.fullName ?? item.FullName);
+  const fullName =
+    fullNameRaw.length > 0
+      ? fullNameRaw
+      : [firstName, middleName, lastName].filter(Boolean).join(" ").trim() || "-";
 
   return {
     id,
-    fullName: String(item.fullName ?? item.FullName ?? ""),
-    email: (item.email ?? item.Email ?? undefined) as string | undefined,
-    phone: (item.phone ?? item.Phone ?? undefined) as string | undefined,
-    mobile: (item.mobile ?? item.Mobile ?? undefined) as string | undefined,
-    notes: (item.notes ?? item.Notes ?? undefined) as string | undefined,
+    salutation: toNumber(item.salutation ?? item.Salutation) ?? 0,
+    firstName,
+    middleName,
+    lastName,
+    fullName,
+    email: getOptionalString(item.email ?? item.Email),
+    phone: getOptionalString(item.phone ?? item.Phone),
+    mobile: getOptionalString(item.mobile ?? item.Mobile),
+    notes: getOptionalString(item.notes ?? item.Notes),
     customerId,
-    customerName: (item.customerName ?? item.CustomerName ?? undefined) as string | undefined,
-    titleId,
-    titleName: (item.titleName ?? item.TitleName ?? undefined) as string | undefined,
-    createdDate: String(item.createdDate ?? item.CreatedDate ?? ""),
-    updatedDate: (item.updatedDate ?? item.UpdatedDate ?? undefined) as string | undefined,
+    customerName: getOptionalString(item.customerName ?? item.CustomerName),
+    titleId: toNullableNumber(item.titleId ?? item.TitleId),
+    titleName: getOptionalString(item.titleName ?? item.TitleName),
+    createdDate: getString(item.createdDate ?? item.CreatedDate) || undefined,
+    updatedDate: getOptionalString(item.updatedDate ?? item.UpdatedDate),
     isDeleted: Boolean(item.isDeleted ?? item.IsDeleted ?? false),
-    createdByFullUser: (item.createdByFullUser ?? item.CreatedByFullUser ?? undefined) as string | undefined,
-    updatedByFullUser: (item.updatedByFullUser ?? item.UpdatedByFullUser ?? undefined) as string | undefined,
-    deletedByFullUser: (item.deletedByFullUser ?? item.DeletedByFullUser ?? undefined) as string | undefined,
+    createdByFullUser: getOptionalString(item.createdByFullUser ?? item.CreatedByFullUser),
+    updatedByFullUser: getOptionalString(item.updatedByFullUser ?? item.UpdatedByFullUser),
+    deletedByFullUser: getOptionalString(item.deletedByFullUser ?? item.DeletedByFullUser),
   };
 };
 
@@ -141,7 +166,8 @@ export const contactApi = {
       throw new Error(response.data.message || response.data.exceptionMessage || "Kişi bulunamadı");
     }
 
-    const normalized = normalizeContact(response.data.data);
+    const data = response.data.data as unknown;
+    const normalized = normalizeContact(data);
     if (!normalized) {
       throw new Error("Kişi verisi çözümlenemedi");
     }
@@ -158,7 +184,8 @@ export const contactApi = {
       );
     }
 
-    const normalized = normalizeContact(response.data.data);
+    const responseData = response.data.data as unknown;
+    const normalized = normalizeContact(responseData);
     if (!normalized) {
       throw new Error("Kişi verisi çözümlenemedi");
     }
@@ -175,7 +202,8 @@ export const contactApi = {
       );
     }
 
-    const normalized = normalizeContact(response.data.data);
+    const responseData = response.data.data as unknown;
+    const normalized = normalizeContact(responseData);
     if (!normalized) {
       throw new Error("Kişi verisi çözümlenemedi");
     }
@@ -211,11 +239,12 @@ export const contactApi = {
       Items?: unknown[];
     } | null;
 
-    const rawItems = payload && Array.isArray(payload.items)
-      ? payload.items
-      : payload && Array.isArray(payload.Items)
-        ? payload.Items
-        : [];
+    const rawItems =
+      payload && Array.isArray(payload.items)
+        ? payload.items
+        : payload && Array.isArray(payload.Items)
+          ? payload.Items
+          : [];
 
     return rawItems
       .map(normalizeContact)

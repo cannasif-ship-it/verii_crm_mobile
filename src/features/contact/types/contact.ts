@@ -1,5 +1,19 @@
+export const SALUTATION_TYPE = {
+  None: 0,
+  Mr: 1,
+  Mrs: 2,
+  Ms: 3,
+  Dr: 4,
+} as const;
+
+export type SalutationType = (typeof SALUTATION_TYPE)[keyof typeof SALUTATION_TYPE];
+
 export interface ContactDto {
   id: number;
+  salutation: number;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
   fullName: string;
   email?: string;
   phone?: string;
@@ -7,32 +21,40 @@ export interface ContactDto {
   notes?: string;
   customerId: number;
   customerName?: string;
-  titleId: number;
+  titleId?: number | null;
   titleName?: string;
-  createdDate: string;
+  createdDate?: string;
   updatedDate?: string;
-  isDeleted: boolean;
+  isDeleted?: boolean;
   createdByFullUser?: string;
   updatedByFullUser?: string;
   deletedByFullUser?: string;
 }
 
 export interface CreateContactDto {
-  fullName: string;
+  salutation: number;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  fullName?: string;
   email?: string;
   phone?: string;
   mobile?: string;
   notes?: string;
   customerId: number;
-  titleId: number;
+  titleId?: number | null;
 }
 
 export interface UpdateContactDto {
-  fullName: string;
+  salutation: number;
+  firstName: string;
+  middleName?: string;
+  lastName: string;
+  fullName?: string;
   email?: string;
   phone?: string;
   mobile?: string;
   notes?: string;
   customerId: number;
-  titleId: number;
+  titleId?: number | null;
 }
