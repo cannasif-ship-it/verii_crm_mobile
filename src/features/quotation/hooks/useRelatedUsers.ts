@@ -7,6 +7,6 @@ export function useRelatedUsers(userId: number | undefined) {
     queryKey: ["quotation", "related-users", userId],
     queryFn: () => quotationApi.getRelatedUsers(userId!),
     enabled: !!userId && userId > 0,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 }

@@ -6,7 +6,7 @@ import type {
   QuotationExchangeRateDetailGetDto,
 } from "../types";
 
-const STALE_TIME_MS = 60 * 1000;
+const STALE_TIME_MS = 30 * 1000;
 
 export function useQuotationDetail(quotationId: number | undefined): {
   header: QuotationDetailGetDto | undefined;

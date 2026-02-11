@@ -7,6 +7,6 @@ export function useUserDiscountLimitsBySalesperson(salespersonId: number | undef
     queryKey: ["userDiscountLimit", "salesperson", salespersonId],
     queryFn: () => quotationApi.getUserDiscountLimitsBySalesperson(salespersonId!),
     enabled: !!salespersonId && salespersonId > 0,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
   });
 }

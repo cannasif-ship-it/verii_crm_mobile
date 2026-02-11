@@ -20,6 +20,6 @@ export function usePriceRuleOfQuotation(params: UsePriceRuleOfQuotationParams) {
         quotationDate: quotationDate!,
       }),
     enabled: !!customerCode && !!salesmenId && !!quotationDate,
-    staleTime: 2 * 60 * 1000,
+    staleTime: 60 * 1000,
   });
 }
