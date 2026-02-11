@@ -142,6 +142,7 @@
     "create": "Yeni Müşteri",
     "edit": "Müşteri Düzenle",
     "selectCustomer": "Müşteri Seçin",
+    "select": "Müşteri Seçin",
     "searchCustomer": "Müşteri ara...",
     "searchPlaceholder": "Müşteri adı veya kodu ile ara...",
     "name": "Müşteri Adı",
@@ -199,7 +200,10 @@
     "statusNo": "Hayır",
     "tabDetail": "Detay",
     "tabContacts": "Kişiler",
-    "tabShippingAddresses": "Sevk Adresleri"
+    "tabShippingAddresses": "Sevk Adresleri",
+    "defaultShippingAddress": "Varsayılan Sevk Adresi",
+    "defaultShippingAddressPlaceholder": "Seçiniz",
+    "noShippingAddress": "Sevk adresi bulunamadı"
   },
   "erpCustomer": {
     "title": "ERP Müşteriler",
@@ -229,11 +233,16 @@
     "edit": "Kişi Düzenle",
     "searchPlaceholder": "Kişi adı ile ara...",
     "fullName": "Ad Soyad",
+    "firstName": "Ad",
+    "lastName": "Soyad",
     "email": "E-posta",
     "phone": "Telefon",
     "mobile": "Mobil",
     "notes": "Notlar",
     "titleField": "Ünvan",
+    "title": "Ünvan",
+    "department": "Departman",
+    "isPrimary": "Birincil Kişi",
     "customer": "Müşteri",
     "deleteConfirm": "Bu kişiyi silmek istediğinize emin misiniz?",
     "deleteSuccess": "Kişi başarıyla silindi",
@@ -374,7 +383,9 @@
     "subjectRequired": "Konu zorunludur",
     "activityTypeRequired": "Aktivite tipi seçilmelidir",
     "statusRequired": "Durum seçilmelidir",
-    "dateRequired": "Tarih zorunludur"
+    "dateRequired": "Tarih zorunludur",
+    "nameRequired": "İsim zorunludur",
+    "invalidEmail": "Geçerli bir e-posta adresi girin"
   },
   "titleManagement": {
     "title": "Ünvan Yönetimi",
