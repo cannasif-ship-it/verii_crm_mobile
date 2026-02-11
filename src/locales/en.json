@@ -252,7 +252,15 @@
     "deleteSuccess": "Contact deleted successfully",
     "createSuccess": "Contact created successfully",
     "updateSuccess": "Contact updated successfully",
-    "noContacts": "No contacts yet"
+    "noContacts": "No contacts yet",
+    "salutation": "Salutation",
+    "salutationNone": "None",
+    "salutationMr": "Mr",
+    "salutationMs": "Ms",
+    "salutationMrs": "Mrs",
+    "salutationDr": "Dr.",
+    "middleName": "Middle Name",
+    "titleNone": "No title"
   },
   "shippingAddress": {
     "title": "Shipping Addresses",
@@ -553,6 +561,10 @@
     "grandTotal": "Grand Total",
     "summary": "Summary",
     "customerSection": "Customer Info",
+    "notesSection": "Quotation Notes",
+    "noteLabel": "Note {{index}}",
+    "notePlaceholder": "Max 100 characters",
+    "saveNotes": "Save Notes",
     "quotationInfo": "Quotation Info",
     "selectCustomer": "Select Customer",
     "selectCustomerPlaceholder": "Select customer",

@@ -248,7 +248,15 @@
     "deleteSuccess": "Kişi başarıyla silindi",
     "createSuccess": "Kişi başarıyla oluşturuldu",
     "updateSuccess": "Kişi başarıyla güncellendi",
-    "noContacts": "Henüz kişi bulunmuyor"
+    "noContacts": "Henüz kişi bulunmuyor",
+    "salutation": "Hitap",
+    "salutationNone": "Yok",
+    "salutationMr": "Bay",
+    "salutationMs": "Bayan",
+    "salutationMrs": "Sayın",
+    "salutationDr": "Dr.",
+    "middleName": "İkinci Ad",
+    "titleNone": "Ünvan yok"
   },
   "shippingAddress": {
     "title": "Sevk Adresleri",
@@ -557,6 +565,10 @@
     "grandTotal": "Genel Toplam",
     "summary": "Özet",
     "customerSection": "Müşteri Bilgileri",
+    "notesSection": "Teklif Notları",
+    "noteLabel": "Not {{index}}",
+    "notePlaceholder": "En fazla 100 karakter",
+    "saveNotes": "Notları Kaydet",
     "quotationInfo": "Teklif Bilgileri",
     "selectCustomer": "Müşteri Seç",
     "selectCustomerPlaceholder": "Müşteri seçiniz",
