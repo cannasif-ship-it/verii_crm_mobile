@@ -47,8 +47,17 @@ import type {
   GenerateReportPdfRequest,
 } from "../types";
 import type { ApiResponse } from "../../auth/types";
+import type {
+  ProjeDto,
+  SalesTypeGetDto,
+  QuotationNotesGetDto,
+  UpdateQuotationNotesListDto,
+} from "../types";
 
 export interface ReportTemplateListResponse extends ApiResponse<PagedResponse<ReportTemplateGetDto>> {}
+
+export type ErpProjectCodesResponse = ApiResponse<ProjeDto[]>;
+export type SalesTypeListResponse = ApiResponse<PagedResponse<SalesTypeGetDto>>;
 
 function normalizeKurDto(item: unknown): ExchangeRateDto {
   const o = item && typeof item === "object" ? item as Record<string, unknown> : {};
@@ -121,10 +130,14 @@ export const quotationApi = {
     return response.data.data ?? false;
   },
 
-  startApprovalFlow: async (quotationId: number): Promise<boolean> => {
+  startApprovalFlow: async (data: {
+    entityId: number;
+    documentType: number;
+    totalAmount: number;
+  }): Promise<boolean> => {
     const response = await apiClient.post<ApproveResponse>(
-      `/api/Quotation/${quotationId}/start-approval`,
-      {}
+      "/api/Quotation/start-approval-flow",
+      data
     );
 
     if (!response.data.success) {
@@ -401,6 +414,80 @@ export const quotationApi = {
     }
 
     return response.data.data || [];
+  },
+
+  getProjectCodes: async (): Promise<ProjeDto[]> => {
+    const response = await apiClient.get<ErpProjectCodesResponse>("/api/Erp/getProjectCodes");
+    const body = response.data as { success?: boolean; data?: ProjeDto[]; message?: string };
+    if (body.success === false) {
+      throw new Error(body.message || "Proje kodları alınamadı");
+    }
+    const data = body.data;
+    if (!Array.isArray(data)) return [];
+    return data.map((p) => ({
+      projeKod: p.projeKod ?? "",
+      projeAciklama: p.projeAciklama ?? null,
+    }));
+  },
+
+  getQuotationNotes: async (quotationId: number): Promise<QuotationNotesGetDto | null> => {
+    const response = await apiClient.get<ApiResponse<QuotationNotesGetDto>>(
+      `/api/QuotationNotes/by-quotation/${quotationId}`
+    );
+    const body = response.data as { success?: boolean; data?: QuotationNotesGetDto; message?: string };
+    if (body.success === false) {
+      throw new Error(body.message || "Teklif notları alınamadı");
+    }
+    return body.data ?? null;
+  },
+
+  updateQuotationNotesList: async (
+    quotationId: number,
+    data: UpdateQuotationNotesListDto
+  ): Promise<void> => {
+    const response = await apiClient.put<ApiResponse<null>>(
+      `/api/QuotationNotes/by-quotation/${quotationId}/notes-list`,
+      data
+    );
+    const body = response.data as { success?: boolean; message?: string };
+    if (body.success === false) {
+      throw new Error(body.message || "Teklif notları güncellenemedi");
+    }
+  },
+
+  getSalesTypeList: async (params: {
+    pageNumber?: number;
+    pageSize?: number;
+    filters?: Array<{ column: string; operator: string; value: string }>;
+  }): Promise<SalesTypeGetDto[]> => {
+    const queryParams: Record<string, string | number> = {
+      pageNumber: params.pageNumber ?? 1,
+      pageSize: params.pageSize ?? 500,
+    };
+    if (params.filters && params.filters.length > 0) {
+      queryParams.filters = JSON.stringify(params.filters);
+    }
+    const response = await apiClient.get<SalesTypeListResponse>("/api/SalesType", {
+      params: queryParams,
+    });
+    const body = response.data as { success?: boolean; data?: { items?: SalesTypeGetDto[] }; message?: string };
+    if (body.success === false) {
+      throw new Error(body.message || "Satış tipleri alınamadı");
+    }
+    const paged = body.data;
+    const rawItems = paged && typeof paged === "object" && ("items" in paged || "Items" in paged)
+      ? (paged as { items?: SalesTypeGetDto[]; Items?: SalesTypeGetDto[] }).items ??
+        (paged as { items?: SalesTypeGetDto[]; Items?: SalesTypeGetDto[] }).Items
+      : [];
+    const items = Array.isArray(rawItems) ? rawItems : [];
+    return items.map((item) => {
+      const r = item as Record<string, unknown>;
+      return {
+        id: (r.id ?? r.Id ?? 0) as number,
+        salesType: (r.salesType ?? r.SalesType ?? "") as string,
+        name: (r.name ?? r.Name ?? "") as string,
+      } as SalesTypeGetDto;
+    });
   },
 
   getExchangeRate: async (params?: { tarih?: string; fiyatTipi?: number }): Promise<ExchangeRateDto[]> => {

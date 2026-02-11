@@ -91,6 +91,22 @@ export interface QuotationGetDto {
   exchangeRates?: QuotationExchangeRateGetDto[];
 }
 
+export const OfferType = {
+  YURTICI: "YURTICI",
+  YURTDISI: "YURTDISI",
+} as const;
+
+export type OfferTypeValue = (typeof OfferType)[keyof typeof OfferType];
+
+export const DEFAULT_OFFER_TYPE: OfferTypeValue = OfferType.YURTICI;
+
+export function normalizeOfferType(value: string | null | undefined): OfferTypeValue {
+  if (value === OfferType.YURTICI || value === OfferType.YURTDISI) return value;
+  if (value === "Domestic") return OfferType.YURTICI;
+  if (value === "Export") return OfferType.YURTDISI;
+  return DEFAULT_OFFER_TYPE;
+}
+
 export interface CreateQuotationDto {
   potentialCustomerId?: number | null;
   erpCustomerCode?: string | null;
@@ -100,13 +116,18 @@ export interface CreateQuotationDto {
   status?: number | null;
   description?: string | null;
   paymentTypeId?: number | null;
-  documentSerialTypeId?: number | null;
+  documentSerialTypeId: number;
   offerType: string;
   offerDate?: string | null;
   offerNo?: string | null;
   revisionNo?: string | null;
   revisionId?: number | null;
   currency: string;
+  generalDiscountRate?: number | null;
+  generalDiscountAmount?: number | null;
+  demandId?: number | null;
+  erpProjectCode?: string | null;
+  salesTypeDefinitionId?: number | null;
 }
 
 export interface CreateQuotationLineDto {
@@ -132,6 +153,7 @@ export interface CreateQuotationLineDto {
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
   isMainRelatedProduct?: boolean;
+  erpProjectCode?: string | null;
   approvalStatus?: number;
 }
 
@@ -159,6 +181,7 @@ export interface QuotationLineUpdateDto {
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
   isMainRelatedProduct?: boolean;
+  erpProjectCode?: string | null;
   approvalStatus?: number;
   createdAt?: string | null;
 }
@@ -171,10 +194,53 @@ export interface QuotationExchangeRateCreateDto {
   isOfficial?: boolean;
 }
 
+export interface QuotationNotesDto {
+  note1?: string;
+  note2?: string;
+  note3?: string;
+  note4?: string;
+  note5?: string;
+  note6?: string;
+  note7?: string;
+  note8?: string;
+  note9?: string;
+  note10?: string;
+  note11?: string;
+  note12?: string;
+  note13?: string;
+  note14?: string;
+  note15?: string;
+}
+
+export interface QuotationNotesGetDto {
+  id: number;
+  quotationId: number;
+  note1: string | null;
+  note2: string | null;
+  note3: string | null;
+  note4: string | null;
+  note5: string | null;
+  note6: string | null;
+  note7: string | null;
+  note8: string | null;
+  note9: string | null;
+  note10: string | null;
+  note11: string | null;
+  note12: string | null;
+  note13: string | null;
+  note14: string | null;
+  note15: string | null;
+}
+
+export interface UpdateQuotationNotesListDto {
+  notes: string[];
+}
+
 export interface QuotationBulkCreateDto {
   quotation: CreateQuotationDto;
   lines: CreateQuotationLineDto[];
   exchangeRates?: QuotationExchangeRateCreateDto[];
+  quotationNotes?: QuotationNotesDto;
 }
 
 export interface QuotationLineFormState {
@@ -200,6 +266,7 @@ export interface QuotationLineFormState {
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
   isMainRelatedProduct?: boolean;
+  erpProjectCode?: string | null;
   approvalStatus?: number;
   isEditing: boolean;
   relatedLines?: QuotationLineFormState[];
@@ -339,13 +406,6 @@ export interface GenerateReportPdfRequest {
 export const PricingRuleType = {
   Quotation: 2,
 } as const;
-
-export const OfferType = {
-  Domestic: "Domestic",
-  Export: "Export",
-} as const;
-
-export type OfferTypeValue = typeof OfferType[keyof typeof OfferType];
 
 export interface CalculationTotals {
   subtotal: number;
@@ -503,6 +563,17 @@ export type PaymentTypesResponse = ApiResponse<PaymentTypeDto[]>;
 export type DocumentSerialTypesResponse = ApiResponse<DocumentSerialTypeDto[]>;
 export type RelatedUsersResponse = ApiResponse<ApprovalScopeUserDto[]>;
 export type UserListResponse = ApiResponse<PagedResponse<UserDto>>;
+
+export interface ProjeDto {
+  projeKod: string;
+  projeAciklama: string | null;
+}
+
+export interface SalesTypeGetDto {
+  id: number;
+  salesType: string;
+  name: string;
+}
 
 export type { PagedFilter, PagedParams, PagedResponse };
 export type { StockGetDto } from "../../stocks/types";

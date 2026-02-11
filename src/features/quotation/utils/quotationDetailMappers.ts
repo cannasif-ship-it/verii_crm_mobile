@@ -1,4 +1,5 @@
 import type { CreateQuotationSchema } from "../schemas";
+import { normalizeOfferType } from "../types";
 import type {
   QuotationDetailGetDto,
   QuotationLineDetailGetDto,
@@ -70,13 +71,17 @@ export function mapDetailHeaderToForm(
     status: h.status ?? null,
     description: h.description ?? null,
     paymentTypeId: h.paymentTypeId ?? null,
-    documentSerialTypeId: h.documentSerialTypeId ?? null,
-    offerType: h.offerType || "Domestic",
+    documentSerialTypeId: h.documentSerialTypeId ?? 0,
+    offerType: normalizeOfferType(h.offerType),
     offerDate: toDateOnly(h.offerDate),
     offerNo: h.offerNo ?? null,
     revisionNo: h.revisionNo ?? null,
     revisionId: h.revisionId ?? null,
     currency: h.currency || "",
+    generalDiscountRate: (h as unknown as Record<string, unknown>).generalDiscountRate as number | null | undefined ?? null,
+    generalDiscountAmount: (h as unknown as Record<string, unknown>).generalDiscountAmount as number | null | undefined ?? null,
+    erpProjectCode: (h as unknown as Record<string, unknown>).erpProjectCode as string | null | undefined ?? null,
+    salesTypeDefinitionId: (h as unknown as Record<string, unknown>).salesTypeDefinitionId as number | null | undefined ?? null,
   };
 }
 
@@ -104,6 +109,7 @@ function mapDetailLineToFormState(d: QuotationLineDetailGetDto): QuotationLineFo
     relatedStockId: d.relatedStockId ?? null,
     relatedProductKey: d.relatedProductKey ?? null,
     isMainRelatedProduct: d.isMainRelatedProduct,
+    erpProjectCode: (d as unknown as Record<string, unknown>).erpProjectCode as string | null | undefined ?? null,
     approvalStatus: d.approvalStatus,
     isEditing: false,
   };
@@ -216,6 +222,7 @@ export function mapQuotationLineFormStateToCreateDto(
     relatedStockId: line.relatedStockId ?? null,
     relatedProductKey: line.relatedProductKey ?? null,
     isMainRelatedProduct: line.isMainRelatedProduct ?? false,
+    erpProjectCode: line.erpProjectCode ?? null,
     approvalStatus: line.approvalStatus ?? 0,
   };
 }
@@ -250,6 +257,7 @@ export function mapQuotationLineFormStateToUpdateDto(
     relatedStockId: line.relatedStockId ?? null,
     relatedProductKey: line.relatedProductKey ?? null,
     isMainRelatedProduct: line.isMainRelatedProduct ?? false,
+    erpProjectCode: line.erpProjectCode ?? null,
     approvalStatus: line.approvalStatus ?? 0,
     createdAt: null,
   };

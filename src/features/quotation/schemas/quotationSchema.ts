@@ -12,13 +12,19 @@ export const createQuotationSchema = () =>
         status: z.number().nullable().optional(),
         description: z.string().max(500).nullable().optional(),
         paymentTypeId: z.number().nullable().optional(),
-        documentSerialTypeId: z.number().nullable().optional(),
+        documentSerialTypeId: z
+          .number()
+          .refine((v) => v != null && v > 0, { message: "Seri no seçilmelidir" }),
         offerType: z.string().min(1, "Teklif tipi seçilmelidir"),
         offerDate: z.string().nullable().optional(),
         offerNo: z.string().max(50).nullable().optional(),
         revisionNo: z.string().max(50).nullable().optional(),
         revisionId: z.number().nullable().optional(),
         currency: z.string().min(1, "Para birimi seçilmelidir"),
+        generalDiscountRate: z.number().min(0).max(100).nullable().optional(),
+        generalDiscountAmount: z.number().min(0).nullable().optional(),
+        erpProjectCode: z.string().max(50).nullable().optional(),
+        salesTypeDefinitionId: z.number().nullable().optional(),
       }),
     })
     .superRefine((data, ctx) => {
@@ -45,6 +51,21 @@ export const createQuotationSchema = () =>
           code: z.ZodIssueCode.custom,
           message: "Teslimat tarihi seçilmelidir",
           path: ["quotation", "deliveryDate"],
+        });
+      }
+      if (!q.documentSerialTypeId || q.documentSerialTypeId < 1) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Seri no seçilmelidir",
+          path: ["quotation", "documentSerialTypeId"],
+        });
+      }
+      const validOfferTypes = ["YURTICI", "YURTDISI"];
+      if (!q.offerType || !validOfferTypes.includes(q.offerType)) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Teklif tipi YURTICI veya YURTDISI olmalıdır",
+          path: ["quotation", "offerType"],
         });
       }
     });
