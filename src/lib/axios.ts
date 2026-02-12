@@ -1,5 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from "axios";
-import { API_BASE_URL, API_TIMEOUT } from "../constants/env";
+import { API_BASE_URL, API_TIMEOUT } from "../constants/config";
 import { ACCESS_TOKEN_KEY, BRANCH_STORAGE_KEY, LANGUAGE_STORAGE_KEY } from "../constants/storage";
 import { storage } from "./storage";
 import type { ApiResponse, Branch } from "../features/auth/types";
