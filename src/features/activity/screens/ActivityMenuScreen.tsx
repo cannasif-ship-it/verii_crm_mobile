@@ -42,8 +42,8 @@ export function ActivityMenuScreen(): React.ReactElement {
   const menuItems = [
     {
       key: "activities",
-      title: t("activityMenu.activities", "Aktiviteler"),
-      description: t("activityMenu.activitiesDesc", "Toplantı, ziyaret ve aramalarınızı yönetin"),
+      title: t("activityMenu.activities"),
+      description: t("activityMenu.activitiesDesc"),
       icon: (
         <Calendar03Icon
           size={24}
@@ -56,8 +56,8 @@ export function ActivityMenuScreen(): React.ReactElement {
     },
     {
       key: "dailyTasks",
-      title: t("activityMenu.dailyTasks", "Günlük İşler"),
-      description: t("activityMenu.dailyTasksDesc", "Günlük görevlerinizi takip edin"),
+      title: t("activityMenu.dailyTasks"),
+      description: t("activityMenu.dailyTasksDesc"),
       icon: (
         <TaskDaily01Icon
           size={24}
@@ -77,7 +77,7 @@ export function ActivityMenuScreen(): React.ReactElement {
       {/* HEADER ALANI */}
       <View style={[styles.container, { backgroundColor: headerBg }]}>
         
-        <ScreenHeader title={t("activityMenu.title", "Aktivite Yönetimi")} showBackButton />
+        <ScreenHeader title={t("activityMenu.title")} showBackButton />
         
         {/* İÇERİK ALANI (Modern Yuvarlak Köşeler) */}
         <FlatList
