@@ -41,7 +41,36 @@
     "tabDetail": "Detay",
     "tabApprovalFlow": "Onay Akışı",
     "tabReport": "Rapor",
-    "noData": "Veri yok"
+    "noData": "Veri yok",
+    "loadMore": "Daha Fazla",
+    "select": "Seçiniz",
+    "demandApprovalFlowStarted": "Talep onay sürecine gönderildi.",
+    "quotationApprovalFlowStarted": "Teklif onay sürecine gönderildi.",
+    "demandUpdated": "Talep güncellendi.",
+    "quotationUpdated": "Teklif güncellendi.",
+    "rowsUpdated": "Satırlar güncellendi.",
+    "rowsAdded": "Satırlar eklendi.",
+    "exchangeRatesUpdated": "Döviz kurları güncellendi.",
+    "demandCreatedAndSentForApproval": "Talep başarıyla oluşturuldu. Talep onay sürecine gönderildi.",
+    "quotationCreatedAndSentForApproval": "Teklif başarıyla oluşturuldu. Teklif onay sürecine gönderildi.",
+    "voiceSearchStartError": "Sesli arama başlatılamadı.",
+    "lineDeleted": "Satır silindi.",
+    "selectCustomerRepresentativeCurrency": "Lütfen müşteri, temsilci ve para birimi seçimlerini yapınız.",
+    "approvalFlowStartError": "Onay süreci başlatılamadı",
+    "demandUpdateFailed": "Talep güncellenemedi",
+    "demandRowsUpdateFailed": "Talep satırları güncellenemedi",
+    "rowsAddFailed": "Satırlar eklenemedi",
+    "exchangeRatesUpdateFailed": "Döviz kurları güncellenemedi",
+    "demandCreateFailed": "Talep oluşturulamadı",
+    "demandCreateFailedGeneric": "Talep oluşturulurken bir hata oluştu.",
+    "quotationNotesSaved": "Teklif notları kaydedildi.",
+    "quotationNotesSaveFailed": "Teklif notları kaydedilemedi",
+    "quotationUpdateFailed": "Teklif güncellenemedi",
+    "quotationRowsUpdateFailed": "Teklif satırları güncellenemedi",
+    "quotationCreateFailed": "Teklif oluşturulamadı",
+    "quotationCreateFailedGeneric": "Teklif oluşturulurken bir hata oluştu.",
+    "lineDeleteFailed": "Satır silinemedi",
+    "voiceSearchSupportInfo": "Sesli arama: Web'de tarayıcı destekliyorsa çalışır. Mobil için: npx expo install expo-speech-recognition"
   },
   "home": {
     "greeting": "Merhaba",
@@ -88,25 +117,20 @@
     "passwordPlaceholder": "••••••••",
     "rememberMe": "Beni Hatırla",
     "forgotPassword": "Şifremi Unuttum",
-    "login": "Giriş Yap",
+    "login": {
+      "slogan": "İşinizi tahminlerle değil, VERII CRM ile yönetin."
+    },
     "loggingIn": "Giriş yapılıyor...",
     "loginError": "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.",
     "logout": "Çıkış Yap"
   },
   "validation": {
-    "required": "Bu alan zorunludur",
-    "invalidEmail": "Geçerli bir e-posta adresi girin",
-    "minLength": "En az {{count}} karakter olmalıdır",
-    "maxLength": "En fazla {{count}} karakter olmalıdır",
-    "branchRequired": "Şube seçimi gerekli",
-    "emailRequired": "E-posta adresi gerekli",
-    "passwordRequired": "Şifre gerekli",
-    "passwordMinLength": "Şifre en az 6 karakter olmalı",
+    "subjectRequired": "Konu zorunludur",
+    "activityTypeRequired": "Aktivite tipi seçilmelidir",
+    "statusRequired": "Durum seçilmelidir",
+    "dateRequired": "Tarih zorunludur",
     "nameRequired": "İsim zorunludur",
-    "customerRequired": "Müşteri seçimi zorunludur",
-    "titleRequired": "Ünvan seçimi zorunludur",
-    "addressRequired": "Adres zorunludur",
-    "fullNameRequired": "Ad Soyad zorunludur"
+    "invalidEmail": "Geçerli bir e-posta adresi girin"
   },
   "language": {
     "title": "Dil",
@@ -203,7 +227,8 @@
     "tabShippingAddresses": "Sevk Adresleri",
     "defaultShippingAddress": "Varsayılan Sevk Adresi",
     "defaultShippingAddressPlaceholder": "Seçiniz",
-    "noShippingAddress": "Sevk adresi bulunamadı"
+    "noShippingAddress": "Sevk adresi bulunamadı",
+    "search": "Müşteri Ara..."
   },
   "erpCustomer": {
     "title": "ERP Müşteriler",
@@ -226,7 +251,7 @@
     "businessUnitCode": "İş Birimi Kodu"
   },
   "contact": {
-    "title": "Kişiler",
+    "title": "Ünvan",
     "list": "Kişi Listesi",
     "detail": "Kişi Detayı",
     "create": "Yeni Kişi",
@@ -240,7 +265,6 @@
     "mobile": "Mobil",
     "notes": "Notlar",
     "titleField": "Ünvan",
-    "title": "Ünvan",
     "department": "Departman",
     "isPrimary": "Birincil Kişi",
     "customer": "Müşteri",
@@ -387,14 +411,6 @@
     "updateSuccess": "Aktivite tipi güncellendi",
     "deleteSuccess": "Aktivite tipi silindi"
   },
-  "validation": {
-    "subjectRequired": "Konu zorunludur",
-    "activityTypeRequired": "Aktivite tipi seçilmelidir",
-    "statusRequired": "Durum seçilmelidir",
-    "dateRequired": "Tarih zorunludur",
-    "nameRequired": "İsim zorunludur",
-    "invalidEmail": "Geçerli bir e-posta adresi girin"
-  },
   "titleManagement": {
     "title": "Ünvan Yönetimi",
     "list": "Ünvan Listesi",
@@ -482,7 +498,10 @@
     "orderList": "Sipariş Listesi",
     "orderListDesc": "Tüm siparişleri görüntüleyin ve yönetin",
     "orderWaitingApprovals": "Sipariş Onay Listesi",
-    "orderWaitingApprovalsDesc": "Onayı bekleyen sipariş isteklerini görüntüle ve yönet"
+    "orderWaitingApprovalsDesc": "Onayı bekleyen sipariş isteklerini görüntüle ve yönet",
+    "quotations": "Teklifler",
+    "orders": "Siparişler",
+    "demands": "Talepler"
   },
   "quotation": {
     "list": "Teklif Listesi",
@@ -600,7 +619,19 @@
       "flowDescription": "Akış Açıklaması",
       "overallStatus": "Genel Durum",
       "rejectedReason": "Red Nedeni"
-    }
+    },
+    "exchangeRate": {
+      "inUseCannotEdit": "Kullanımda olan kur değiştirilemez."
+    },
+    "projectCode": "Proje Kodu",
+    "projectCodeSearch": "Proje ara...",
+    "deliveryMethod": "Gönderim/Teslim Şekli",
+    "generalDiscountRate": "Genel İskonto Oranı (%)",
+    "generalDiscountAmount": "Genel İskonto Tutarı",
+    "deleteRelatedGroupTitle": "Bağlı Grup Silinsin mi?",
+    "deleteLineTitle": "Satır Silinsin mi?",
+    "deleteRelatedGroupMessage": "Bu satır bağlı bir grup oluşturuyor. Silerseniz bağlı satırlar da silinecektir.",
+    "deleteLineMessage": "Bu satırı silmek istediğinize emin misiniz?"
   },
   "demand": {
     "list": "Talep Listesi",
