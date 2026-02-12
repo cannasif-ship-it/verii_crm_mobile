@@ -2,10 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { demandApi } from "../api";
 import type { DemandBulkCreateDto, DemandGetDto } from "../types";
 import { useToastStore } from "../../../store/toast";
+import { useTranslation } from "react-i18next";
 
 export function useUpdateDemandBulk() {
   const queryClient = useQueryClient();
   const showToast = useToastStore((state) => state.showToast);
+  const { t } = useTranslation();
 
   return useMutation<
     DemandGetDto,
@@ -18,12 +20,12 @@ export function useUpdateDemandBulk() {
       queryClient.invalidateQueries({ queryKey: ["demand", "detail", id] });
       queryClient.invalidateQueries({ queryKey: ["demand", "detail", "lines", id] });
       queryClient.invalidateQueries({ queryKey: ["demand", "detail", "exchangeRates", id] });
-      showToast("success", "Talep güncellendi.");
+      showToast("success", t("common.demandUpdated"));
     },
     onError: (error) => {
       showToast(
         "error",
-        "Talep güncellenemedi: " + (error.message ?? "Bilinmeyen hata."),
+        `${t("common.demandUpdateFailed")}: ${error.message ?? t("common.unknownError")}`,
         10000
       );
     },

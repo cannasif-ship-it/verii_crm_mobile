@@ -24,8 +24,8 @@ export function OfferTypePicker({
 
   const offerTypeOptions = React.useMemo(
     () => [
-      { id: OfferType.Domestic, name: t("demand.offerType.domestic", "Yurtiçi") },
-      { id: OfferType.Export, name: t("demand.offerType.export", "Yurtdışı") },
+      { id: OfferType.Domestic, name: t("demand.offerType.domestic") },
+      { id: OfferType.Export, name: t("demand.offerType.export") },
     ],
     [t]
   );
@@ -40,7 +40,7 @@ export function OfferTypePicker({
           <View style={styles.labelContainer}>
             <Text style={styles.labelIcon}>📋</Text>
             <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {t("demand.offerType.label", "Talep Tipi")}{" "}
+              {t("demand.offerType.label")}{" "}
               <Text style={[styles.required, { color: colors.accent }]}>*</Text>
             </Text>
           </View>
@@ -66,15 +66,15 @@ export function OfferTypePicker({
               numberOfLines={1}
             >
               {value
-                ? offerTypeOptions.find((opt) => opt.id === value)?.name || t("common.select", "Seçiniz")
-                : t("common.select", "Seçiniz")}
+                ? offerTypeOptions.find((opt) => opt.id === value)?.name || t("common.select")
+                : t("common.select")}
             </Text>
             <Text style={[styles.arrowIcon, { color: colors.textMuted }]}>›</Text>
           </TouchableOpacity>
 
           {error && (
             <Text style={[styles.errorText, { color: colors.error }]}>
-              {error.message || t("demand.offerType.required", "Talep tipi seçilmelidir")}
+              {error.message || t("demand.offerType.required")}
             </Text>
           )}
 
@@ -87,8 +87,8 @@ export function OfferTypePicker({
               setModalVisible(false);
             }}
             onClose={() => setModalVisible(false)}
-            title={t("demand.offerType.selectTitle", "Talep Tipi Seçiniz")}
-            searchPlaceholder={t("demand.offerType.searchPlaceholder", "Talep tipi ara...")}
+            title={t("demand.offerType.selectTitle")}
+            searchPlaceholder={t("demand.offerType.searchPlaceholder")}
             isLoading={false}
           />
         </View>

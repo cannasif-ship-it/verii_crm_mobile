@@ -2,10 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { demandApi } from "../api";
 import type { DemandLineUpdateDto, DemandLineDetailGetDto } from "../types";
 import { useToastStore } from "../../../store/toast";
+import { useTranslation } from "react-i18next";
 
 export function useUpdateDemandLines() {
   const queryClient = useQueryClient();
   const showToast = useToastStore((state) => state.showToast);
+  const { t } = useTranslation();
 
   return useMutation<
     DemandLineDetailGetDto[],
@@ -15,12 +17,12 @@ export function useUpdateDemandLines() {
     mutationFn: ({ body }) => demandApi.updateDemandLines(body),
     onSuccess: (_, { demandId }) => {
       queryClient.invalidateQueries({ queryKey: ["demand", "detail", "lines", demandId] });
-      showToast("success", "Satırlar güncellendi.");
+      showToast("success", t("common.rowsUpdated"));
     },
     onError: (error) => {
       showToast(
         "error",
-        "Talep satırları güncellenemedi: " + (error.message ?? "Bilinmeyen hata."),
+        `${t("common.demandRowsUpdateFailed")}: ${error.message ?? t("common.unknownError")}`,
         10000
       );
     },

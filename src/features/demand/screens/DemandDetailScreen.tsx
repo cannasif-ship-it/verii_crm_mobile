@@ -327,7 +327,7 @@ export function DemandDetailScreen(): React.ReactElement {
 
   const handleAddLine = useCallback(() => {
     if ((!watchedCustomerId && !watchedErpCustomerCode) || !watchedRepresentativeId || !watchedCurrency) {
-      showToast("error", "Lütfen müşteri, temsilci ve para birimi seçimlerini yapınız.");
+      showToast("error", t("common.selectCustomerRepresentativeCurrency"));
       return;
     }
     setEditingLine(null);
