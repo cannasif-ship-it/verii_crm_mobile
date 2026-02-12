@@ -501,7 +501,7 @@ export function ContactFormScreen(): React.ReactElement {
                   }}
                 >
                   <Text style={[styles.pickerItemText, { color: colors.text }]}>
-                    {t("contact.titleNone", "Ünvan yok")}
+                    {t("contact.titleNone")}
                   </Text>
                   {(watchTitleId === null || watchTitleId === 0) && (
                     <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>

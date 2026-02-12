@@ -178,7 +178,7 @@ export function ContactListScreen(): React.ReactElement {
                   {isFetchingNextPage ? (
                     <ActivityIndicator size="small" color={colors.accent} />
                   ) : (
-                    <Text style={{ color: colors.text }}>{t("common.loadMore", "Daha Fazla")}</Text>
+                    <Text style={{ color: colors.text }}>{t("common.loadMore")}</Text>
                   )}
                 </TouchableOpacity>
               ) : null}
