@@ -83,7 +83,7 @@ export function ExchangeRateDialog({
     (id: string, field: keyof OrderExchangeRateFormState, value: string | number | boolean) => {
       const rate = rates.find((r) => r.id === id);
       if (rate && currencyInUse != null && rate.currency === currencyInUse) {
-        showToast("warning", t("order.exchangeRate.inUseCannotEdit", "Kullanımda olan kur değiştirilemez."));
+        showToast("warning", t("order.exchangeRate.inUseCannotEdit"));
         return;
       }
       setRates((prev) =>
@@ -104,7 +104,7 @@ export function ExchangeRateDialog({
     (id: string, erpRate: number) => {
       const rate = rates.find((r) => r.id === id);
       if (rate && currencyInUse != null && rate.currency === currencyInUse) {
-        showToast("warning", t("order.exchangeRate.inUseCannotEdit", "Kullanımda olan kur değiştirilemez."));
+        showToast("warning", t("order.exchangeRate.inUseCannotEdit"));
         return;
       }
       setRates((prev) =>
@@ -118,7 +118,7 @@ export function ExchangeRateDialog({
 
   const handleFocusInUseField = useCallback(() => {
     if (currencyInUse != null) {
-      showToast("warning", t("order.exchangeRate.inUseCannotEdit", "Kullanımda olan kur değiştirilemez."));
+      showToast("warning", t("order.exchangeRate.inUseCannotEdit"));
     }
   }, [currencyInUse, showToast, t]);
 
