@@ -351,7 +351,7 @@ export function CustomerFormScreen(): React.ReactElement {
 
           <View style={styles.fieldContainer}>
             <Text style={[styles.label, { color: THEME.textMute }]}>
-              {t("customer.defaultShippingAddress", "Varsayılan Sevk Adresi")}
+              {t("customer.defaultShippingAddress")}
             </Text>
             <TouchableOpacity
               style={[
@@ -367,7 +367,7 @@ export function CustomerFormScreen(): React.ReactElement {
                   { color: selectedShippingAddress ? THEME.text : THEME.textMute },
                 ]}
               >
-                {selectedShippingAddress?.address || t("customer.defaultShippingAddressPlaceholder", "Seçiniz")}
+                {selectedShippingAddress?.address || t("customer.defaultShippingAddressPlaceholder")}
               </Text>
               <ArrowDown01Icon size={16} color={THEME.textMute} />
             </TouchableOpacity>
@@ -378,7 +378,7 @@ export function CustomerFormScreen(): React.ReactElement {
             name="salesRepCode"
             render={({ field: { onChange, value } }) => (
               <FormField
-                label={t("customer.salesRepCode", "Satış Temsilci Kodu")}
+                label={t("customer.salesRepCode")}
                 value={value || ""}
                 onChangeText={onChange}
                 maxLength={50}
@@ -391,7 +391,7 @@ export function CustomerFormScreen(): React.ReactElement {
             name="groupCode"
             render={({ field: { onChange, value } }) => (
               <FormField
-                label={t("customer.groupCode", "Grup Kodu")}
+                label={t("customer.groupCode")}
                 value={value || ""}
                 onChangeText={onChange}
                 maxLength={50}
@@ -404,7 +404,7 @@ export function CustomerFormScreen(): React.ReactElement {
             name="creditLimit"
             render={({ field: { onChange, value } }) => (
               <FormField
-                label={t("customer.creditLimit", "Kredi Limiti")}
+                label={t("customer.creditLimit")}
                 value={value !== undefined && value !== null ? String(value) : ""}
                 onChangeText={(text) => onChange(text ? Number(text) : undefined)}
                 keyboardType="numeric"
@@ -417,7 +417,7 @@ export function CustomerFormScreen(): React.ReactElement {
             name="branchCode"
             render={({ field: { onChange, value } }) => (
               <FormField
-                label={t("customer.branchCode", "Şube Kodu")}
+                label={t("customer.branchCode")}
                 value={value !== undefined && value !== null ? String(value) : ""}
                 onChangeText={(text) => onChange(text ? Number(text) : 0)}
                 keyboardType="numeric"
@@ -430,7 +430,7 @@ export function CustomerFormScreen(): React.ReactElement {
             name="businessUnitCode"
             render={({ field: { onChange, value } }) => (
               <FormField
-                label={t("customer.businessUnitCode", "İşletme Kodu")}
+                label={t("customer.businessUnitCode")}
                 value={value !== undefined && value !== null ? String(value) : ""}
                 onChangeText={(text) => onChange(text ? Number(text) : 0)}
                 keyboardType="numeric"
@@ -649,7 +649,7 @@ export function CustomerFormScreen(): React.ReactElement {
             <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
               <View style={[styles.handle, { backgroundColor: THEME.border }]} />
               <Text style={[styles.modalTitle, { color: THEME.text }]}>
-                {t("customer.defaultShippingAddress", "Varsayılan Sevk Adresi")}
+                {t("customer.defaultShippingAddress")}
               </Text>
             </View>
             <FlatList
@@ -675,7 +675,7 @@ export function CustomerFormScreen(): React.ReactElement {
               showsVerticalScrollIndicator={false}
               ListEmptyComponent={() => (
                 <View style={{ padding: 20 }}>
-                  <Text style={{ color: THEME.textMute }}>{t("customer.noShippingAddress", "Sevk adresi bulunamadı")}</Text>
+                  <Text style={{ color: THEME.textMute }}>{t("customer.noShippingAddress")}</Text>
                 </View>
               )}
             />
