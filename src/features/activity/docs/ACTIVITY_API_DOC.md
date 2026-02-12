@@ -6,7 +6,7 @@ Bu belge, React Native (Expo) CRM uygulamasında **Sidebar > Aktivite** altında
 
 ## 1. Genel Yapı
 
-- **Base URL:** `API_BASE_URL` (`src/constants/env.ts`) veya `/config.json` içindeki `apiUrl`. Tüm API istekleri `src/lib/axios.ts` içindeki `apiClient` instance ile atılır (interceptor ile token eklenir).
+- **Base URL:** `config.json` içindeki `apiUrl` → `src/constants/config.ts` → `src/lib/axios.ts` (`apiClient`). Tüm API istekleri `apiClient` instance ile atılır (interceptor ile token eklenir).
 - **Tüm API response'ları** şu wrapper ile gelir:
 
 ```ts
