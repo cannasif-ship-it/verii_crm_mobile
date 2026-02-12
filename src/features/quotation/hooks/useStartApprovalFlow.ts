@@ -1,6 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { quotationApi } from "../api";
 import { useToastStore } from "../../../store/toast";
+import { useTranslation } from "react-i18next";
 
 export type StartApprovalFlowPayload = {
   entityId: number;
@@ -11,6 +12,7 @@ export type StartApprovalFlowPayload = {
 export function useStartApprovalFlow() {
   const queryClient = useQueryClient();
   const showToast = useToastStore((state) => state.showToast);
+  const { t } = useTranslation();
 
   return useMutation<boolean, Error, StartApprovalFlowPayload>({
     mutationFn: (data) => quotationApi.startApprovalFlow(data),
@@ -18,12 +20,12 @@ export function useStartApprovalFlow() {
       queryClient.invalidateQueries({ queryKey: ["quotation", "list"] });
       queryClient.invalidateQueries({ queryKey: ["quotation", "detail", variables.entityId] });
       queryClient.invalidateQueries({ queryKey: ["quotation", "waitingApprovals"] });
-      showToast("success", "Teklif onay sürecine gönderildi.");
+      showToast("success", t("common.quotationApprovalFlowStarted"));
     },
     onError: (error) => {
       showToast(
         "error",
-        "Onay süreci başlatılamadı: " + (error.message ?? "Bilinmeyen hata."),
+        `${t("common.approvalFlowStartError")}: ${error.message ?? t("common.unknownError")}`,
         10000
       );
     },

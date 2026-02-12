@@ -585,7 +585,7 @@ export function QuotationLineForm({
 
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>
-                {t("quotation.projectCode", "Proje Kodu")}
+                {t("quotation.projectCode")}
               </Text>
               <TouchableOpacity
                 style={[
@@ -607,7 +607,7 @@ export function QuotationLineForm({
                             : p.projeKod
                           : erpProjectCode;
                       })()
-                    : t("common.select", "Seçiniz")}
+                    : t("common.select")}
                 </Text>
               </TouchableOpacity>
             </View>
@@ -720,8 +720,8 @@ export function QuotationLineForm({
         setProjectCodeModalVisible(false);
       }}
       onClose={() => setProjectCodeModalVisible(false)}
-      title={t("quotation.projectCode", "Proje Kodu")}
-      searchPlaceholder={t("quotation.projectCodeSearch", "Proje ara...")}
+      title={t("quotation.projectCode")}
+      searchPlaceholder={t("quotation.projectCodeSearch")}
     />
   </>
   );

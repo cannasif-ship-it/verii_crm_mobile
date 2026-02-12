@@ -2,10 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { quotationApi } from "../api";
 import type { QuotationBulkCreateDto, QuotationGetDto } from "../types";
 import { useToastStore } from "../../../store/toast";
+import { useTranslation } from "react-i18next";
 
 export function useUpdateQuotationBulk() {
   const queryClient = useQueryClient();
   const showToast = useToastStore((state) => state.showToast);
+  const { t } = useTranslation();
 
   return useMutation<
     QuotationGetDto,
@@ -18,12 +20,12 @@ export function useUpdateQuotationBulk() {
       queryClient.invalidateQueries({ queryKey: ["quotation", "detail", id] });
       queryClient.invalidateQueries({ queryKey: ["quotation", "detail", "lines", id] });
       queryClient.invalidateQueries({ queryKey: ["quotation", "detail", "exchangeRates", id] });
-      showToast("success", "Teklif güncellendi.");
+      showToast("success", t("common.quotationUpdated"));
     },
     onError: (error) => {
       showToast(
         "error",
-        "Teklif güncellenemedi: " + (error.message ?? "Bilinmeyen hata."),
+        `${t("common.quotationUpdateFailed")}: ${error.message ?? t("common.unknownError")}`,
         10000
       );
     },

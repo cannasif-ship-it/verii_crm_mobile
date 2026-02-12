@@ -2,10 +2,12 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { quotationApi } from "../api";
 import type { CreateQuotationLineDto, QuotationLineDetailGetDto } from "../types";
 import { useToastStore } from "../../../store/toast";
+import { useTranslation } from "react-i18next";
 
 export function useCreateQuotationLines() {
   const queryClient = useQueryClient();
   const showToast = useToastStore((state) => state.showToast);
+  const { t } = useTranslation();
 
   return useMutation<
     QuotationLineDetailGetDto[],
@@ -15,12 +17,12 @@ export function useCreateQuotationLines() {
     mutationFn: ({ body }) => quotationApi.createQuotationLines(body),
     onSuccess: (_, { quotationId }) => {
       queryClient.invalidateQueries({ queryKey: ["quotation", "detail", "lines", quotationId] });
-      showToast("success", "Satırlar eklendi.");
+      showToast("success", t("common.rowsAdded"));
     },
     onError: (error) => {
       showToast(
         "error",
-        "Satırlar eklenemedi: " + (error.message ?? "Bilinmeyen hata."),
+        `${t("common.rowsAddFailed")}: ${error.message ?? t("common.unknownError")}`,
         10000
       );
     },

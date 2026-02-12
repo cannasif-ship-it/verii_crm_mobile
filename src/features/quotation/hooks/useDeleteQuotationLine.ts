@@ -1,22 +1,24 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { quotationApi } from "../api";
 import { useToastStore } from "../../../store/toast";
+import { useTranslation } from "react-i18next";
 
 export function useDeleteQuotationLine() {
   const queryClient = useQueryClient();
   const showToast = useToastStore((state) => state.showToast);
+  const { t } = useTranslation();
 
   return useMutation<void, Error, { quotationId: number; lineId: number }>({
     mutationFn: ({ lineId }) => quotationApi.deleteQuotationLine(lineId),
     onSuccess: (_, { quotationId }) => {
       queryClient.invalidateQueries({ queryKey: ["quotation", "detail", quotationId] });
       queryClient.invalidateQueries({ queryKey: ["quotation", "detail", "lines", quotationId] });
-      showToast("success", "Satır silindi.");
+      showToast("success", t("common.lineDeleted"));
     },
     onError: (error) => {
       showToast(
         "error",
-        "Satır silinemedi: " + (error.message ?? "Bilinmeyen hata."),
+        `${t("common.lineDeleteFailed")}: ${error.message ?? t("common.unknownError")}`,
         10000
       );
     },

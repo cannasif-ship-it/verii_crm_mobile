@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import { quotationApi } from "../api";
 import type { QuotationBulkCreateDto, QuotationGetDto, QuotationNotesDto } from "../types";
 import { useToastStore } from "../../../store/toast";
+import { useTranslation } from "react-i18next";
 
 function dtoToNotesArray(dto: QuotationNotesDto): string[] {
   const arr: string[] = [];
@@ -17,6 +18,7 @@ export function useCreateQuotationBulk() {
   const queryClient = useQueryClient();
   const router = useRouter();
   const showToast = useToastStore((state) => state.showToast);
+  const { t } = useTranslation();
 
   return useMutation<QuotationGetDto, Error, QuotationBulkCreateDto>({
     mutationFn: (data) => quotationApi.createBulk(data),
@@ -32,13 +34,13 @@ export function useCreateQuotationBulk() {
         }
       }
       queryClient.invalidateQueries({ queryKey: ["quotation", "list"] });
-      showToast("success", "Teklif Başarıyla Oluşturuldu. Teklif onay sürecine gönderildi.");
+      showToast("success", t("common.quotationCreatedAndSentForApproval"));
       router.push(`/(tabs)/sales/quotations/${data.id}`);
     },
     onError: (error) => {
       showToast(
         "error",
-        "Teklif Oluşturulamadı: " + (error.message || "Teklif oluşturulurken bir hata oluştu."),
+        `${t("common.quotationCreateFailed")}: ${error.message || t("common.quotationCreateFailedGeneric")}`,
         10000
       );
     },

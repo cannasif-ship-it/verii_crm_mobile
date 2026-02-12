@@ -336,7 +336,7 @@ export function QuotationCreateScreen(): React.ReactElement {
 
   const handleAddLine = useCallback(() => {
     if ((!watchedCustomerId && !watchedErpCustomerCode) || !watchedRepresentativeId || !watchedCurrency) {
-      showToast("error", "Lütfen müşteri, temsilci ve para birimi seçimlerini yapınız.");
+      showToast("error", t("common.selectCustomerRepresentativeCurrency"));
       return;
     }
 
@@ -844,7 +844,7 @@ export function QuotationCreateScreen(): React.ReactElement {
                 render={({ field: { onChange, value } }) => (
                   <View style={styles.fieldContainer}>
                     <Text style={[styles.label, { color: colors.textSecondary }]}>
-                      {t("quotation.deliveryMethod", "Gönderim/Teslim Şekli")}
+                      {t("quotation.deliveryMethod")}
                     </Text>
                     <TouchableOpacity
                       style={[
@@ -870,7 +870,7 @@ export function QuotationCreateScreen(): React.ReactElement {
               render={({ field: { onChange, value } }) => (
                 <View style={styles.fieldContainer}>
                   <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t("quotation.projectCode", "Proje Kodu")}
+                    {t("quotation.projectCode")}
                   </Text>
                   <TouchableOpacity
                     style={[
@@ -898,7 +898,7 @@ export function QuotationCreateScreen(): React.ReactElement {
               render={({ field: { onChange, value } }) => (
                 <View style={styles.fieldContainer}>
                   <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t("quotation.generalDiscountRate", "Genel İskonto Oranı (%)")}
+                    {t("quotation.generalDiscountRate")}
                   </Text>
                   <TextInput
                     style={[
@@ -924,7 +924,7 @@ export function QuotationCreateScreen(): React.ReactElement {
               render={({ field: { onChange, value } }) => (
                 <View style={styles.fieldContainer}>
                   <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t("quotation.generalDiscountAmount", "Genel İskonto Tutarı")}
+                    {t("quotation.generalDiscountAmount")}
                   </Text>
                   <TextInput
                     style={[
@@ -959,7 +959,7 @@ export function QuotationCreateScreen(): React.ReactElement {
               onPress={() => setNotesModalVisible(true)}
             >
               <Text style={[styles.notesButtonText, { color: colors.text }]}>
-                📝 {t("quotation.notesSection", "Teklif Notları")}
+                📝 {t("quotation.notesSection")}
                 {notes.some((n) => n.trim()) ? ` (${notes.filter((n) => n.trim()).length})` : ""}
               </Text>
             </TouchableOpacity>
@@ -1546,8 +1546,8 @@ export function QuotationCreateScreen(): React.ReactElement {
             setProjectCodeModalVisible(false);
           }}
           onClose={() => setProjectCodeModalVisible(false)}
-          title={t("quotation.projectCode", "Proje Kodu")}
-          searchPlaceholder={t("quotation.projectCodeSearch", "Proje ara...")}
+          title={t("quotation.projectCode")}
+          searchPlaceholder={t("quotation.projectCodeSearch")}
         />
 
         {watchedOfferType && (
@@ -1563,8 +1563,8 @@ export function QuotationCreateScreen(): React.ReactElement {
               setSalesTypeModalVisible(false);
             }}
             onClose={() => setSalesTypeModalVisible(false)}
-            title={t("quotation.deliveryMethod", "Gönderim/Teslim Şekli")}
-            searchPlaceholder={t("common.search", "Ara...")}
+            title={t("quotation.deliveryMethod")}
+            searchPlaceholder={t("common.search")}
           />
         )}
 

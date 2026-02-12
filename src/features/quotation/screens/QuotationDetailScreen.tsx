@@ -359,7 +359,7 @@ export function QuotationDetailScreen(): React.ReactElement {
 
   const handleAddLine = useCallback(() => {
     if ((!watchedCustomerId && !watchedErpCustomerCode) || !watchedRepresentativeId || !watchedCurrency) {
-      showToast("error", "Lütfen müşteri, temsilci ve para birimi seçimlerini yapınız.");
+      showToast("error", t("common.selectCustomerRepresentativeCurrency"));
       return;
     }
     setEditingLine(null);
@@ -1044,7 +1044,7 @@ export function QuotationDetailScreen(): React.ReactElement {
                 onPress={() => setNotesModalVisible(true)}
               >
                 <Text style={[styles.notesButtonText, { color: colors.text }]}>
-                  📝 {t("quotation.notesSection", "Teklif Notları")}
+                  📝 {t("quotation.notesSection")}
                   {notes.some((n) => n.trim()) ? ` (${notes.filter((n) => n.trim()).length})` : ""}
                 </Text>
               </TouchableOpacity>

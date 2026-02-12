@@ -41,7 +41,7 @@ export function QuotationNotesForm({
   return (
     <View style={styles.container}>
       <Text style={[styles.sectionTitle, { color: colors.text }]}>
-        {t("quotation.notesSection", "Teklif Notları")}
+        {t("quotation.notesSection")}
       </Text>
       {validationError ? (
         <Text style={[styles.validationError, { color: colors.error }]}>{validationError}</Text>
@@ -63,7 +63,7 @@ export function QuotationNotesForm({
             ]}
             value={note}
             onChangeText={(text) => handleChange(index, text)}
-            placeholder={t("quotation.notePlaceholder", "En fazla 100 karakter")}
+            placeholder={t("quotation.notePlaceholder")}
             placeholderTextColor={colors.textMuted}
             maxLength={MAX_CHAR_PER_NOTE}
             editable={editable}

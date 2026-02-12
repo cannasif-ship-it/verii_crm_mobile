@@ -99,7 +99,7 @@ export function QuotationNotesModal({
           <View style={[styles.header, { borderBottomColor: colors.border }]}>
             <View style={[styles.handle, { backgroundColor: colors.border }]} />
             <Text style={[styles.title, { color: colors.text }]}>
-              {t("quotation.notesSection", "Teklif Notları")}
+              {t("quotation.notesSection")}
             </Text>
             <TouchableOpacity onPress={handleCancel} style={styles.closeBtn}>
               <Text style={[styles.closeBtnText, { color: colors.text }]}>✕</Text>
@@ -130,7 +130,7 @@ export function QuotationNotesModal({
                   ]}
                   value={note}
                   onChangeText={(text) => handleChange(index, text)}
-                  placeholder={t("quotation.notePlaceholder", "En fazla 100 karakter")}
+                  placeholder={t("quotation.notePlaceholder")}
                   placeholderTextColor={colors.textMuted}
                   maxLength={MAX_CHAR_PER_NOTE}
                 />
@@ -148,7 +148,7 @@ export function QuotationNotesModal({
               disabled={isSaving}
             >
               <Text style={[styles.cancelBtnText, { color: colors.text }]}>
-                {t("common.cancel", "İptal")}
+                {t("common.cancel")}
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
@@ -157,7 +157,7 @@ export function QuotationNotesModal({
               disabled={isSaving}
             >
               <Text style={styles.saveBtnText}>
-                {isSaving ? t("common.loading", "Yükleniyor...") : t("common.save", "Kaydet")}
+                {isSaving ? t("common.loading") : t("common.save")}
               </Text>
             </TouchableOpacity>
           </View>

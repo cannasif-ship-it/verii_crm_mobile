@@ -24,8 +24,8 @@ export function OfferTypePicker({
 
   const offerTypeOptions = React.useMemo(
     () => [
-      { id: OfferType.YURTICI, name: t("quotation.offerType.domestic", "Yurtiçi") },
-      { id: OfferType.YURTDISI, name: t("quotation.offerType.export", "Yurtdışı") },
+      { id: OfferType.YURTICI, name: t("quotation.offerType.domestic") },
+      { id: OfferType.YURTDISI, name: t("quotation.offerType.export") },
     ],
     [t]
   );
@@ -40,7 +40,7 @@ export function OfferTypePicker({
           <View style={styles.labelContainer}>
             <Text style={styles.labelIcon}>📋</Text>
             <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {t("quotation.offerType.label", "Teklif Tipi")}{" "}
+              {t("quotation.offerType.label")}{" "}
               <Text style={[styles.required, { color: colors.accent }]}>*</Text>
             </Text>
           </View>
@@ -66,15 +66,15 @@ export function OfferTypePicker({
               numberOfLines={1}
             >
               {value
-                ? offerTypeOptions.find((opt) => opt.id === value)?.name || t("common.select", "Seçiniz")
-                : t("common.select", "Seçiniz")}
+                ? offerTypeOptions.find((opt) => opt.id === value)?.name || t("common.select")
+                : t("common.select")}
             </Text>
             <Text style={[styles.arrowIcon, { color: colors.textMuted }]}>›</Text>
           </TouchableOpacity>
 
           {error && (
             <Text style={[styles.errorText, { color: colors.error }]}>
-              {error.message || t("quotation.offerType.required", "Teklif tipi seçilmelidir")}
+              {error.message || t("quotation.offerType.required")}
             </Text>
           )}
 
@@ -87,8 +87,8 @@ export function OfferTypePicker({
               setModalVisible(false);
             }}
             onClose={() => setModalVisible(false)}
-            title={t("quotation.offerType.selectTitle", "Teklif Tipi Seçiniz")}
-            searchPlaceholder={t("quotation.offerType.searchPlaceholder", "Teklif tipi ara...")}
+            title={t("quotation.offerType.selectTitle")}
+            searchPlaceholder={t("quotation.offerType.searchPlaceholder")}
             isLoading={false}
           />
         </View>
