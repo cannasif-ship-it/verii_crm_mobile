@@ -100,7 +100,7 @@ export function StockListScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
       <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
-      <ScreenHeader title={t("stock.list", "Stok Listesi")} showBackButton />
+      <ScreenHeader title={t("stock.list")} showBackButton />
 
       <View style={styles.listContainer}>
         {/* HEADER */}

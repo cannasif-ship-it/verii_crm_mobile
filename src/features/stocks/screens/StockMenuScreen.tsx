@@ -39,7 +39,7 @@ export function StockMenuScreen(): React.ReactElement {
       <View style={[styles.container, { backgroundColor: colors.header }]}>
         
         <ScreenHeader 
-          title={t("stockMenu.title", "Stok Yönetimi")} 
+          title={t("stockMenu.title")} 
           showBackButton 
         />
         
@@ -54,8 +54,8 @@ export function StockMenuScreen(): React.ReactElement {
         >
           {/* MENU KARTI */}
           <MenuCard
-            title={t("stockMenu.stockMovements", "Stok Hareketleri")}
-            description={t("stockMenu.stockMovementsDesc", "Giriş, çıkış ve transfer işlemlerini yönetin")}
+            title={t("stockMenu.stockMovements")}
+            description={t("stockMenu.stockMovementsDesc")}
             // GÜNCELLEME: Artık icon prop'una BİLEŞEN gönderiyoruz
             icon={
               <PackageIcon 
