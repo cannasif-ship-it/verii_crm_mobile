@@ -82,7 +82,7 @@ export function SalesMenuScreen(): React.ReactElement {
         >
           
           {/* --- BÖLÜM: TEKLİFLER (QUOTATIONS) --- */}
-          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.quotations", "Teklifler")}</Text>
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.quotations")}</Text>
           
           <MenuCard
             title={t("sales.createQuotation")}
@@ -107,7 +107,7 @@ export function SalesMenuScreen(): React.ReactElement {
           />
 
           {/* --- BÖLÜM: SİPARİŞLER (ORDERS) --- */}
-          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.orders", "Siparişler")}</Text>
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.orders")}</Text>
 
           <MenuCard
             title={t("sales.createOrder")}
@@ -132,7 +132,7 @@ export function SalesMenuScreen(): React.ReactElement {
           />
 
           {/* --- BÖLÜM: TALEPLER (DEMANDS) --- */}
-          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.demands", "Talepler")}</Text>
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.demands")}</Text>
 
           <MenuCard
             title={t("sales.createDemand")}
@@ -155,7 +155,7 @@ export function SalesMenuScreen(): React.ReactElement {
             rightIcon={<ArrowRight01Icon size={20} color={arrowColor} />}
             onPress={handleDemandWaitingApprovalsPress}
           />
-<Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.demands", "KPI")}</Text>
+<Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.demands")}</Text>
                     {/* --- KPI / RAPORLAR --- */}
           <MenuCard
             title={t("salesman360.title")}
