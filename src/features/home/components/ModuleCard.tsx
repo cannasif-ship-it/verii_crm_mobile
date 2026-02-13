@@ -1,75 +1,161 @@
-import React from "react";
-import { TouchableOpacity, View } from "react-native";
+import React, { useState } from "react";
+import { TouchableWithoutFeedback, View, StyleSheet, Platform, Animated } from "react-native";
 import { useTranslation } from "react-i18next";
+import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import type { Module } from "../types";
 import {
-  UserGroupIcon,
-  Calendar03Icon,
-  Money03Icon,
-  PackageIcon,
+  UserIcon,        // Müşteriler
+  Calendar02Icon,    // Aktiviteler
+  SaleTag01Icon,     // Satış
+  CubeIcon,        // Stok
+  PackageIcon,       // Yedek
 } from "hugeicons-react-native";
 
-const ACCENT = "#E84855";
-
-const MODULE_ICONS: Record<string, React.ComponentType<{ size: number; color: string }>> = {
-  customers: UserGroupIcon,
-  activities: Calendar03Icon,
-  sales: Money03Icon,
-  stock: PackageIcon,
+// YENİ İKON SETİ
+const MODULE_ICONS: Record<string, React.ElementType> = {
+  customers: UserIcon,
+  activities: Calendar02Icon,
+  sales: SaleTag01Icon,
+  stock: CubeIcon, 
 };
 
 interface ModuleCardProps {
-  module: Module;
+  item: Module;
   onPress: (route: string) => void;
-  isPrimary?: boolean;
 }
 
-export function ModuleCard({ module, onPress, isPrimary = false }: ModuleCardProps): React.ReactElement {
+export function ModuleCard({ item, onPress }: ModuleCardProps): React.ReactElement {
   const { t } = useTranslation();
   const { themeMode } = useUIStore();
-  const title = t(`modules.${module.key}`);
-  const description = t(`modules.${module.key}Desc`);
-  const IconComponent = MODULE_ICONS[module.key];
-  const iconColor = isPrimary ? ACCENT : (themeMode === "dark" ? "#94A3B8" : "#6B7280");
-  const iconBg = themeMode === "dark" ? "rgba(255,255,255,0.06)" : "#F3F4F6";
+  const [isPressed, setIsPressed] = useState(false);
+  
+  const Icon = MODULE_ICONS[item.key] ?? PackageIcon;
+  const isDark = themeMode === "dark";
 
-  const handlePress = (): void => {
-    onPress(module.route);
-  };
+  // Renk Paleti
+  const darkGradient = ["#161229", "#0F0B1E"] as const; 
+  const lightBg = "#FFFFFF";
+
+  // Border Rengi: Basılıyken Pembe, Değilse Standart
+  const activeBorderColor = "#EC4899";
+  const defaultBorderColor = isDark ? "rgba(255,255,255,0.08)" : "#F1F5F9";
+  const currentBorderColor = isPressed ? activeBorderColor : defaultBorderColor;
+  
+  // İkon Arkaplanı
+  const iconBg = isDark ? "rgba(255,255,255,0.06)" : item.color + "10";
+
+  // İçerik Yapısı (Ortalanmış, Oksuz)
+  const Content = (
+    <View style={styles.centerContent}>
+      <View style={[styles.iconWrap, { backgroundColor: iconBg }]}>
+        <Icon size={30} color={item.color} strokeWidth={2} />
+      </View>
+      
+      <View style={styles.textWrap}>
+        <Text style={[styles.title, { color: isDark ? "#F8FAFC" : "#1E293B" }]}>
+            {t(`modules.${item.key}`)}
+        </Text>
+        <Text style={[styles.desc, { color: isDark ? "#94A3B8" : "#64748B" }]} numberOfLines={2}>
+            {t(`modules.${item.key}Desc`)}
+        </Text>
+      </View>
+    </View>
+  );
 
   return (
-    <TouchableOpacity
-      className="flex-row items-center rounded-2xl py-4 px-4 mb-3 border border-app-cardBorder dark:border-app-cardBorderDark bg-app-card dark:bg-app-cardDark active:opacity-90"
-      onPress={handlePress}
-      activeOpacity={0.88}
+    <TouchableWithoutFeedback
+      onPress={() => onPress(item.route)}
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
     >
       <View
-        className="w-12 h-12 rounded-2xl items-center justify-center mr-4"
-        style={{ backgroundColor: iconBg }}
+        style={[
+          styles.cardContainer,
+          {
+             borderColor: currentBorderColor,
+             backgroundColor: isDark ? "transparent" : lightBg,
+             // Basıldığında hafif küçülme efekti (Scale)
+             transform: [{ scale: isPressed ? 0.98 : 1 }], 
+          }
+        ]}
       >
-        {IconComponent ? (
-          <IconComponent size={24} color={iconColor} />
+        {isDark ? (
+          <LinearGradient
+            colors={[...darkGradient]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.gradientBg}
+          >
+            {Content}
+          </LinearGradient>
         ) : (
-          <Text className="text-xl">{module.icon}</Text>
+          <View style={styles.plainBg}>{Content}</View>
         )}
       </View>
-      <View className="flex-1 min-w-0">
-        <Text
-          className="text-[15px] font-semibold text-app-text dark:text-app-textDark mb-0.5"
-          numberOfLines={1}
-        >
-          {title}
-        </Text>
-        <Text
-          className="text-[12px] leading-4 text-app-textSecondary dark:text-app-textSecondaryDark"
-          numberOfLines={2}
-        >
-          {description}
-        </Text>
-      </View>
-      <Text className="text-app-textMuted dark:text-app-textMutedDark text-lg ml-2">›</Text>
-    </TouchableOpacity>
+    </TouchableWithoutFeedback>
   );
 }
+
+const styles = StyleSheet.create({
+  cardContainer: {
+    flex: 1,
+    minHeight: 180, // Kart boyu biraz daha artırıldı, ferahlık için
+    borderWidth: 1.5,
+    borderRadius: 24, 
+    marginBottom: 16,
+    // Android Gölge
+    elevation: 4,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    overflow: 'hidden',
+  },
+  gradientBg: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  plainBg: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  centerContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: '100%',
+  },
+  iconWrap: {
+    width: 60, 
+    height: 60,
+    borderRadius: 20, // Daha yuvarlak hatlar
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 16,
+  },
+  textWrap: {
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 8,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: "700", 
+    marginBottom: 8,
+    textAlign: 'center',
+    letterSpacing: -0.3,
+    fontFamily: Platform.select({ ios: 'System', android: 'Roboto' }), 
+  },
+  desc: {
+    fontSize: 12,
+    lineHeight: 16,
+    opacity: 0.7,
+    textAlign: 'center',
+    fontWeight: "400",
+  },
+});

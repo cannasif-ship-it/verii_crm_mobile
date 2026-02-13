@@ -1,15 +1,14 @@
 import React from "react";
-import { View } from "react-native";
+import { View, StyleSheet } from "react-native";
 import { useTranslation } from "react-i18next";
+import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "../../../components/ui/text";
+import { useUIStore } from "../../../store/ui";
 import {
   PackageIcon,
   TruckIcon,
-  AlarmClockIcon,
+  Task01Icon,
 } from "hugeicons-react-native";
-import { useUIStore } from "../../../store/ui";
-
-const ACCENT = "#E84855";
 
 interface StatsStripProps {
   todayReceiving: number;
@@ -17,57 +16,108 @@ interface StatsStripProps {
   pendingTasks: number;
 }
 
-function StatItem({
-  icon: Icon,
-  value,
-  label,
-  color,
-}: {
-  icon: React.ComponentType<{ size: number; color: string }>;
+interface StatItemProps {
+  icon: React.ElementType;
   value: number;
   label: string;
   color: string;
-}): React.ReactElement {
+  isDark: boolean;
+}
+
+function StatItem({ icon: Icon, value, label, color, isDark }: StatItemProps): React.ReactElement {
+  
+  // Premium Renk Paleti Ayarları
+  const bgColors = isDark 
+    ? ["#161229", "#0F0B1E"] as const // Dark Gradient
+    : ["#FFFFFF", "#FFFFFF"] as const; // Light Solid
+
+  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)";
+  const iconBg = isDark ? "rgba(255,255,255,0.06)" : color + "15";
+
   return (
-    <View className="flex-1 rounded-2xl border border-app-cardBorder dark:border-app-cardBorderDark bg-app-card dark:bg-app-cardDark py-4 px-3 items-center min-w-0">
-      <View className="w-10 h-10 rounded-xl items-center justify-center mb-2" style={{ backgroundColor: `${color}18` }}>
-        <Icon size={20} color={color} />
+    <LinearGradient
+        colors={[...bgColors]}
+        style={[styles.statCard, { borderColor }]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0, y: 1 }}
+    >
+      <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
+        <Icon size={20} color={color} strokeWidth={2.5} />
       </View>
-      <Text className="text-xl font-bold text-app-text dark:text-app-textDark" numberOfLines={1}>
-        {value}
-      </Text>
-      <Text className="text-[11px] text-app-textSecondary dark:text-app-textSecondaryDark mt-0.5" numberOfLines={1}>
-        {label}
-      </Text>
-    </View>
+      <View>
+        <Text style={[styles.value, { color: isDark ? "#F8FAFC" : "#0F172A" }]}>
+          {value}
+        </Text>
+        <Text style={[styles.label, { color: isDark ? "#94A3B8" : "#64748B" }]} numberOfLines={1}>
+          {label}
+        </Text>
+      </View>
+    </LinearGradient>
   );
 }
 
 export function StatsStrip({ todayReceiving, todayShipping, pendingTasks }: StatsStripProps): React.ReactElement {
   const { t } = useTranslation();
   const { themeMode } = useUIStore();
-  const muted = themeMode === "dark" ? "#64748B" : "#6B7280";
+  const isDark = themeMode === "dark";
 
   return (
-    <View className="flex-row gap-3 mb-6">
+    <View style={styles.container}>
       <StatItem
         icon={PackageIcon}
         value={todayReceiving}
-        label={t("home.todayReceiving")}
-        color={ACCENT}
+        label={t("home.todayReceiving", "Bugün Giriş")}
+        color="#3B82F6" // Blue
+        isDark={isDark}
       />
       <StatItem
         icon={TruckIcon}
         value={todayShipping}
-        label={t("home.todayShipping")}
-        color="#10B981"
+        label={t("home.todayShipping", "Bugün Çıkış")}
+        color="#F59E0B" // Amber
+        isDark={isDark}
       />
       <StatItem
-        icon={AlarmClockIcon}
+        icon={Task01Icon}
         value={pendingTasks}
-        label={t("home.pendingTasks")}
-        color={muted}
+        label={t("home.pendingTasks", "Bekleyen")}
+        color="#EC4899" // Pink
+        isDark={isDark}
       />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flexDirection: "row",
+    gap: 12,
+    marginBottom: 24,
+  },
+  statCard: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1,
+    minHeight: 105,
+    justifyContent: "space-between",
+    elevation: 1, // Hafif gölge
+  },
+  iconBox: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 8,
+  },
+  value: {
+    fontSize: 20,
+    fontWeight: "800",
+    marginBottom: 2,
+  },
+  label: {
+    fontSize: 11,
+    fontWeight: "600",
+  },
+});
