@@ -4,14 +4,13 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { ScreenHeader } from "../../../components/navigation";
 import { useUIStore } from "../../../store/ui";
-import { MenuCard } from "../components"; // Yeni Pembe MenuCard
-
-// --- PROFESYONEL İKONLAR ---
+import { MenuCard } from "../components";
 import { 
-  Calendar03Icon,    // Aktiviteler / Takvim
-  TaskDaily01Icon,   // Günlük İşler
+  Calendar03Icon,
+  TaskDaily01Icon,
   ArrowRight01Icon 
 } from "hugeicons-react-native";
 
@@ -19,18 +18,19 @@ export function ActivityMenuScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   
-  // Store Verileri
   const { colors, themeMode } = useUIStore() as any;
   const insets = useSafeAreaInsets();
   const isDark = themeMode === "dark";
 
-  // --- TEMA RENKLERİ ---
-  const THEME_PINK = "#ec4899"; // Neon Pembe
-  const headerBg = isDark ? (colors?.header || "#1E293B") : "#FFFFFF";
-  const contentBg = isDark ? (colors?.background || "#0f0518") : "#F8F9FA";
+  const THEME_PINK = "#ec4899";
   const arrowColor = isDark ? "#64748B" : "#9CA3AF";
 
-  // --- YÖNLENDİRMELER ---
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)']
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
   const handleActivitiesPress = useCallback(() => {
     router.push("/(tabs)/activities/list");
   }, [router]);
@@ -71,20 +71,26 @@ export function ActivityMenuScreen(): React.ReactElement {
   ];
 
   return (
-    <>
-      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={headerBg} />
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       
-      {/* HEADER ALANI */}
-      <View style={[styles.container, { backgroundColor: headerBg }]}>
-        
+      <View style={StyleSheet.absoluteFill}>
+          <LinearGradient
+              colors={gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+          />
+      </View>
+
+      <View style={{ flex: 1 }}>
         <ScreenHeader title={t("activityMenu.title")} showBackButton />
         
-        {/* İÇERİK ALANI (Modern Yuvarlak Köşeler) */}
         <FlatList
-          style={[styles.content, { backgroundColor: contentBg }]}
+          style={styles.content}
           contentContainerStyle={[
             styles.contentContainer, 
-            { paddingBottom: insets.bottom + 100 }
+            { paddingBottom: insets.bottom + 40 }
           ]}
           data={menuItems}
           keyExtractor={(item) => item.key}
@@ -100,7 +106,7 @@ export function ActivityMenuScreen(): React.ReactElement {
           showsVerticalScrollIndicator={false}
         />
       </View>
-    </>
+    </View>
   );
 }
 
@@ -110,16 +116,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    // Modern Bottom Sheet Görünümü (32px radius)
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: "hidden",
-    // Hafif üst çizgi
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.05)",
+    backgroundColor: 'transparent',
   },
   contentContainer: {
     padding: 20,
-    paddingTop: 32,
+    paddingTop: 10,
   },
 });

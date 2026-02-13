@@ -5,20 +5,20 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { ScreenHeader } from "../../../components/navigation";
 import { useUIStore } from "../../../store/ui";
-import { MenuCard } from "../../customer/components"; // Yeni Pembe MenuCard
-import { Text } from "../../../components/ui/text"; // Başlıklar için
+import { MenuCard } from "../../customer/components";
+import { Text } from "../../../components/ui/text";
 
-// --- PROFESYONEL İKONLAR ---
 import { 
   PlusSignIcon, 
-  Files01Icon,          // Liste / Belge
-  HourglassIcon,        // Bekleyen Onay
-  Invoice01Icon,        // Teklif
-  ShoppingBag01Icon,    // Sipariş
-  NoteIcon,             // Talep
-  ChartLineData01Icon,  // KPI / Grafik
+  Files01Icon,
+  HourglassIcon,
+  Invoice01Icon,
+  ShoppingBag01Icon,
+  NoteIcon,
+  ChartLineData01Icon,
   ArrowRight01Icon 
 } from "hugeicons-react-native";
 
@@ -26,21 +26,20 @@ export function SalesMenuScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   
-  // Store Verileri
   const { colors, themeMode } = useUIStore() as any;
   const insets = useSafeAreaInsets();
   const isDark = themeMode === "dark";
 
-  // --- TEMA RENKLERİ ---
-  const THEME_PINK = "#ec4899"; // Neon Pembe
-  const headerBg = isDark ? (colors?.header || "#1E293B") : "#FFFFFF";
-  const contentBg = isDark ? (colors?.background || "#0f0518") : "#F8F9FA";
+  const THEME_PINK = "#ec4899";
   const arrowColor = isDark ? "#64748B" : "#9CA3AF";
   
-  // Bölüm Başlığı Rengi
   const sectionTitleColor = isDark ? "#94A3B8" : "#6B7280";
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
 
-  // --- YÖNLENDİRMELER ---
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)']
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
   const handleCreateQuotationPress = useCallback(() => router.push("/(tabs)/sales/quotations/create"), [router]);
   const handleQuotationListPress = useCallback(() => router.push("/(tabs)/sales/quotations"), [router]);
   const handleWaitingApprovalsPress = useCallback(() => router.push("/(tabs)/sales/quotations/waiting-approvals"), [router]);
@@ -55,7 +54,6 @@ export function SalesMenuScreen(): React.ReactElement {
 
   const handleSalesKpiPress = useCallback(() => router.push("/(tabs)/sales/sales-kpi"), [router]);
 
-  // --- İKON HELPER (Kod tekrarını önlemek için) ---
   const renderIcon = (IconComponent: any) => (
     <IconComponent 
       size={24} 
@@ -66,14 +64,23 @@ export function SalesMenuScreen(): React.ReactElement {
   );
 
   return (
-    <>
-      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={headerBg} />
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       
-      <View style={[styles.container, { backgroundColor: headerBg }]}>
+      <View style={StyleSheet.absoluteFill}>
+          <LinearGradient
+              colors={gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+          />
+      </View>
+      
+      <View style={{ flex: 1 }}>
         <ScreenHeader title={t("modules.sales")} showBackButton />
         
         <FlatListScrollView
-          style={[styles.content, { backgroundColor: contentBg }]}
+          style={styles.content}
           contentContainerStyle={[
             styles.contentContainer, 
             { paddingBottom: insets.bottom + 100 }
@@ -155,8 +162,9 @@ export function SalesMenuScreen(): React.ReactElement {
             rightIcon={<ArrowRight01Icon size={20} color={arrowColor} />}
             onPress={handleDemandWaitingApprovalsPress}
           />
-<Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sales.demands")}</Text>
-                    {/* --- KPI / RAPORLAR --- */}
+
+          {/* --- KPI / RAPORLAR --- */}
+           <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>{t("sidebar.reports")}</Text>
           <MenuCard
             title={t("salesman360.title")}
             description={t("salesman360.subtitle")}
@@ -167,7 +175,7 @@ export function SalesMenuScreen(): React.ReactElement {
 
         </FlatListScrollView>
       </View>
-    </>
+    </View>
   );
 }
 
@@ -177,16 +185,11 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    // Modern Bottom Sheet görünümü (Diğer sayfalarla uyumlu: 32)
-    borderTopLeftRadius: 32,
-    borderTopRightRadius: 32,
-    overflow: "hidden",
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.05)",
+    backgroundColor: 'transparent',
   },
   contentContainer: {
     padding: 20,
-    paddingTop: 24, // Biraz daha yukarı aldım
+    paddingTop: 24,
   },
   sectionTitle: {
     fontSize: 13,
