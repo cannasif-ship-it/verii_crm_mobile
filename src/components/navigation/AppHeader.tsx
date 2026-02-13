@@ -15,19 +15,18 @@ export function AppHeader(): React.ReactElement {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   
-  // Get theme colors and mode
   const { colors, openSidebar, themeMode } = useUIStore();
   const { user, branch, clearAuth } = useAuthStore(); 
 
   const isDark = themeMode === "dark";
 
-  // Define dynamic styles based on theme
   const THEME = {
-    bg: isDark ? "#0f0518" : colors.card, // Dark purple for dark mode, card color for light
-    border: isDark ? "rgba(255, 255, 255, 0.1)" : colors.border,
-    iconColor: isDark ? "#E2E8F0" : colors.text, // Light icons for dark mode, dark icons for light
-    buttonBg: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.05)",
-    avatarInnerBg: isDark ? "#0f0518" : colors.background,
+    bg: isDark ? "#0c0516" : "#FFFFFF",
+    border: isDark ? "rgba(255, 255, 255, 0.08)" : "#F1F5F9",
+    iconColor: isDark ? "#F8FAFC" : "#0F172A",
+    buttonBg: isDark ? "rgba(255, 255, 255, 0.06)" : "#F8FAFC",
+    avatarInnerBg: isDark ? "#0c0516" : "#FFFFFF",
+    shadowColor: isDark ? "#000000" : "#64748B",
   };
 
   const [isProfileOpen, setProfileOpen] = useState(false);
@@ -51,10 +50,10 @@ export function AppHeader(): React.ReactElement {
             backgroundColor: THEME.bg,
             paddingTop: insets.top + 10,
             borderBottomColor: THEME.border,
+            shadowColor: THEME.shadowColor,
           }
         ]}
       >
-        {/* Left: Menu Button */}
         <View style={styles.leftContainer}>
           <TouchableOpacity 
             onPress={openSidebar} 
@@ -65,10 +64,8 @@ export function AppHeader(): React.ReactElement {
           </TouchableOpacity>
         </View>
 
-        {/* Center: Spacer (Title removed as per original design) */}
         <View style={styles.centerContainer} pointerEvents="none" />
 
-        {/* Right: Profile Avatar */}
         <View style={styles.rightContainer}>
           <TouchableOpacity onPress={handleProfilePress} activeOpacity={0.8}>
             <LinearGradient
@@ -106,12 +103,10 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     borderBottomWidth: 1,
     zIndex: 50,
-    // Shadow logic mostly applies to light mode or elevated dark surfaces
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
     minHeight: 80, 
   },
   leftContainer: {
@@ -130,17 +125,16 @@ const styles = StyleSheet.create({
     flex: 2,
   },
   iconButton: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 20,
-    // Background color is handled in component
+    borderRadius: 14,
   },
   avatarBorder: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
     padding: 2, 
     alignItems: "center",
     justifyContent: "center",
@@ -148,9 +142,8 @@ const styles = StyleSheet.create({
   avatarInner: {
     width: "100%",
     height: "100%",
-    borderRadius: 20,
+    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
-    // Background color is handled in component
   },
 });
