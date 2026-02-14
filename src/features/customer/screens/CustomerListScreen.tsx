@@ -12,6 +12,7 @@ import {
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
+import { LinearGradient } from "expo-linear-gradient"; // Gradient eklendi
 import { ScreenHeader } from "../../../components/navigation";
 import { useUIStore } from "../../../store/ui";
 import { useCustomers } from "../hooks"; 
@@ -20,7 +21,6 @@ import { LayoutGridIcon, ListViewIcon, Add01Icon } from "hugeicons-react-native"
 import type { CustomerDto } from "../types"; 
 import { CustomerCard } from "../components/CustomerCard"; 
 
-// Ekran boyutuna göre Grid hesaplaması
 const { width } = Dimensions.get('window');
 const GAP = 12; 
 const PADDING = 16; 
@@ -30,19 +30,20 @@ export function CustomerListScreen() {
   const { t } = useTranslation();
   const router = useRouter();
   
-  // --- TEMA AYARLARI (Store'dan) ---
   const { themeMode, colors } = useUIStore();
   const isDark = themeMode === "dark";
 
-  // Renkleri dinamik hale getirdik
+  // --- AMBIENT GRADIENT AYARLARI ---
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
   const theme = {
-    screenBg: isDark ? "#1a0b2e" : colors.background,
-    headerBg: isDark ? "#1a0b2e" : colors.card,
     textMute: isDark ? "#94a3b8" : colors.textMuted,
     primary: "#db2777",     
     activeSwitch: "#db2777",
     switchBg: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
-    iconColor: isDark ? '#FFFFFF' : colors.text,
   };
   
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -54,7 +55,6 @@ export function CustomerListScreen() {
     return () => clearTimeout(handler);
   }, [searchText]);
 
-  // --- API ---
   const { 
     data, 
     isLoading, 
@@ -62,7 +62,6 @@ export function CustomerListScreen() {
     isRefetching 
   } = useCustomers({ pageSize: 1000 }); 
 
-  // --- FİLTRELEME ---
   const customers = useMemo(() => {
     const allCustomers = data?.pages?.flatMap(page => page.items ?? []) || [];
     if (!debouncedQuery || debouncedQuery.trim().length < 2) {
@@ -91,97 +90,90 @@ export function CustomerListScreen() {
   ), [viewMode, router]);
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
-      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       
-      <ScreenHeader title={t("customer.title")} showBackButton={true} />
+      {/* KATMAN 1: Ambient Gradient (En arkada) */}
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
 
-      <View style={styles.listContainer}>
-        {/* --- KONTROL ALANI --- */}
-        <View style={[styles.controlsArea, { backgroundColor: theme.headerBg }]}>
-          
-          {/* Arama */}
-          <View style={{ flex: 1, marginRight: 10 }}>
-             <SearchInput value={searchText} onSearch={setSearchText} placeholder={t("customer.search")} />
-          </View>
-          
-          {/* Ekle Butonu - Yeni Müşteri */}
-          <TouchableOpacity
-            onPress={handleCreatePress}
-            style={[styles.iconBtn, { backgroundColor: theme.primary, marginRight: 8 }]}
-            activeOpacity={0.8}
-            accessibilityLabel={t("customer.create")}
-            accessibilityRole="button"
-          >
-            <Add01Icon size={18} color="#FFF" variant="stroke" />
-          </TouchableOpacity>
+      {/* KATMAN 2: Sayfa İçeriği */}
+      <View style={{ flex: 1 }}>
+        <ScreenHeader title={t("customer.title")} showBackButton={true} />
 
-          {/* Grid/List Değiştirici */}
-          <View style={[styles.viewSwitcher, { backgroundColor: theme.switchBg }]}>
-            <TouchableWithoutFeedback onPress={() => setViewMode('grid')}>
-              <View style={[styles.switchBtn, viewMode === 'grid' && { backgroundColor: theme.activeSwitch }]}>
-                 <LayoutGridIcon 
+        <View style={styles.listContainer}>
+          <View style={styles.controlsArea}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+               <SearchInput value={searchText} onSearch={setSearchText} placeholder={t("customer.search")} />
+            </View>
+            
+            <TouchableOpacity
+              onPress={handleCreatePress}
+              style={[styles.iconBtn, { backgroundColor: theme.primary, marginRight: 8 }]}
+              activeOpacity={0.8}
+            >
+              <Add01Icon size={18} color="#FFF" variant="stroke" />
+            </TouchableOpacity>
+
+            <View style={[styles.viewSwitcher, { backgroundColor: theme.switchBg }]}>
+              <TouchableWithoutFeedback onPress={() => setViewMode('grid')}>
+                <View style={[styles.switchBtn, viewMode === 'grid' && { backgroundColor: theme.activeSwitch }]}>
+                   <LayoutGridIcon 
                     size={18} 
                     color={viewMode === 'grid' ? '#FFF' : theme.textMute} 
                     variant="stroke" 
-                 />
-              </View>
-            </TouchableWithoutFeedback>
-            
-            <TouchableWithoutFeedback onPress={() => setViewMode('list')}>
-              <View style={[styles.switchBtn, viewMode === 'list' && { backgroundColor: theme.activeSwitch }]}>
-                 <ListViewIcon 
+                   />
+                </View>
+              </TouchableWithoutFeedback>
+              
+              <TouchableWithoutFeedback onPress={() => setViewMode('list')}>
+                <View style={[styles.switchBtn, viewMode === 'list' && { backgroundColor: theme.activeSwitch }]}>
+                   <ListViewIcon 
                     size={18} 
                     color={viewMode === 'list' ? '#FFF' : theme.textMute} 
                     variant="stroke" 
-                 />
-              </View>
-            </TouchableWithoutFeedback>
+                   />
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
           </View>
-        </View>
 
-        {/* --- LİSTE --- */}
-        {isLoading && !data ? (
-          <View style={styles.center}><ActivityIndicator size="large" color={theme.primary} /></View>
-        ) : (
-          <FlatList
-            key={viewMode} // Mod değişince listeyi sıfırla ki layout bozulmasın
-            data={customers}
-            renderItem={renderItem}
-            keyExtractor={(item) => String(item.id)}
-            
-            // Grid ise 2 kolon, List ise 1
-            numColumns={viewMode === 'grid' ? 2 : 1}
-            
-            // Grid modunda sütunlar arası boşluk
-            columnWrapperStyle={viewMode === 'grid' ? { gap: GAP } : undefined}
-            
-            contentContainerStyle={{
-                // === İŞTE BURASI ÖNEMLİ ===
-                // List modunda kenar boşluklarını (Padding) SIFIRLIYORUZ (Tam genişlik)
-                paddingHorizontal: viewMode === 'grid' ? PADDING : 0,
-                
-                paddingTop: viewMode === 'grid' ? 12 : 0,
-                paddingBottom: 40,
-                
-                // List modunda elemanlar arası boşluğu (Gap) SIFIRLIYORUZ (Bitişik olsun)
-                gap: viewMode === 'grid' ? GAP : 0, 
-            }}
-            
-            ListFooterComponent={<View style={{ height: 20 }} />}
-            refreshing={isRefetching}
-            onRefresh={refetch}
-            
-            ListEmptyComponent={
-              <View style={styles.center}>
-                <Text style={{ fontSize: 40 }}>👥</Text>
-                <Text style={{ color: theme.textMute, marginTop: 10 }}>
-                  {debouncedQuery.length > 0 ? t("common.noResults") : t("customer.noCustomers")}
-                </Text>
-              </View>
-            }
-          />
-        )}
+          {isLoading && !data ? (
+            <View style={styles.center}><ActivityIndicator size="large" color={theme.primary} /></View>
+          ) : (
+            <FlatList
+              key={viewMode}
+              data={customers}
+              renderItem={renderItem}
+              keyExtractor={(item) => String(item.id)}
+              numColumns={viewMode === 'grid' ? 2 : 1}
+              columnWrapperStyle={viewMode === 'grid' ? { gap: GAP } : undefined}
+              contentContainerStyle={{
+                  paddingHorizontal: viewMode === 'grid' ? PADDING : 16,
+                  paddingTop: 12,
+                  paddingBottom: 40,
+                  gap: viewMode === 'grid' ? GAP : 12, 
+              }}
+              ListFooterComponent={<View style={{ height: 20 }} />}
+              refreshing={isRefetching}
+              onRefresh={refetch}
+              ListEmptyComponent={
+                <View style={styles.center}>
+                  <Text style={{ fontSize: 40 }}>👥</Text>
+                  <Text style={{ color: theme.textMute, marginTop: 10 }}>
+                    {debouncedQuery.length > 0 ? t("common.noResults") : t("customer.noCustomers")}
+                  </Text>
+                </View>
+              }
+            />
+          )}
+        </View>
       </View>
     </View>
   );
@@ -189,19 +181,15 @@ export function CustomerListScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContainer: { flex: 1 },
+  listContainer: { flex: 1, backgroundColor: 'transparent' },
   center: { flex: 1, alignItems: "center", justifyContent: "center", marginTop: 50 },
-  
   controlsArea: {
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingHorizontal: 16, 
     paddingVertical: 12,
-    // Header altında hafif bir ayırıcı çizgi olabilir (opsiyonel)
-    // borderBottomWidth: 1,
-    // borderBottomColor: 'rgba(255,255,255,0.05)', 
+    backgroundColor: 'transparent',
   },
-  
   viewSwitcher: {
     flexDirection: 'row', 
     padding: 4, 
@@ -217,7 +205,6 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     justifyContent: 'center' 
   },
-  
   iconBtn: {
     height: 48,
     width: 48,

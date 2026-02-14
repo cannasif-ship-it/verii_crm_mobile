@@ -1,10 +1,10 @@
 import React from "react";
-import { View, StyleSheet, ScrollView } from "react-native";
+import { View, StyleSheet, ScrollView, Platform } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
 import { Text } from "../../../components/ui/text";
-import type { CustomerDto } from "../types";
-// UI Store'u içe aktar
 import { useUIStore } from "../../../store/ui"; 
-// HugeIcons
+import type { CustomerDto } from "../types";
 import { 
   Call02Icon, 
   Mail01Icon, 
@@ -24,7 +24,6 @@ import {
   Shield02Icon
 } from "hugeicons-react-native";
 
-// --- YARDIMCI FONKSİYONLAR ---
 const getInitials = (name: string) => {
   return name?.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ ]/g, "").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "?";
 };
@@ -49,8 +48,6 @@ function formatCurrency(value: number | undefined | null): string | null {
   return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 2 }).format(value);
 }
 
-// --- BİLEŞENLER ---
-
 function DetailRow({ label, value, icon, theme }: { label: string; value: string | undefined | null; icon?: React.ReactNode, theme: any }) {
   if (!value) return null;
   return (
@@ -66,7 +63,6 @@ function DetailRow({ label, value, icon, theme }: { label: string; value: string
 
 function StatusBadge({ isActive, activeText, inactiveText, theme }: { isActive: boolean; activeText: string; inactiveText: string, theme: any }) {
   const color = isActive ? "#10B981" : "#EF4444";
-  // Açık modda arka plan rengini biraz daha belirgin yapalım
   const bgColor = isActive 
     ? (theme.isDark ? "rgba(16, 185, 129, 0.1)" : "#D1FAE5") 
     : (theme.isDark ? "rgba(239, 68, 68, 0.1)" : "#FEE2E2");
@@ -81,33 +77,38 @@ function StatusBadge({ isActive, activeText, inactiveText, theme }: { isActive: 
 
 interface CustomerDetailContentProps {
   customer: CustomerDto | undefined;
-  colors: Record<string, string>; // Props'tan gelse de store kullanacağız
+  colors: Record<string, string>;
   insets: { bottom: number };
   t: (key: string) => string;
 }
 
 export function CustomerDetailContent({ customer, insets, t }: CustomerDetailContentProps): React.ReactElement {
-  
-  // --- DİNAMİK TEMA ---
   const { colors, themeMode } = useUIStore();
   const isDark = themeMode === "dark";
 
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
   const THEME = {
     isDark,
-    bg: isDark ? "#1a0b2e" : colors.background, // Koyu mor / Beyaz
-    cardBg: isDark ? "#1e1b29" : colors.card,   // Koyu kart / Açık kart
-    borderColor: isDark ? "rgba(255,255,255,0.08)" : colors.border,
-    divider: isDark ? "rgba(255,255,255,0.05)" : "#E2E8F0",
+    bg: "transparent",
+    cardBg: isDark ? "rgba(30, 27, 41, 0.5)" : "rgba(255, 255, 255, 0.8)",
+    borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
+    divider: isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9",
     text: isDark ? "#FFFFFF" : colors.text,
     textMute: isDark ? "#94a3b8" : colors.textMuted,
     primary: "#db2777",
-    
-    // Badge Renkleri (Açık modda daha soft)
-    badgeBg: isDark ? "rgba(219, 39, 119, 0.1)" : "#FCE7F3",
+    badgeBg: isDark ? "rgba(219, 39, 119, 0.15)" : "#FCE7F3",
     badgeText: "#db2777",
-    
-    yearBadgeBg: isDark ? "rgba(147, 51, 234, 0.1)" : "#F3E8FF",
+    yearBadgeBg: isDark ? "rgba(147, 51, 234, 0.15)" : "#F3E8FF",
     yearBadgeText: "#9333ea"
+  };
+
+  const safeT = (key: string, fallback: string) => {
+    const translation = t(key);
+    return translation === key ? fallback : translation;
   };
 
   const initials = getInitials(customer?.name || "");
@@ -117,7 +118,6 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
   if (customer?.countryName) locationParts.push(customer.countryName);
   if (customer?.cityName) locationParts.push(customer.cityName);
   if (customer?.districtName) locationParts.push(customer.districtName);
-  const locationString = locationParts.join(", ");
 
   const hasContactInfo = customer?.phone || customer?.phone2 || customer?.email || customer?.website;
   const hasLocationInfo = customer?.address || locationParts.length > 0;
@@ -127,223 +127,219 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
   const hasERPInfo = customer?.erpIntegrationNumber || customer?.isERPIntegrated !== undefined || customer?.lastSyncDate;
 
   return (
-    <ScrollView 
-      style={[styles.container, { backgroundColor: THEME.bg }]}
-      contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 100 }}
-      showsVerticalScrollIndicator={false}
-    >
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       
-      {/* --- HEADER KARTI --- */}
-      <View style={[styles.card, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-        <View style={styles.headerContent}>
-          <View style={[styles.avatar, { backgroundColor: `${avatarColor}15`, borderColor: `${avatarColor}30` }]}>
-            <Text style={[styles.avatarText, { color: avatarColor }]}>{initials}</Text>
-          </View>
-          
-          <Text style={[styles.customerName, { color: THEME.text }]}>{customer?.name}</Text>
-          {customer?.customerCode && (
-             <Text style={[styles.customerCode, { color: THEME.textMute }]}>#{customer.customerCode}</Text>
-          )}
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
 
-          <View style={styles.badgeRow}>
-            {customer?.customerTypeName && (
-              <View style={[styles.badge, { backgroundColor: THEME.badgeBg }]}>
-                <Text style={[styles.badgeText, { color: THEME.badgeText }]}>{customer.customerTypeName}</Text>
-              </View>
+      <ScrollView 
+        style={styles.content}
+        contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 100 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={[styles.card, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+          <View style={styles.headerContent}>
+            <View style={[styles.avatar, { backgroundColor: `${avatarColor}20`, borderColor: `${avatarColor}40` }]}>
+              <Text style={[styles.avatarText, { color: avatarColor }]}>{initials}</Text>
+            </View>
+            <Text style={[styles.customerName, { color: THEME.text }]}>{customer?.name}</Text>
+            {customer?.customerCode && (
+               <Text style={[styles.customerCode, { color: THEME.textMute }]}>#{customer.customerCode}</Text>
             )}
-            {customer?.year && (
-               <View style={[styles.badge, { backgroundColor: THEME.yearBadgeBg }]}>
-                  <Text style={[styles.badgeText, { color: THEME.yearBadgeText }]}>{customer.year}</Text>
+            <View style={styles.badgeRow}>
+              {customer?.customerTypeName && (
+                <View style={[styles.badge, { backgroundColor: THEME.badgeBg }]}>
+                  <Text style={[styles.badgeText, { color: THEME.badgeText }]}>{customer.customerTypeName}</Text>
+                </View>
+              )}
+              {customer?.year && (
+                 <View style={[styles.badge, { backgroundColor: THEME.yearBadgeBg }]}>
+                    <Text style={[styles.badgeText, { color: THEME.yearBadgeText }]}>{customer.year}</Text>
+                 </View>
+              )}
+            </View>
+          </View>
+        </View>
+
+        {hasContactInfo && (
+          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.contactInfo", "İLETİŞİM BİLGİLERİ")}</Text>
+            <DetailRow theme={THEME} label={safeT("customer.phone", "Telefon")} value={customer?.phone} icon={<Call02Icon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("customer.phone2", "Telefon 2")} value={customer?.phone2} icon={<Call02Icon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("customer.email", "E-Posta")} value={customer?.email} icon={<Mail01Icon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("customer.website", "Web Sitesi")} value={customer?.website} icon={<Globe02Icon size={16} color={THEME.textMute} />} />
+          </View>
+        )}
+
+        {hasLocationInfo && (
+          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("lookup.location", "ADRES BİLGİLERİ")}</Text>
+            <DetailRow theme={THEME} label={safeT("customer.address", "Adres")} value={customer?.address} icon={<Location01Icon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("lookup.country", "Ülke")} value={customer?.countryName} />
+            <DetailRow theme={THEME} label={safeT("lookup.city", "Şehir")} value={customer?.cityName} />
+            <DetailRow theme={THEME} label={safeT("lookup.district", "İlçe")} value={customer?.districtName} />
+          </View>
+        )}
+
+        {hasBusinessInfo && (
+          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.businessInfo", "TİCARİ BİLGİLER")}</Text>
+            <DetailRow theme={THEME} label={safeT("customer.salesRepCode", "Satış Temsilcisi")} value={customer?.salesRepCode} icon={<UserIcon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("customer.groupCode", "Grup Kodu")} value={customer?.groupCode} icon={<UserGroupIcon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("customer.creditLimit", "Kredi Limiti")} value={formatCurrency(customer?.creditLimit)} icon={<Coins01Icon size={16} color="#10b981" />} />
+            <DetailRow theme={THEME} label={safeT("customer.branchCode", "Şube Kodu")} value={customer?.branchCode ? String(customer.branchCode) : null} />
+          </View>
+        )}
+
+        {hasTaxInfo && (
+          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.taxInfo", "VERGİ BİLGİLERİ")}</Text>
+            <DetailRow theme={THEME} label={safeT("customer.taxNumber", "Vergi Numarası")} value={customer?.taxNumber} icon={<Invoice01Icon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("customer.taxOffice", "Vergi Dairesi")} value={customer?.taxOffice} icon={<Building03Icon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("customer.tcknNumber", "TCKN")} value={customer?.tcknNumber} icon={<CreditCardIcon size={16} color={THEME.textMute} />} />
+          </View>
+        )}
+
+        {hasApprovalInfo && (
+          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.approvalInfo", "ONAY BİLGİLERİ")}</Text>
+            <View style={styles.badgeRow}>
+               {customer?.isCompleted !== undefined && (
+                  <StatusBadge 
+                    theme={THEME}
+                    isActive={customer.isCompleted} 
+                    activeText={safeT("customer.statusCompleted", "Tamamlandı")} 
+                    inactiveText={safeT("customer.statusPending", "Beklemede")} 
+                  />
+               )}
+               {customer?.isPendingApproval && (
+                  <View style={[styles.pendingBadge, { backgroundColor: isDark ? "rgba(245, 158, 11, 0.15)" : "#FEF3C7" }]}>
+                     <Text style={[styles.pendingText, { color: "#F59E0B" }]}>{safeT("customer.isPendingApproval", "Onay Bekliyor")}</Text>
+                  </View>
+               )}
+            </View>
+            <DetailRow theme={THEME} label={safeT("customer.approvalStatus", "Onay Durumu")} value={customer?.approvalStatus} icon={<Shield02Icon size={16} color={THEME.textMute} />} />
+            <DetailRow theme={THEME} label={safeT("customer.approvalDate", "Onay Tarihi")} value={formatDate(customer?.approvalDate)} />
+            <DetailRow theme={THEME} label={safeT("customer.rejectedReason", "Red Nedeni")} value={customer?.rejectedReason} />
+          </View>
+        )}
+
+        {hasERPInfo && (
+          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.erpIntegration", "ERP ENTEGRASYONU")}</Text>
+            <DetailRow theme={THEME} label={safeT("customer.erpIntegrationNumber", "ERP No")} value={customer?.erpIntegrationNumber} icon={<ComputerIcon size={16} color={THEME.textMute} />} />
+            {customer?.isERPIntegrated !== undefined && (
+               <View style={[styles.detailRow, { borderBottomColor: THEME.divider }]}>
+                  <View style={styles.detailLabelRow}>
+                     <View style={styles.iconWrapper}><ComputerIcon size={16} color={THEME.textMute} /></View>
+                     <Text style={[styles.detailLabel, { color: THEME.textMute }]}>{safeT("customer.isERPIntegrated", "ERP Entegre")}</Text>
+                  </View>
+                  <StatusBadge theme={THEME} isActive={customer.isERPIntegrated} activeText={safeT("customer.statusYes", "Evet")} inactiveText={safeT("customer.statusNo", "Hayır")} />
                </View>
             )}
+            <DetailRow theme={THEME} label={safeT("customer.lastSyncDate", "Son Senkronizasyon")} value={formatDate(customer?.lastSyncDate)} />
           </View>
-        </View>
-      </View>
+        )}
 
-      {/* --- İLETİŞİM --- */}
-      {hasContactInfo && (
-        <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("customer.contactInfo")}</Text>
-          <DetailRow theme={THEME} label={t("customer.phone")} value={customer?.phone} icon={<Call02Icon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("customer.phone2")} value={customer?.phone2} icon={<Call02Icon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("customer.email")} value={customer?.email} icon={<Mail01Icon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("customer.website")} value={customer?.website} icon={<Globe02Icon size={16} color={THEME.textMute} />} />
-        </View>
-      )}
-
-      {/* --- LOKASYON --- */}
-      {hasLocationInfo && (
-        <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("lookup.location")}</Text>
-          <DetailRow theme={THEME} label={t("customer.address")} value={customer?.address} icon={<Location01Icon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("lookup.country")} value={customer?.countryName} />
-          <DetailRow theme={THEME} label={t("lookup.city")} value={customer?.cityName} />
-          <DetailRow theme={THEME} label={t("lookup.district")} value={customer?.districtName} />
-        </View>
-      )}
-
-      {/* --- FİNANSAL --- */}
-      {hasBusinessInfo && (
-        <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("customer.businessInfo")}</Text>
-          <DetailRow theme={THEME} label={t("customer.salesRepCode")} value={customer?.salesRepCode} icon={<UserIcon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("customer.groupCode")} value={customer?.groupCode} icon={<UserGroupIcon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("customer.creditLimit")} value={formatCurrency(customer?.creditLimit)} icon={<Coins01Icon size={16} color="#10b981" />} />
-          <DetailRow theme={THEME} label={t("customer.branchCode")} value={String(customer?.branchCode)} />
-          <DetailRow theme={THEME} label={t("customer.businessUnitCode")} value={String(customer?.businessUnitCode)} />
-        </View>
-      )}
-
-      {/* --- VERGİ --- */}
-      {hasTaxInfo && (
-        <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("customer.taxInfo")}</Text>
-          <DetailRow theme={THEME} label={t("customer.taxNumber")} value={customer?.taxNumber} icon={<Invoice01Icon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("customer.taxOffice")} value={customer?.taxOffice} icon={<Building03Icon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("customer.tcknNumber")} value={customer?.tcknNumber} icon={<CreditCardIcon size={16} color={THEME.textMute} />} />
-        </View>
-      )}
-
-      {/* --- ONAY --- */}
-      {hasApprovalInfo && (
-        <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("customer.approvalInfo")}</Text>
-          
-          <View style={styles.badgeRow}>
-             {customer?.isCompleted !== undefined && (
-                <StatusBadge 
-                  theme={THEME}
-                  isActive={customer.isCompleted} 
-                  activeText={t("customer.statusCompleted")} 
-                  inactiveText={t("customer.statusPending")} 
-                />
-             )}
-             {customer?.isPendingApproval && (
-                <View style={[styles.pendingBadge, { backgroundColor: isDark ? "rgba(245, 158, 11, 0.1)" : "#FEF3C7" }]}>
-                   <Text style={[styles.pendingText, { color: "#F59E0B" }]}>{t("customer.isPendingApproval")}</Text>
-                </View>
-             )}
+        {customer?.notes && (
+          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+            <View style={styles.detailLabelRow}>
+               <Note01Icon size={16} color={THEME.textMute} style={{marginRight: 8}} />
+               <Text style={[styles.sectionTitle, { color: THEME.primary, marginBottom: 0 }]}>{safeT("customer.notes", "NOTLAR")}</Text>
+            </View>
+            <Text style={[styles.notesText, { color: THEME.text }]}>{customer.notes}</Text>
           </View>
+        )}
 
-          <DetailRow theme={THEME} label={t("customer.approvalStatus")} value={customer?.approvalStatus} icon={<Shield02Icon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={t("customer.approvalDate")} value={formatDate(customer?.approvalDate)} />
-          <DetailRow theme={THEME} label={t("customer.completionDate")} value={formatDate(customer?.completionDate)} />
-          <DetailRow theme={THEME} label={t("customer.rejectedReason")} value={customer?.rejectedReason} />
-        </View>
-      )}
-
-      {/* --- ERP --- */}
-      {hasERPInfo && (
         <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("customer.erpIntegration")}</Text>
-          
-          <DetailRow theme={THEME} label={t("customer.erpIntegrationNumber")} value={customer?.erpIntegrationNumber} icon={<ComputerIcon size={16} color={THEME.textMute} />} />
-          
-          {customer?.isERPIntegrated !== undefined && (
-             <View style={[styles.detailRow, { borderBottomColor: THEME.divider }]}>
-                <View style={styles.detailLabelRow}>
-                   <View style={styles.iconWrapper}><ComputerIcon size={16} color={THEME.textMute} /></View>
-                   <Text style={[styles.detailLabel, { color: THEME.textMute }]}>{t("customer.isERPIntegrated")}</Text>
-                </View>
-                <StatusBadge theme={THEME} isActive={customer.isERPIntegrated} activeText={t("customer.statusYes")} inactiveText={t("customer.statusNo")} />
-             </View>
-          )}
-          
-          <DetailRow theme={THEME} label={t("customer.lastSyncDate")} value={formatDate(customer?.lastSyncDate)} />
+          <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.systemInfo", "SİSTEM BİLGİLERİ")}</Text>
+          <DetailRow theme={THEME} label={safeT("customer.createdBy", "Oluşturan")} value={customer?.createdByFullUser} icon={<UserIcon size={16} color={THEME.textMute} />} />
+          <DetailRow theme={THEME} label={safeT("customer.createdDate", "Oluşturulma")} value={formatDate(customer?.createdDate)} icon={<Calendar03Icon size={16} color={THEME.textMute} />} />
+          <DetailRow theme={THEME} label={safeT("customer.updatedBy", "Güncelleyen")} value={customer?.updatedByFullUser} icon={<UserIcon size={16} color={THEME.textMute} />} />
+          <DetailRow theme={THEME} label={safeT("customer.updatedDate", "Güncellenme")} value={formatDate(customer?.updatedDate)} icon={<Calendar03Icon size={16} color={THEME.textMute} />} />
         </View>
-      )}
-
-      {/* --- NOTLAR --- */}
-      {customer?.notes && (
-        <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <View style={styles.detailLabelRow}>
-             <Note01Icon size={16} color={THEME.textMute} style={{marginRight: 8}} />
-             <Text style={[styles.sectionTitle, { color: THEME.text, marginBottom: 0 }]}>{t("customer.notes")}</Text>
-          </View>
-          <Text style={[styles.notesText, { color: THEME.textMute }]}>{customer.notes}</Text>
-        </View>
-      )}
-
-      {/* --- SİSTEM --- */}
-      <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-        <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("customer.systemInfo")}</Text>
-        <DetailRow theme={THEME} label={t("customer.createdBy")} value={customer?.createdByFullUser} icon={<UserIcon size={16} color={THEME.textMute} />} />
-        <DetailRow theme={THEME} label={t("customer.createdDate")} value={formatDate(customer?.createdDate)} icon={<Calendar03Icon size={16} color={THEME.textMute} />} />
-        <DetailRow theme={THEME} label={t("customer.updatedBy")} value={customer?.updatedByFullUser} icon={<UserIcon size={16} color={THEME.textMute} />} />
-        <DetailRow theme={THEME} label={t("customer.updatedDate")} value={formatDate(customer?.updatedDate)} icon={<Calendar03Icon size={16} color={THEME.textMute} />} />
-      </View>
-
-    </ScrollView>
+      </ScrollView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  content: { flex: 1, backgroundColor: 'transparent' },
   card: {
     padding: 24,
     borderRadius: 24,
     borderWidth: 1,
     marginBottom: 20,
     alignItems: 'center',
+    ...Platform.select({
+      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
+      android: { elevation: 2 }
+    })
   },
   headerContent: { alignItems: 'center' },
   avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 30,
+    width: 84,
+    height: 84,
+    borderRadius: 28,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 1.5,
     marginBottom: 16,
   },
-  avatarText: { fontSize: 28, fontWeight: "bold" },
-  customerName: { fontSize: 22, fontWeight: "700", textAlign: "center", marginBottom: 4 },
-  customerCode: { fontSize: 14, fontFamily: "monospace", opacity: 0.7, marginBottom: 16 },
-  
+  avatarText: { fontSize: 30, fontWeight: "800" },
+  customerName: { fontSize: 22, fontWeight: "800", textAlign: "center", marginBottom: 4 },
+  customerCode: { fontSize: 13, fontFamily: Platform.select({ ios: 'Courier', android: 'monospace' }), opacity: 0.6, marginBottom: 16 },
   badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 8 },
-  badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  badgeText: { fontSize: 12, fontWeight: "600" },
-  
+  badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
+  badgeText: { fontSize: 11, fontWeight: "700" },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
     borderWidth: 1,
     gap: 6,
   },
-  statusText: { fontSize: 12, fontWeight: "600" },
-  pendingBadge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8 },
-  pendingText: { fontSize: 12, fontWeight: "600" },
-
+  statusText: { fontSize: 11, fontWeight: "700" },
+  pendingBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
+  pendingText: { fontSize: 11, fontWeight: "700" },
   section: {
     padding: 20,
-    borderRadius: 20,
+    borderRadius: 24,
     borderWidth: 1,
     marginBottom: 16,
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 16,
-    opacity: 0.9,
+    fontSize: 13,
+    fontWeight: "800",
+    marginBottom: 18,
+    letterSpacing: 1,
+    textTransform: 'uppercase'
   },
   detailRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderBottomWidth: 1,
   },
   detailLabelRow: { flexDirection: 'row', alignItems: 'center' },
-  iconWrapper: { marginRight: 10, opacity: 0.7 },
-  detailLabel: { fontSize: 14, fontWeight: "500" },
+  iconWrapper: { marginRight: 10, opacity: 0.8 },
+  detailLabel: { fontSize: 13, fontWeight: "600" },
   detailValue: {
-    fontSize: 14,
-    fontWeight: "600",
-    maxWidth: '60%',
+    fontSize: 13,
+    fontWeight: "700",
+    maxWidth: '65%',
     textAlign: 'right',
   },
-  notesText: { marginTop: 12, fontSize: 14, lineHeight: 22 },
+  notesText: { marginTop: 12, fontSize: 14, lineHeight: 22, opacity: 0.9 },
 });

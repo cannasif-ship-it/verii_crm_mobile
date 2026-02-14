@@ -5,6 +5,7 @@ import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient"; // Gradient eklendi
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { CustomRefreshControl } from "../../../components/CustomRefreshControl";
@@ -20,9 +21,15 @@ export function ContactListScreen(): React.ReactElement {
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
 
-  const [searchText, setSearchText] = useState("");
+  const isDark = themeMode === "dark";
 
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
+  // --- AMBIENT GRADIENT AYARLARI ---
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
+  const [searchText, setSearchText] = useState("");
 
   const filters: PagedFilter[] | undefined = useMemo(() => {
     if (searchText.trim().length >= 2) {
@@ -97,9 +104,21 @@ export function ContactListScreen(): React.ReactElement {
   }, [isInitialLoading, colors, t]);
 
   return (
-    <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}> 
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      
+      {/* KATMAN 1: Ambient Gradient (En arkada duracak) */}
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
+      {/* KATMAN 2: Sayfa İçeriği */}
+      <View style={{ flex: 1 }}>
         <ScreenHeader
           title={t("contact.title")}
           showBackButton
@@ -109,7 +128,9 @@ export function ContactListScreen(): React.ReactElement {
             </TouchableOpacity>
           }
         />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}> 
+        
+        {/* İçerik alanını şeffaf yaptık ki gradient görünsün */}
+        <View style={styles.content}> 
           <View style={styles.topSection}>
             <TouchableOpacity
               style={[styles.createButton, { backgroundColor: colors.accent }]}
@@ -153,13 +174,13 @@ export function ContactListScreen(): React.ReactElement {
                 Platform.OS === "android" ? (
                   <TouchableOpacity
                     key={String(item.id ?? index)}
-                    style={styles.androidCard}
+                    style={[styles.androidCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }]}
                     onPress={() => handleContactPress(item)}
                     activeOpacity={0.8}
                   >
-                    <RNText style={styles.androidCardTitle}>{item.fullName || "-"}</RNText>
-                    <RNText style={styles.androidCardSub}>{item.titleName || "Unvan: -"}</RNText>
-                    <RNText style={styles.androidCardSub}>{item.phone || item.mobile || "-"}</RNText>
+                    <RNText style={[styles.androidCardTitle, { color: colors.text }]}>{item.fullName || "-"}</RNText>
+                    <RNText style={[styles.androidCardSub, { color: colors.textMuted }]}>{item.titleName || "Unvan: -"}</RNText>
+                    <RNText style={[styles.androidCardSub, { color: colors.textMuted }]}>{item.phone || item.mobile || "-"}</RNText>
                   </TouchableOpacity>
                 ) : (
                   <ContactCard
@@ -171,7 +192,7 @@ export function ContactListScreen(): React.ReactElement {
               )}
               {hasNextPage ? (
                 <TouchableOpacity
-                  style={[styles.loadMoreButton, { borderColor: colors.cardBorder }]}
+                  style={[styles.loadMoreButton, { borderColor: colors.cardBorder, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }]}
                   onPress={handleLoadMore}
                   disabled={isFetchingNextPage}
                 >
@@ -186,18 +207,15 @@ export function ContactListScreen(): React.ReactElement {
           )}
         </View>
       </View>
-    </>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: 'transparent',
   },
   topSection: {
     paddingHorizontal: 20,
@@ -213,58 +231,18 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     gap: 6,
   },
-  createButtonIcon: {
-    fontSize: 16,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  createButtonText: {
-    fontSize: 13,
-    color: "#FFFFFF",
-    fontWeight: "600",
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    paddingHorizontal: 20,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  retryText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 16,
-  },
+  createButtonIcon: { fontSize: 16, color: "#FFFFFF", fontWeight: "600" },
+  createButtonText: { fontSize: 13, color: "#FFFFFF", fontWeight: "600" },
+  list: { flex: 1, backgroundColor: 'transparent' },
+  listContent: { paddingHorizontal: 20 },
+  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
+  errorContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },
+  errorText: { fontSize: 16, marginBottom: 16 },
+  retryButton: { paddingHorizontal: 20, paddingVertical: 10 },
+  retryText: { fontSize: 16, fontWeight: "600" },
+  emptyContainer: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60 },
+  emptyIcon: { fontSize: 48, marginBottom: 16 },
+  emptyText: { fontSize: 16 },
   addButton: {
     width: 32,
     height: 32,
@@ -273,12 +251,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  addIcon: {
-    fontSize: 18,
-    color: "#FFFFFF",
-    fontWeight: "600",
-    lineHeight: 22,
-  },
+  addIcon: { fontSize: 18, color: "#FFFFFF", fontWeight: "600", lineHeight: 22 },
   loadMoreButton: {
     minHeight: 42,
     borderWidth: 1,
@@ -289,7 +262,6 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   androidCard: {
-    backgroundColor: "#1f2937",
     borderColor: "rgba(255,255,255,0.15)",
     borderWidth: 1,
     borderRadius: 12,
@@ -297,14 +269,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     marginBottom: 12,
   },
-  androidCardTitle: {
-    color: "#ffffff",
-    fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 4,
-  },
-  androidCardSub: {
-    color: "#cbd5e1",
-    fontSize: 13,
-  },
+  androidCardTitle: { fontSize: 15, fontWeight: "600", marginBottom: 4 },
+  androidCardSub: { fontSize: 13 },
 });

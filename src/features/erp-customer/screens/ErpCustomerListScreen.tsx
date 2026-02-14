@@ -4,6 +4,7 @@ import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { CustomRefreshControl } from "../../../components/CustomRefreshControl";
@@ -16,10 +17,16 @@ export function ErpCustomerListScreen(): React.ReactElement {
   const { t } = useTranslation();
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+  
+  const isDark = themeMode === "dark";
+
+  // 1. Ana zemin ve Gradient Renkleri (Standart Şablon)
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
 
   const [searchText, setSearchText] = useState("");
-
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
 
   const searchParam = useMemo(() => {
     return searchText.trim().length >= 2 ? searchText.trim() : null;
@@ -71,14 +78,28 @@ export function ErpCustomerListScreen(): React.ReactElement {
         </Text>
       </View>
     );
-  }, [isPending, colors, t]);
+  }, [isPending, colors.accent, colors.textMuted, t]);
 
   return (
-    <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}> 
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      {/* StatusBar ayarı */}
+      <StatusBar style={isDark ? "light" : "dark"} />
+
+      {/* KATMAN 1: Ambient Gradient (En arkada) */}
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
+      {/* KATMAN 2: Sayfa İçeriği */}
+      <View style={{ flex: 1 }}>
         <ScreenHeader title={t("erpCustomer.title")} showBackButton />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}> 
+        
+        <View style={styles.content}>
           <View style={styles.topSection}>
             <SearchInput
               value={searchText}
@@ -114,13 +135,25 @@ export function ErpCustomerListScreen(): React.ReactElement {
                 Platform.OS === "android" ? (
                   <TouchableOpacity
                     key={`${item.cariKod}-${item.subeKodu}-${index}`}
-                    style={styles.androidCard}
+                    style={[
+                      styles.androidCard, 
+                      { 
+                        backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.8)",
+                        borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" 
+                      }
+                    ]}
                     onPress={() => handleCustomerPress(item)}
                     activeOpacity={0.8}
                   >
-                    <RNText style={styles.androidCardTitle}>{item.cariIsim || item.cariKod}</RNText>
-                    <RNText style={styles.androidCardSub}>{item.cariKod}</RNText>
-                    <RNText style={styles.androidCardSub}>{item.cariTel || item.email || "-"}</RNText>
+                    <RNText style={[styles.androidCardTitle, { color: colors.text }]}>
+                      {item.cariIsim || item.cariKod}
+                    </RNText>
+                    <RNText style={[styles.androidCardSub, { color: colors.textMuted }]}>
+                      {item.cariKod}
+                    </RNText>
+                    <RNText style={[styles.androidCardSub, { color: colors.textMuted }]}>
+                      {item.cariTel || item.email || "-"}
+                    </RNText>
                   </TouchableOpacity>
                 ) : (
                   <ErpCustomerCard
@@ -134,7 +167,7 @@ export function ErpCustomerListScreen(): React.ReactElement {
           )}
         </View>
       </View>
-    </>
+    </View>
   );
 }
 
@@ -144,18 +177,20 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: 'transparent', // Gradientin görünmesi için şeffaf
   },
   topSection: {
     paddingHorizontal: 20,
     paddingTop: 16,
+    paddingBottom: 8,
   },
   list: {
     flex: 1,
+    backgroundColor: 'transparent',
   },
   listContent: {
     paddingHorizontal: 20,
+    paddingTop: 8,
   },
   loadingContainer: {
     flex: 1,
@@ -194,22 +229,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   androidCard: {
-    backgroundColor: "#1f2937",
-    borderColor: "rgba(255,255,255,0.15)",
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 12,
+    // Glassmorphism etkisi
+    ...Platform.select({
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.1,
+        shadowRadius: 4,
+      },
+      android: {
+        elevation: 2,
+      },
+    }),
   },
   androidCardTitle: {
-    color: "#ffffff",
     fontSize: 15,
-    fontWeight: "600",
+    fontWeight: "700",
     marginBottom: 4,
   },
   androidCardSub: {
-    color: "#cbd5e1",
     fontSize: 13,
+    marginTop: 2,
   },
 });
