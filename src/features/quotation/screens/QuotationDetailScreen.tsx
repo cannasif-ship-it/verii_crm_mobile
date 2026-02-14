@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -109,6 +110,10 @@ export function QuotationDetailScreen(): React.ReactElement {
   const router = useRouter();
   const { t } = useTranslation();
   const { colors, themeMode } = useUIStore();
+  const isDark = themeMode === "dark";
+const gradientColors = isDark
+  ? (['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] as const)
+  : (['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)'] as const);
   const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.showToast);
@@ -707,7 +712,7 @@ export function QuotationDetailScreen(): React.ReactElement {
   if (!quotationId) {
     return (
       <>
-        <StatusBar style="light" />
+       <StatusBar style={isDark ? "light" : "dark"} />
         <View style={[styles.container, { backgroundColor: colors.header }]}>
           <ScreenHeader title={t("quotation.detail")} showBackButton />
           <View style={[styles.content, { backgroundColor: contentBackground }]}>
@@ -766,23 +771,26 @@ export function QuotationDetailScreen(): React.ReactElement {
 
   return (
     <>
-      <StatusBar style="light" />
+    <View style={{ flex: 1 }}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <LinearGradient
+      colors={gradientColors}
+      style={StyleSheet.absoluteFill}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    />
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.header }]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
+      style={[styles.container, { backgroundColor: 'transparent' }]} // <-- Şeffaf
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+    >
         <ScreenHeader title={pageTitle} showBackButton />
-        <View style={[styles.tabBar, { backgroundColor: colors.header }]}>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === "detail" && styles.tabActive,
-              activeTab === "detail" && { borderBottomColor: colors.accent },
-            ]}
+       <View style={[styles.tabBar, { backgroundColor: 'transparent', borderBottomColor: colors.border }]}>
+         <TouchableOpacity
+            style={[styles.tab, activeTab === "detail" && { borderBottomColor: colors.accent }]}
             onPress={() => setActiveTab("detail")}
           >
-            <Text style={[styles.tabText, activeTab === "detail" && { color: colors.accent }]}>
+            <Text style={[styles.tabText, { color: activeTab === "detail" ? colors.accent : colors.textSecondary }]}>
               {t("common.tabDetail")}
             </Text>
           </TouchableOpacity>
@@ -817,7 +825,7 @@ export function QuotationDetailScreen(): React.ReactElement {
           <QuotationReportTab quotationId={quotationId} />
         ) : (
         <FlatListScrollView
-          style={[styles.content, { backgroundColor: contentBackground }]}
+          style={[styles.content, { backgroundColor: 'transparent' }]}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
           showsVerticalScrollIndicator={false}
         >
@@ -1511,16 +1519,17 @@ export function QuotationDetailScreen(): React.ReactElement {
           />
         )}
       </KeyboardAvoidingView>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  tabBar: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.2)" },
+  tabBar: { flexDirection: "row", borderBottomWidth: 1},
   tab: { flex: 1, paddingVertical: 12, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: "transparent" },
   tabActive: {},
-  tabText: { fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.8)" },
+  tabText: { fontSize: 14, fontWeight: "600"},
   content: { flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
   contentContainer: { padding: 20 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },

@@ -66,6 +66,8 @@ import {
 import type { StockRelationDto } from "../../stocks/types";
 import { calculateLineTotals, calculateTotals } from "../utils";
 import type { ExchangeRateDto } from "../types";
+import { UserIcon } from "hugeicons-react-native";
+import { LinearGradient } from "expo-linear-gradient"; // Bu satırı ekle
 
 function findExchangeRateByCurrency(
   currency: string,
@@ -87,7 +89,16 @@ export function QuotationCreateScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((state) => state.showToast);
 
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
+ 
+  const isDark = themeMode === "dark";
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF"; // Zemin rengi
+  // Ambient Gradient Renkleri
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)']
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
+  // İçerik artık şeffaf olmalı ki gradyan görünsün
+  const contentBackground = "transparent";
 
   const [lines, setLines] = useState<QuotationLineFormState[]>([]);
   const [exchangeRates, setExchangeRates] = useState<QuotationExchangeRateFormState[]>([]);
@@ -615,13 +626,22 @@ export function QuotationCreateScreen(): React.ReactElement {
 
   return (
     <>
-      <StatusBar style="light" />
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <View style={[styles.container, { backgroundColor: mainBg }]}>
+        <View style={StyleSheet.absoluteFill}>
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
       <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.header }]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
-        <ScreenHeader title={t("quotation.createNew")} showBackButton />
+          style={{ flex: 1 }} // Arka plan rengini buradan kaldırdık
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+       <ScreenHeader title={t("quotation.createNew")} showBackButton />
         <FlatListScrollView
           style={[styles.content, { backgroundColor: contentBackground }]}
           contentContainerStyle={[
@@ -655,30 +675,40 @@ export function QuotationCreateScreen(): React.ReactElement {
           <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>Müşteri Bilgileri</Text>
 
-            <TouchableOpacity
-              style={[
-                styles.customerSelectButton,
-                { backgroundColor: colors.backgroundSecondary, borderColor: errors.quotation?.potentialCustomerId ? colors.error : colors.border },
-              ]}
-              onPress={() => setCustomerSelectDialogOpen(true)}
-            >
-              <View style={styles.customerSelectContent}>
-                <Text style={styles.customerSelectIcon}>👤</Text>
-                <View style={styles.customerSelectTextContainer}>
-                  <Text style={[styles.customerSelectLabel, { color: colors.textSecondary }]}>
-                    Müşteri Seç
-                  </Text>
-                  <Text
-                    style={[styles.customerSelectValue, { color: colors.text }]}
-                    numberOfLines={1}
-                  >
-                    {selectedCustomer?.name ||
-                      (watchedErpCustomerCode ? `ERP: ${watchedErpCustomerCode}` : "Müşteri seçiniz")}
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.customerSelectArrow, { color: colors.textMuted }]}>›</Text>
-            </TouchableOpacity>
+
+<TouchableOpacity
+  style={[
+    styles.customerSelectButton,
+    { 
+      backgroundColor: colors.card, 
+      borderColor: errors.quotation?.potentialCustomerId ? colors.error : colors.border 
+    },
+  ]}
+  onPress={() => setCustomerSelectDialogOpen(true)}
+>
+  <View style={styles.customerSelectContent}>
+    {/* İkon Konteynırı */}
+    <View style={[styles.iconContainer, { backgroundColor: colors.accent + "15" }]}>
+       <UserIcon 
+         size={22} 
+         color={colors.accent} 
+         variant="stroke" // veya "twotone" crm diline çok yakışır
+       />
+    </View>
+
+    <View style={styles.customerSelectTextContainer}>
+      <Text style={[styles.customerSelectLabel, { color: colors.textMuted }]}>
+        MÜŞTERİ SEÇİMİ
+      </Text>
+      <Text style={[styles.customerSelectValue, { color: colors.text }]}>
+        {selectedCustomer?.name || (watchedErpCustomerCode ? `ERP: ${watchedErpCustomerCode}` : "Lütfen seçiniz...")}
+      </Text>
+    </View>
+  </View>
+  
+  {/* Sağ ok için de HugeIcons: ArrowRight01Icon kullanabilirsin */}
+  <Text style={{ color: colors.textMuted, fontSize: 20 }}>›</Text>
+</TouchableOpacity>
             {errors.quotation?.potentialCustomerId?.message && (
               <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.potentialCustomerId.message}</Text>
             )}
@@ -1603,6 +1633,7 @@ export function QuotationCreateScreen(): React.ReactElement {
         )}
 
       </KeyboardAvoidingView>
+      </View>
     </>
   );
 }
@@ -1613,8 +1644,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
   },
   contentContainer: {
     padding: 20,
@@ -1641,10 +1670,16 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   section: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 18,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 20,
+    // Modern CRM kart efekti
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   sectionHeader: {
     flexDirection: "row",
@@ -1653,6 +1688,14 @@ const styles = StyleSheet.create({
     flexWrap: "wrap",
     marginBottom: 12,
     gap: 8,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    borderRadius: 12, // Modern CRM dili: Çok yuvarlak değil, yumuşak kare
+    justifyContent: "center",
+    alignItems: "center",
+    marginRight: 14,
   },
   addLineButtons: {
     flexDirection: "row",
@@ -1667,9 +1710,12 @@ const styles = StyleSheet.create({
     color: "#111827",
   },
   sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
+    fontSize: 14,
+    fontWeight: "700",
+    textTransform: "uppercase", // Daha kurumsal bir görünüm
+    letterSpacing: 0.5,
+    marginBottom: 16,
+    opacity: 0.8,
   },
   fieldContainer: {
     marginBottom: 16,
@@ -1680,11 +1726,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   input: {
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderWidth: 1.5,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 15,
+    fontWeight: "500",
   },
   pickerButton: {
     borderWidth: 1,
@@ -1715,11 +1762,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
-  lineCard: {
+ lineCard: {
     padding: 16,
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    marginBottom: 12,
+    marginBottom: 16,
+    backgroundColor: 'white',
   },
   lineCardHeader: {
     flexDirection: "row",
@@ -1737,14 +1785,15 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   lineProductName: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 16,
+    fontWeight: "700",
+    lineHeight: 22,
     flex: 1,
   },
   mainBadge: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 20, // Tam yuvarlak (pill)
   },
   mainBadgeText: {
     fontSize: 11,
@@ -1873,10 +1922,10 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderWidth: 1.5, // Biraz daha belirgin
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     marginBottom: 16,
   },
   customerSelectContent: {
@@ -1930,9 +1979,9 @@ const styles = StyleSheet.create({
   },
   cancelButton: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    height: 52,
+    borderWidth: 1.5,
+    borderRadius: 16,
+    height: 56,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -1940,24 +1989,31 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  summaryRow: {
+ summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    alignItems: "center",
+    marginBottom: 10,
+    paddingVertical: 2,
   },
   summaryLabel: {
     fontSize: 14,
   },
-  summaryValue: {
-    fontSize: 14,
-    fontWeight: "500",
+ summaryValue: {
+    fontSize: 15,
+    fontWeight: "700",
   },
   submitButton: {
-    flex: 1,
-    height: 52,
-    borderRadius: 12,
+    flex: 2, // Kaydet butonu daha geniş
+    height: 56,
+    borderRadius: 16,
     alignItems: "center",
     justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 5,
+    elevation: 5,
   },
   submitButtonDisabled: {
     opacity: 0.6,
