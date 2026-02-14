@@ -31,7 +31,18 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      [
+        "./plugins/withAndroidNetworkSecurityConfig",
+        {
+          "domains": [
+            "crmapi.v3rii.com",
+            "crm.v3rii.com",
+            "localhost",
+            "10.0.2.2"
+          ]
+        }
+      ]
     ]
   }
 }
