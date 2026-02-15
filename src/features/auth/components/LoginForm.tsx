@@ -10,6 +10,8 @@ import {
   Modal,
   FlatList,
   Pressable,
+  ToastAndroid,
+  Platform,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
@@ -20,15 +22,13 @@ import {
   FormControlError,
   FormControlErrorText,
 } from "../../../components/ui/form-control";
-
-// --- ICONS (Görseldekilerle birebir eşleşenler) ---
 import {
-  Location01Icon, // Şube için pin ikonu
+  Location01Icon,
   Mail02Icon,
   LockKeyIcon,
   ViewIcon,
   ViewOffIcon,
-  Tick02Icon, // Checkbox için
+  Tick02Icon,
   ArrowDown01Icon,
   Alert02Icon,
 } from "hugeicons-react-native";
@@ -38,15 +38,13 @@ import { useBranches } from "../hooks/useBranches";
 import { createLoginSchema, type LoginFormData } from "../schemas";
 import type { Branch } from "../types";
 
-// --- TASARIM DEĞİŞKENLERİ ---
 const COLORS = {
-  inputBg: "#15111D", // Görseldeki çok koyu mor/siyah arka plan
+  inputBg: "#15111D",
   border: "rgba(255, 255, 255, 0.08)",
-  placeholder: "#6b7280", // slate-500
-  pink: "#eb0064", // Logodaki canlı pembe
+  placeholder: "#6b7280",
+  pink: "#eb0064",
 };
 
-// --- Custom Checkbox Bileşeni (Görseldeki Kare) ---
 const CustomCheckbox = ({ checked, onChange }: { checked: boolean; onChange: () => void }) => (
   <Pressable 
     onPress={onChange}
@@ -58,7 +56,6 @@ const CustomCheckbox = ({ checked, onChange }: { checked: boolean; onChange: () 
   </Pressable>
 );
 
-// --- Şube Listesi Elemanı ---
 function BranchItem({ item, isSelected, onSelect }: { item: Branch; isSelected: boolean; onSelect: (b: Branch) => void }) {
   return (
     <Pressable
@@ -78,7 +75,7 @@ function BranchItem({ item, isSelected, onSelect }: { item: Branch; isSelected: 
 export function LoginForm(): React.ReactElement {
   const { t } = useTranslation();
   const { login, isLoading, error } = useLogin();
-  const { branches, isLoading: isBranchesLoading, refetch } = useBranches();
+  const { branches, isLoading: isBranchesLoading } = useBranches();
 
   const [showPassword, setShowPassword] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
@@ -103,6 +100,12 @@ export function LoginForm(): React.ReactElement {
     },
   });
 
+  const showToast = () => {
+    if (Platform.OS === 'android') {
+      ToastAndroid.show("Yakında...", ToastAndroid.SHORT);
+    }
+  };
+
   const onSubmit = (data: LoginFormData) => {
     if (!selectedBranch) return;
     login({ loginData: data, branch: selectedBranch }, { onSuccess: () => router.replace("/(tabs)") });
@@ -114,18 +117,15 @@ export function LoginForm(): React.ReactElement {
     setShowBranchModal(false);
   };
 
-  // Dinamik Input Sınıfları (Görseldeki yuvarlak köşeler: rounded-2xl)
   const getInputClasses = (hasError: boolean, isFocused: boolean) => {
-    const base = "flex-row items-center bg-[#15111D] border rounded-2xl px-5 h-[60px]"; // Height 60px
+    const base = "flex-row items-center bg-[#15111D] border rounded-2xl px-5 h-[60px]";
     if (hasError) return `${base} border-red-500/80`;
-    if (isFocused) return `${base} border-[#eb0064]/50`; // Odaklanınca hafif pembe
-    return `${base} border-white/10`; // Normalde çok silik sınır
+    if (isFocused) return `${base} border-[#eb0064]/50`;
+    return `${base} border-white/10`;
   };
 
   return (
     <VStack space="xl" className="w-full px-1">
-      
-      {/* SLOGAN (Formun hemen üstünde) */}
       <View className="items-center mb-4">
         <Text className="text-slate-300 text-[11px] font-bold tracking-[2px] uppercase opacity-70">
           SATIŞ & MÜŞTERİ YÖNETİMİ
@@ -133,7 +133,6 @@ export function LoginForm(): React.ReactElement {
       </View>
 
       <VStack space="md">
-        {/* --- ŞUBE SEÇİMİ (DROPDOWN GÖRÜNÜMÜ) --- */}
         <FormControl isInvalid={!!errors.branchId}>
           <Controller
             control={control}
@@ -144,7 +143,6 @@ export function LoginForm(): React.ReactElement {
                 className={getInputClasses(!!errors.branchId, showBranchModal)}
               >
                 <Location01Icon size={20} color="#9ca3af" /> 
-                
                 <View className="flex-1 ml-4 justify-center">
                   {isBranchesLoading ? (
                     <Text className="text-slate-500 text-sm">{t("common.loading")}</Text>
@@ -154,7 +152,6 @@ export function LoginForm(): React.ReactElement {
                     </Text>
                   )}
                 </View>
-
                 <ArrowDown01Icon size={16} color="#6b7280" />
               </Pressable>
             )}
@@ -168,7 +165,6 @@ export function LoginForm(): React.ReactElement {
           )}
         </FormControl>
 
-        {/* --- E-POSTA --- */}
         <FormControl isInvalid={!!errors.email}>
           <Controller
             control={control}
@@ -199,7 +195,6 @@ export function LoginForm(): React.ReactElement {
           )}
         </FormControl>
 
-        {/* --- ŞİFRE --- */}
         <FormControl isInvalid={!!errors.password}>
           <Controller
             control={control}
@@ -236,7 +231,6 @@ export function LoginForm(): React.ReactElement {
           )}
         </FormControl>
 
-        {/* --- BENİ HATIRLA & ŞİFREMİ UNUTTUM --- */}
         <Controller
           control={control}
           name="rememberMe"
@@ -247,7 +241,7 @@ export function LoginForm(): React.ReactElement {
                 <Text className="text-[13px] text-slate-300 font-medium">Beni Hatırla</Text>
               </Pressable>
               
-              <Pressable>
+              <Pressable onPress={showToast}>
                 <Text className="text-[13px] text-slate-400 font-medium">Şifremi Unuttum?</Text>
               </Pressable>
             </View>
@@ -255,7 +249,6 @@ export function LoginForm(): React.ReactElement {
         />
       </VStack>
 
-      {/* --- HATA MESAJI (Varsa) --- */}
       {error && (
         <View className="flex-row items-center bg-red-500/10 rounded-lg p-3 mt-2 border border-red-500/20">
           <Alert02Icon size={18} color="#fca5a5" />
@@ -265,32 +258,29 @@ export function LoginForm(): React.ReactElement {
         </View>
       )}
 
-      {/* --- GİRİŞ YAP BUTONU (Gradient) --- */}
-      <TouchableOpacity
-        onPress={handleSubmit(onSubmit)}
-        disabled={isLoading || isBranchesLoading}
-        activeOpacity={0.9}
-        className="mt-6"
-      >
-        <LinearGradient
-          // Görseldeki Pembe -> Turuncu/Sarı geçişi
-          colors={['#eb0064', '#ff5e3a', '#ffb700']} 
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 0 }}
-          className="rounded-2xl h-[56px] items-center justify-center shadow-lg shadow-pink-500/25"
-          style={{ elevation: 8 }}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="white" />
-          ) : (
-            <Text className="text-white text-[15px] font-bold tracking-wider uppercase">
-              GİRİŞ YAP
-            </Text>
-          )}
-        </LinearGradient>
-      </TouchableOpacity>
+    <TouchableOpacity
+  onPress={handleSubmit(onSubmit)}
+  disabled={isLoading || isBranchesLoading}
+  activeOpacity={0.8}
+  className="mt-6 rounded-3xl overflow-hidden shadow-lg shadow-pink-500/25" 
+  style={{ elevation: 8 }}
+>
+  <LinearGradient
+    colors={['#eb0064', '#ff5e3a', '#ffb700']} 
+    start={{ x: 0, y: 0 }}
+    end={{ x: 1, y: 0 }}
 
-      {/* --- ŞUBE SEÇİM MODALI --- */}
+    className="rounded-3xl h-[56px] items-center justify-center"
+  >
+    {isLoading ? (
+      <ActivityIndicator color="white" />
+    ) : (
+      <Text className="text-white text-[15px] font-bold tracking-wider uppercase">
+        GİRİŞ YAP
+      </Text>
+    )}
+  </LinearGradient>
+</TouchableOpacity>
       <Modal
         visible={showBranchModal}
         transparent
@@ -323,7 +313,6 @@ export function LoginForm(): React.ReactElement {
           </Pressable>
         </Pressable>
       </Modal>
-
     </VStack>
   );
 }

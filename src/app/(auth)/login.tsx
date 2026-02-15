@@ -30,6 +30,7 @@ import {
   InstagramIcon,
   NewTwitterIcon,
 } from "hugeicons-react-native";
+import { ToastAndroid as Toast } from 'react-native'
 
 const { width, height } = Dimensions.get("window");
 
@@ -184,17 +185,17 @@ export default function LoginScreen(): React.ReactElement {
                 <SocialButton
                   icon={TelegramIcon}
                   color="#38bdf8"
-                  onPress={() => openLink("https://t.me/v3rii")}
+                 onPress={() => Toast.show("Yakında...", Toast.SHORT)}
                 />
                 <SocialButton
                   icon={InstagramIcon}
                   color="#e879f9"
-                  onPress={() => openLink("https://instagram.com/v3rii")}
+                  onPress={() => Toast.show("Yakında...", Toast.SHORT)}
                 />
                 <SocialButton
                   icon={NewTwitterIcon}
                   color="#ffffff"
-                  onPress={() => openLink("https://x.com/v3rii")}
+                  onPress={() => Toast.show("Yakında...", Toast.SHORT)}
                 />
               </View>
 
