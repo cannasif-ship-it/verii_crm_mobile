@@ -7,6 +7,8 @@ import {
   Alert,
   Modal,
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter, useLocalSearchParams } from "expo-router";
@@ -24,7 +26,6 @@ import { useCustomerShippingAddresses } from "../../shipping-address/hooks/useSh
 import { FormField, LocationPicker } from "../components";
 import { createCustomerSchema, type CustomerFormData } from "../schemas";
 import type { CountryDto, CityDto, DistrictDto, CustomerTypeDto } from "../types";
-// YENİ İKONLAR
 import { Camera01Icon, ArrowDown01Icon, CheckmarkCircle02Icon } from "hugeicons-react-native";
 
 export function CustomerFormScreen(): React.ReactElement {
@@ -39,7 +40,6 @@ export function CustomerFormScreen(): React.ReactElement {
   const customerId = id ? Number(id) : undefined;
   const isDark = themeMode === "dark";
 
-  // --- TEMA ---
   const THEME = {
     bg: isDark ? "#1a0b2e" : colors.background,
     cardBg: isDark ? "#1e1b29" : colors.card,
@@ -260,339 +260,341 @@ export function CustomerFormScreen(): React.ReactElement {
       <StatusBar style={isDark ? "light" : "dark"} backgroundColor={THEME.bg} />
       <View style={[styles.container, { backgroundColor: THEME.bg }]}>
         
-        {/* --- DÜZELTME BURADA --- */}
-        {/* ScreenHeader 'style' almadığı için onu bir View ile sarmaladık */}
         <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.border, backgroundColor: THEME.bg }}>
             <ScreenHeader
               title={isEditMode ? t("customer.edit") : t("customer.create")}
               showBackButton
             />
         </View>
-        {/* ----------------------- */}
         
-        <FlatListScrollView
-          style={[styles.content, { backgroundColor: THEME.bg }]}
-          contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          {!isEditMode && (
-            <View style={[styles.businessCardRow, { borderColor: THEME.border }]}>
-              <View>
-                 <Text style={[styles.businessCardLabel, { color: THEME.text }]}>Kartvizit Tara</Text>
-                 <Text style={{fontSize: 12, color: THEME.textMute, marginTop: 4}}>Kamerayla bilgileri otomatik doldur</Text>
+            <FlatListScrollView
+              style={[styles.content, { backgroundColor: THEME.bg }]}
+              contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              {!isEditMode && (
+                <View style={[styles.businessCardRow, { borderColor: THEME.border }]}>
+                  <View>
+                     <Text style={[styles.businessCardLabel, { color: THEME.text }]}>Kartvizit Tara</Text>
+                     <Text style={{fontSize: 12, color: THEME.textMute, marginTop: 4}}>Kamerayla bilgileri otomatik doldur</Text>
+                  </View>
+                  
+                  <TouchableOpacity
+                    style={[styles.cameraButton, { backgroundColor: THEME.inputBg, borderColor: THEME.border }]}
+                    onPress={handleScanBusinessCard}
+                    disabled={isScanning}
+                  >
+                    {isScanning ? (
+                      <ActivityIndicator size="small" color={THEME.primary} />
+                    ) : (
+                      <Camera01Icon size={24} color={THEME.primary} variant="stroke" />
+                    )}
+                  </TouchableOpacity>
+                </View>
+              )}
+
+              <Controller
+                control={control}
+                name="name"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.name")}
+                    value={value}
+                    onChangeText={onChange}
+                    error={errors.name?.message}
+                    required
+                    maxLength={250}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="customerCode"
+                render={({ field: { value } }) => (
+                  <FormField
+                    label={t("customer.customerCode")}
+                    value={value || ""}
+                    onChangeText={() => {}}
+                    maxLength={100}
+                    editable={false}
+                  />
+                )}
+              />
+
+              <View style={styles.fieldContainer}>
+                <Text style={[styles.label, { color: THEME.textMute }]}>
+                  {t("customer.customerType")}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.pickerField,
+                    { backgroundColor: THEME.inputBg, borderColor: THEME.border },
+                  ]}
+                  onPress={() => setCustomerTypeModalOpen(true)}
+                >
+                  <Text
+                    style={[
+                      styles.pickerFieldText,
+                      { color: selectedCustomerType ? THEME.text : THEME.textMute },
+                    ]}
+                  >
+                    {selectedCustomerType?.name || t("lookup.selectCustomerType")}
+                  </Text>
+                  <ArrowDown01Icon size={16} color={THEME.textMute} />
+                </TouchableOpacity>
               </View>
-              
+
+              <View style={styles.fieldContainer}>
+                <Text style={[styles.label, { color: THEME.textMute }]}>
+                  {t("customer.defaultShippingAddress")}
+                </Text>
+                <TouchableOpacity
+                  style={[
+                    styles.pickerField,
+                    { backgroundColor: THEME.inputBg, borderColor: THEME.border },
+                  ]}
+                  onPress={() => setShippingAddressModalOpen(true)}
+                  disabled={!isEditMode || !customerId}
+                >
+                  <Text
+                    style={[
+                      styles.pickerFieldText,
+                      { color: selectedShippingAddress ? THEME.text : THEME.textMute },
+                    ]}
+                  >
+                    {selectedShippingAddress?.address || t("customer.defaultShippingAddressPlaceholder")}
+                  </Text>
+                  <ArrowDown01Icon size={16} color={THEME.textMute} />
+                </TouchableOpacity>
+              </View>
+
+              <Controller
+                control={control}
+                name="salesRepCode"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.salesRepCode")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    maxLength={50}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="groupCode"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.groupCode")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    maxLength={50}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="creditLimit"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.creditLimit")}
+                    value={value !== undefined && value !== null ? String(value) : ""}
+                    onChangeText={(text) => onChange(text ? Number(text) : undefined)}
+                    keyboardType="numeric"
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="branchCode"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.branchCode")}
+                    value={value !== undefined && value !== null ? String(value) : ""}
+                    onChangeText={(text) => onChange(text ? Number(text) : 0)}
+                    keyboardType="numeric"
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="businessUnitCode"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.businessUnitCode")}
+                    value={value !== undefined && value !== null ? String(value) : ""}
+                    onChangeText={(text) => onChange(text ? Number(text) : 0)}
+                    keyboardType="numeric"
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="phone"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.phone")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    keyboardType="phone-pad"
+                    maxLength={100}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="phone2"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.phone2")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    keyboardType="phone-pad"
+                    maxLength={100}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="email"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.email")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    error={errors.email?.message}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    maxLength={100}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="website"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.website")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    autoCapitalize="none"
+                    maxLength={100}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="address"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.address")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    multiline
+                    numberOfLines={3}
+                    maxLength={500}
+                  />
+                )}
+              />
+
+              <View style={styles.locationSection}>
+                <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("lookup.location")}</Text>
+                <LocationPicker
+                  countryId={watchCountryId}
+                  cityId={watchCityId}
+                  districtId={watch("districtId")}
+                  onCountryChange={handleCountryChange}
+                  onCityChange={handleCityChange}
+                  onDistrictChange={handleDistrictChange}
+                />
+              </View>
+
+              <Controller
+                control={control}
+                name="taxNumber"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.taxNumber")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    keyboardType="numeric"
+                    maxLength={15}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="taxOffice"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.taxOffice")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    maxLength={100}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="tcknNumber"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.tcknNumber")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    keyboardType="numeric"
+                    maxLength={11}
+                  />
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="notes"
+                render={({ field: { onChange, value } }) => (
+                  <FormField
+                    label={t("customer.notes")}
+                    value={value || ""}
+                    onChangeText={onChange}
+                    multiline
+                    numberOfLines={3}
+                    maxLength={250}
+                  />
+                )}
+              />
+
               <TouchableOpacity
-                style={[styles.cameraButton, { backgroundColor: THEME.inputBg, borderColor: THEME.border }]}
-                onPress={handleScanBusinessCard}
-                disabled={isScanning}
+                style={[styles.submitButton, { backgroundColor: THEME.primary }]}
+                onPress={handleSubmit(onSubmit)}
+                disabled={isSubmitting}
               >
-                {isScanning ? (
-                  <ActivityIndicator size="small" color={THEME.primary} />
+                {isSubmitting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
                 ) : (
-                  <Camera01Icon size={24} color={THEME.primary} variant="stroke" />
+                  <Text style={styles.submitButtonText}>
+                    {isEditMode ? t("common.update") : t("common.save")}
+                  </Text>
                 )}
               </TouchableOpacity>
-            </View>
-          )}
-
-          <Controller
-            control={control}
-            name="name"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.name")}
-                value={value}
-                onChangeText={onChange}
-                error={errors.name?.message}
-                required
-                maxLength={250}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="customerCode"
-            render={({ field: { value } }) => (
-              <FormField
-                label={t("customer.customerCode")}
-                value={value || ""}
-                onChangeText={() => {}}
-                maxLength={100}
-                editable={false}
-              />
-            )}
-          />
-
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: THEME.textMute }]}>
-              {t("customer.customerType")}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerField,
-                { backgroundColor: THEME.inputBg, borderColor: THEME.border },
-              ]}
-              onPress={() => setCustomerTypeModalOpen(true)}
-            >
-              <Text
-                style={[
-                  styles.pickerFieldText,
-                  { color: selectedCustomerType ? THEME.text : THEME.textMute },
-                ]}
-              >
-                {selectedCustomerType?.name || t("lookup.selectCustomerType")}
-              </Text>
-              <ArrowDown01Icon size={16} color={THEME.textMute} />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: THEME.textMute }]}>
-              {t("customer.defaultShippingAddress")}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerField,
-                { backgroundColor: THEME.inputBg, borderColor: THEME.border },
-              ]}
-              onPress={() => setShippingAddressModalOpen(true)}
-              disabled={!isEditMode || !customerId}
-            >
-              <Text
-                style={[
-                  styles.pickerFieldText,
-                  { color: selectedShippingAddress ? THEME.text : THEME.textMute },
-                ]}
-              >
-                {selectedShippingAddress?.address || t("customer.defaultShippingAddressPlaceholder")}
-              </Text>
-              <ArrowDown01Icon size={16} color={THEME.textMute} />
-            </TouchableOpacity>
-          </View>
-
-          <Controller
-            control={control}
-            name="salesRepCode"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.salesRepCode")}
-                value={value || ""}
-                onChangeText={onChange}
-                maxLength={50}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="groupCode"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.groupCode")}
-                value={value || ""}
-                onChangeText={onChange}
-                maxLength={50}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="creditLimit"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.creditLimit")}
-                value={value !== undefined && value !== null ? String(value) : ""}
-                onChangeText={(text) => onChange(text ? Number(text) : undefined)}
-                keyboardType="numeric"
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="branchCode"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.branchCode")}
-                value={value !== undefined && value !== null ? String(value) : ""}
-                onChangeText={(text) => onChange(text ? Number(text) : 0)}
-                keyboardType="numeric"
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="businessUnitCode"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.businessUnitCode")}
-                value={value !== undefined && value !== null ? String(value) : ""}
-                onChangeText={(text) => onChange(text ? Number(text) : 0)}
-                keyboardType="numeric"
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="phone"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.phone")}
-                value={value || ""}
-                onChangeText={onChange}
-                keyboardType="phone-pad"
-                maxLength={100}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="phone2"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.phone2")}
-                value={value || ""}
-                onChangeText={onChange}
-                keyboardType="phone-pad"
-                maxLength={100}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="email"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.email")}
-                value={value || ""}
-                onChangeText={onChange}
-                error={errors.email?.message}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                maxLength={100}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="website"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.website")}
-                value={value || ""}
-                onChangeText={onChange}
-                autoCapitalize="none"
-                maxLength={100}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="address"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.address")}
-                value={value || ""}
-                onChangeText={onChange}
-                multiline
-                numberOfLines={3}
-                maxLength={500}
-              />
-            )}
-          />
-
-          <View style={styles.locationSection}>
-            <Text style={[styles.sectionTitle, { color: THEME.text }]}>{t("lookup.location")}</Text>
-            <LocationPicker
-              countryId={watchCountryId}
-              cityId={watchCityId}
-              districtId={watch("districtId")}
-              onCountryChange={handleCountryChange}
-              onCityChange={handleCityChange}
-              onDistrictChange={handleDistrictChange}
-            />
-          </View>
-
-          <Controller
-            control={control}
-            name="taxNumber"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.taxNumber")}
-                value={value || ""}
-                onChangeText={onChange}
-                keyboardType="numeric"
-                maxLength={15}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="taxOffice"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.taxOffice")}
-                value={value || ""}
-                onChangeText={onChange}
-                maxLength={100}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="tcknNumber"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.tcknNumber")}
-                value={value || ""}
-                onChangeText={onChange}
-                keyboardType="numeric"
-                maxLength={11}
-              />
-            )}
-          />
-
-          <Controller
-            control={control}
-            name="notes"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("customer.notes")}
-                value={value || ""}
-                onChangeText={onChange}
-                multiline
-                numberOfLines={3}
-                maxLength={250}
-              />
-            )}
-          />
-
-          <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: THEME.primary }]}
-            onPress={handleSubmit(onSubmit)}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitButtonText}>
-                {isEditMode ? t("common.update") : t("common.save")}
-              </Text>
-            )}
-          </TouchableOpacity>
-        </FlatListScrollView>
+            </FlatListScrollView>
+        </KeyboardAvoidingView>
       </View>
 
       <Modal
