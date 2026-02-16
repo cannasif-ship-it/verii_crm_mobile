@@ -1,7 +1,6 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { Platform } from "react-native";
 import { COLORS, type ThemeMode, type ThemeColors } from "../constants/theme";
 
 interface UIState {
@@ -21,8 +20,8 @@ export const useUIStore = create<UIState>()(
   persist(
     (set, get) => ({
       isLoading: false,
-      themeMode: "dark",
-      colors: COLORS.dark,
+      themeMode: "light",
+      colors: COLORS.light,
       isSidebarOpen: false,
       setIsLoading: (value: boolean) => set({ isLoading: value }),
       setThemeMode: (mode: ThemeMode) =>
@@ -43,27 +42,22 @@ export const useUIStore = create<UIState>()(
       version: 2,
       migrate: (persistedState) => {
         const state = (persistedState ?? {}) as Partial<UIState>;
-        const preferredThemeMode: ThemeMode =
-          Platform.OS === "android"
-            ? "dark"
-            : state.themeMode === "light" || state.themeMode === "dark"
-              ? state.themeMode
-              : "dark";
+        const savedMode = state.themeMode;
+        const validMode = (savedMode === "light" || savedMode === "dark") ? savedMode : "light";
+
         return {
           ...state,
-          themeMode: preferredThemeMode,
-          colors: COLORS[preferredThemeMode],
+          themeMode: validMode,
+          colors: COLORS[validMode],
         };
       },
       onRehydrateStorage: () => (state) => {
         if (state) {
-          const preferredThemeMode: ThemeMode =
-            Platform.OS === "android"
-              ? "dark"
-              : state.themeMode === "light" || state.themeMode === "dark"
-                ? state.themeMode
-                : "dark";
-          state.setThemeMode(preferredThemeMode);
+          const modeToUse = (state.themeMode === "light" || state.themeMode === "dark") 
+            ? state.themeMode 
+            : "light";
+            
+          state.setThemeMode(modeToUse);
         }
       },
     }
