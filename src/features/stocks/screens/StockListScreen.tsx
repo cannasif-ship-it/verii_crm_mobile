@@ -53,36 +53,32 @@ export function StockListScreen() {
   const [searchText, setSearchText] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
+  // Arama metnini gecikmeli olarak set ediyoruz (Performans için)
   useEffect(() => {
     const handler = setTimeout(() => { setDebouncedQuery(searchText); }, 300);
     return () => clearTimeout(handler);
   }, [searchText]);
 
+  // --- API BAĞLANTISI ---
+  // 1. pageSize: 20 yaparak yükü hafifletiyoruz.
+  // 2. debouncedQuery'i göndererek aramayı backend'de yapıyoruz.
   const { 
     data, 
+    fetchNextPage,    // Sonraki sayfayı çekme fonksiyonu
+    hasNextPage,      // Daha sayfa var mı kontrolü
+    isFetchingNextPage, // Şu an altta loading dönüyor mu?
     isPending, 
     isError, 
     refetch, 
     isRefetching 
-  } = useStocks({ pageSize: 1000 });
+  } = useStocks({ pageSize: 20 }, debouncedQuery);
 
+  // --- VERİ BİRLEŞTİRME ---
+  // Artık client-side filtreleme (filter(...)) YOK. 
+  // Backend ne gönderirse onu listeliyoruz.
   const stocks = useMemo(() => {
-    const allStocks = data?.pages?.flatMap(page => (page as any).items || (page as any).Items || []) || [];
-
-    if (!debouncedQuery || debouncedQuery.trim().length < 2) {
-      return allStocks;
-    }
-
-    const lowerText = debouncedQuery.toLowerCase();
-    return allStocks.filter((item: StockGetDto) => {
-      const nameMatch = item.stockName?.toLowerCase().includes(lowerText);
-      const codeMatch = item.erpStockCode?.toLowerCase().includes(lowerText);
-      const groupMatch = item.grupAdi?.toLowerCase().includes(lowerText);
-      
-      return nameMatch || codeMatch || groupMatch;
-    });
-
-  }, [data, debouncedQuery]);
+    return data?.pages?.flatMap(page => page.items || (page as any).Items || []) || [];
+  }, [data]);
 
   const renderItem = useCallback(({ item }: { item: StockGetDto }) => (
     <StockCard 
@@ -94,6 +90,26 @@ export function StockListScreen() {
       gridWidth={GRID_WIDTH}
     />
   ), [viewMode, isDark, theme]);
+
+  // Listenin en altına gelince çalışacak fonksiyon
+  const handleLoadMore = () => {
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  };
+
+  // Listenin en altındaki loading veya boşluk
+  const renderFooter = () => {
+    if (isFetchingNextPage) {
+      return (
+        <View style={styles.footerLoader}>
+          <ActivityIndicator size="small" color={theme.primary} />
+        </View>
+      );
+    }
+    // Bottom Navbar'ın altında kalmaması için güvenli boşluk
+    return <View style={{ height: 100 }} />;
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: mainBg }]}>
@@ -147,16 +163,27 @@ export function StockListScreen() {
               contentContainerStyle={{
                   paddingHorizontal: PADDING,
                   paddingTop: 12,
-                  paddingBottom: 40,
+                  paddingBottom: 20, // Alt boşluk renderFooter ile yönetiliyor
                   gap: GAP, 
               }}
-              ListFooterComponent={<View style={{ height: 20 }} />}
+              
+              // --- INFINITE SCROLL AYARLARI ---
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.5} // Listenin yarısına gelince yenisini çek
+              ListFooterComponent={renderFooter}
+              
+              // --- PERFORMANS OPTİMİZASYONU ---
+              removeClippedSubviews={true} // Ekran dışındakileri bellekten at
+              initialNumToRender={10} 
+              maxToRenderPerBatch={10}
+              windowSize={5}
+
               refreshing={isRefetching}
               onRefresh={refetch}
               ListEmptyComponent={
                 <View style={styles.center}>
                   <Text style={{ color: theme.textMute }}>
-                     {debouncedQuery.length > 0
+                      {debouncedQuery.length > 0
                       ? "Kayıt bulunamadı."
                       : "Listeniz boş."}
                   </Text>
@@ -181,4 +208,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row', padding: 4, borderRadius: 12, alignItems: 'center', height: 48,
   },
   switchBtn: { padding: 8, borderRadius: 8, height: 40, width: 40, alignItems: 'center', justifyContent: 'center' },
+  footerLoader: {
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center'
+  }
 });

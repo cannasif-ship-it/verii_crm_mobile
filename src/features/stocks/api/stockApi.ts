@@ -9,7 +9,7 @@ import type {
   PagedApiResponse,
 } from "../types";
 
-// --- YARDIMCI FONKSİYONLAR ---
+// --- YARDIMCI FONKSİYONLAR (Aynen Korundu) ---
 const toNumber = (value: unknown): number | undefined => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {
@@ -62,15 +62,26 @@ const normalizeStock = (raw: unknown): StockGetDto | null => {
 
 export const stockApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<StockGetDto>> => {
-    // Sadece Sayfalama Parametreleri
+    
+    // 1. Temel URL Parametreleri
     const queryParams = new URLSearchParams();
     if (params.pageNumber) queryParams.append("PageNumber", params.pageNumber.toString());
     if (params.pageSize) queryParams.append("PageSize", params.pageSize.toString());
-    queryParams.append("SortBy", "StockName");
-    queryParams.append("SortDirection", "asc");
+    queryParams.append("SortBy", params.sortBy || "StockName"); // Sıralama dinamik olsun
+    queryParams.append("SortDirection", params.sortDirection || "asc");
+
+    // 2. FİLTRELERİ EKLEME (BURASI EKSİKTİ!)
+    // Backend'in anladığı dil: Filters[0].Column=StockName&Filters[0].Value=dene
+    if (params.filters && params.filters.length > 0) {
+      params.filters.forEach((filter, index) => {
+        queryParams.append(`Filters[${index}].Column`, filter.column);
+        queryParams.append(`Filters[${index}].Operator`, filter.operator);
+        queryParams.append(`Filters[${index}].Value`, filter.value);
+      });
+    }
 
     const fullPath = `/api/Stock?${queryParams.toString()}`;
-    console.log("📡 API REQUEST (Bulk Load):", fullPath);
+    console.log("📡 API REQUEST (Filtreli):", fullPath); // Log'da artık filtreleri göreceksin
 
     const response = await apiClient.get<PagedApiResponse<StockGetDto>>(fullPath);
 
@@ -102,7 +113,7 @@ export const stockApi = {
     };
   },
   
-  // Diğer metodlar aynı kalıyor (getById vb.)
+  // --- Diğer metodlar aynı ---
   getById: async (id: number): Promise<StockGetDto> => {
     const response = await apiClient.get<ApiResponse<StockGetDto>>(`/api/Stock/${id}`);
     if (!response.data.success) throw new Error("Stok bulunamadı");
