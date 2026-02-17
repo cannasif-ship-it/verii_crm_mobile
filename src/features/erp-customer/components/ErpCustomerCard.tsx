@@ -1,224 +1,295 @@
-import React, { memo } from "react";
-import { View, TouchableOpacity, StyleSheet, Platform } from "react-native";
-import { Text } from "../../../components/ui/text";
+import React, { memo, useRef } from "react";
+import { 
+  View, 
+  StyleSheet, 
+  Platform, 
+  Animated, 
+  TouchableWithoutFeedback 
+} from "react-native";
+import { Text } from "../../../components/ui/text"; 
 import { useUIStore } from "../../../store/ui";
 import { LinearGradient } from "expo-linear-gradient";
 import type { CariDto } from "../types";
 import { 
+  Building03Icon, 
   Call02Icon, 
-  Mail01Icon, 
   Location01Icon, 
-  Invoice01Icon,
-  Database01Icon 
+  Database01Icon,
+  Tag01Icon,
 } from "hugeicons-react-native";
+
+// --- SABİT RENKLER ---
+const BRAND_COLOR = "#db2777";      
+const BRAND_COLOR_DARK = "#ec4899"; 
+const TEXT_MUTED_LIGHT = "#64748b"; 
+const TEXT_MUTED_DARK = "#94a3b8";  
 
 interface ErpCustomerCardProps {
   customer: CariDto;
   onPress: () => void;
+  viewMode?: 'grid' | 'list';
 }
 
-function ErpCustomerCardComponent({ customer, onPress }: ErpCustomerCardProps): React.ReactElement {
+function ErpCustomerCardComponent({ customer, onPress, viewMode = 'list' }: ErpCustomerCardProps): React.ReactElement {
   const { colors, themeMode } = useUIStore();
   const isDark = themeMode === "dark";
+  const isGrid = viewMode === 'grid';
 
-  const cardBg = isDark ? "rgba(255, 255, 255, 0.04)" : "#FFFFFF";
-  const cardBorder = isDark ? "rgba(236, 72, 153, 0.25)" : "rgba(0, 0, 0, 0.06)";
-  const iconAccent = isDark ? "rgba(236, 72, 153, 0.15)" : "#FCE7F3";
-  const iconColor = isDark ? "#ec4899" : "#db2777";
+  // --- ANİMASYON DEĞERLERİ ---
+  const scaleValue = useRef(new Animated.Value(1)).current;
+  const hoverAnim = useRef(new Animated.Value(0)).current; // 0: Normal, 1: Hover
 
-  const locationParts: string[] = [];
-  if (customer.cariIl) locationParts.push(customer.cariIl);
-  if (customer.cariIlce) locationParts.push(customer.cariIlce);
-  const location = locationParts.join(", ");
+  const handlePressIn = () => {
+    // Border ve Arkaplan animasyonunu başlat
+    Animated.timing(hoverAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: false, // Renk değişimi için false şart
+    }).start();
+
+    // Sadece Grid modunda küçülme efekti (Listede performansı korumak için kapalı)
+    if (isGrid) {
+      Animated.spring(scaleValue, {
+        toValue: 0.97,
+        useNativeDriver: false, 
+      }).start();
+    }
+  };
+
+  const handlePressOut = () => {
+    Animated.timing(hoverAnim, {
+      toValue: 0,
+      duration: 150,
+      useNativeDriver: false,
+    }).start();
+
+    if (isGrid) {
+      Animated.spring(scaleValue, {
+        toValue: 1,
+        friction: 3,
+        tension: 40,
+        useNativeDriver: false, 
+      }).start();
+    }
+  };
+
+  // --- TEMA ---
+  const theme = {
+    bg: isDark ? "rgba(30, 41, 59, 0.6)" : "#FFFFFF",
+    activeBg: isDark ? "rgba(255, 255, 255, 0.05)" : "#F8FAFC", // Basınca hafif gri/beyaz
+    
+    border: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)", // Normal gri çizgi
+    activeBorder: BRAND_COLOR, // BASINCA OLUŞACAK PEMBE RENK
+    
+    iconBg: isDark ? "rgba(236, 72, 153, 0.15)" : "#FFF1F2",
+    iconColor: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,
+    shadow: isDark ? "transparent" : "#94a3b8",
+    textMuted: isDark ? TEXT_MUTED_DARK : TEXT_MUTED_LIGHT,
+    textMain: colors.text,
+  };
+
+  // --- ANİMASYON STİLLERİ ---
+  
+  // 1. Kenarlık Rengi (Gri -> Pembe)
+  const animatedBorderColor = hoverAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [theme.border, theme.activeBorder]
+  });
+
+  // 2. Arka Plan Rengi (Normal -> Hafif Koyulaşma)
+  const animatedBgColor = hoverAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [theme.bg, theme.activeBg]
+  });
+
+  const location = [customer.cariIl, customer.cariIlce].filter(Boolean).join(" / ");
+
+  // --- YARDIMCI BİLEŞENLER ---
+  const ErpBadge = () => (
+    <View style={styles.badgeContainer}>
+      <LinearGradient
+        colors={isDark ? ["#831843", "#be185d"] : ["#fce7f3", "#fbcfe8"]}
+        start={{ x: 0, y: 0 }} 
+        end={{ x: 1, y: 1 }}
+        style={styles.badgeGradient}
+      >
+        <Database01Icon size={9} color={isDark ? "#FFF" : "#be185d"} variant="stroke" />
+        <Text style={[styles.badgeText, { color: isDark ? "#FFF" : "#be185d" }]}>ERP</Text>
+      </LinearGradient>
+    </View>
+  );
+
+  const IconBox = ({ size }: { size: number }) => (
+    <View style={[styles.iconBox, { 
+      backgroundColor: theme.iconBg, 
+      width: size, 
+      height: size,
+      borderRadius: isGrid ? 14 : size / 2
+    }]}>
+      <Building03Icon size={size * 0.5} color={theme.iconColor} variant="stroke" />
+    </View>
+  );
 
   return (
-    <TouchableOpacity
-      style={[
-        styles.container,
-        { backgroundColor: cardBg, borderColor: cardBorder },
-      ]}
-      onPress={onPress}
-      activeOpacity={0.8}
-    >
-      {/* KARTIN ÜZERİNDEKİ HAFİF PARLAMA EFEKTİ */}
-      {isDark && (
-        <LinearGradient
-          colors={["rgba(236, 72, 153, 0.05)", "transparent"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
-      )}
-
-      <View style={styles.header}>
-        <View style={styles.headerLeft}>
-          <Text style={[styles.name, { color: colors.text }]} numberOfLines={1}>
-            {customer.cariIsim || customer.cariKod}
-          </Text>
-          <View style={[styles.codeBadge, { backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "#F8FAFC" }]}>
-            <Text style={[styles.code, { color: colors.textMuted }]}>
-              {customer.cariKod}
-            </Text>
-          </View>
-        </View>
-
-        <LinearGradient
-          colors={["#ec4899", "#f97316"]}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={styles.erpBadge}
-        >
-          <Database01Icon size={10} color="#FFF"  />sss
-          <Text style={styles.erpBadgeText}>ERP</Text>
-        </LinearGradient>
-      </View>
-
-      <View style={styles.details}>
-        {customer.cariTel && (
-          <View style={styles.detailRow}>
-            <View style={[styles.iconBox, { backgroundColor: iconAccent }]}>
-              <Call02Icon size={14} color={iconColor} variant="stroke" />
+    <TouchableWithoutFeedback onPress={onPress} onPressIn={handlePressIn} onPressOut={handlePressOut}>
+      <Animated.View
+        style={[
+          isGrid ? styles.gridCard : styles.listCard,
+          {
+            backgroundColor: isGrid ? theme.bg : animatedBgColor, // Grid sabit, List animasyonlu bg
+            borderColor: animatedBorderColor, // ARTIK PEMBE OLACAK
+            transform: isGrid ? [{ scale: scaleValue }] : [], // Sadece Grid'de scale var
+          },
+          isGrid && { shadowColor: theme.shadow } // Sadece Grid'de gölge var
+        ]}
+      >
+        {isGrid ? (
+          // === GRID GÖRÜNÜMÜ ===
+          <>
+            <View style={styles.gridHeader}>
+              <IconBox size={40} />
+              <ErpBadge />
             </View>
-            <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-              {customer.cariTel}
-            </Text>
-          </View>
-        )}
-        
-        {customer.email && (
-          <View style={styles.detailRow}>
-            <View style={[styles.iconBox, { backgroundColor: iconAccent }]}>
-              <Mail01Icon size={14} color={iconColor} variant="stroke" />
-            </View>
-            <Text style={[styles.detailText, { color: colors.textSecondary }]} numberOfLines={1}>
-              {customer.email}
-            </Text>
-          </View>
-        )}
-        
-        {location ? (
-          <View style={styles.detailRow}>
-            <View style={[styles.iconBox, { backgroundColor: iconAccent }]}>
-              <Location01Icon size={14} color={iconColor} variant="stroke" />
-            </View>
-            <Text style={[styles.detailText, { color: colors.textSecondary }]}>{location}</Text>
-          </View>
-        ) : null}
-        
-        {customer.vergiNumarasi && (
-          <View style={styles.detailRow}>
-            <View style={[styles.iconBox, { backgroundColor: iconAccent }]}>
-              <Invoice01Icon size={14} color={iconColor} variant="stroke" />
-            </View>
-            <View style={styles.taxInfo}>
-              <Text style={[styles.detailText, { color: colors.textSecondary }]}>
-                {customer.vergiNumarasi}
+            <View style={styles.gridBody}>
+              <Text style={[styles.gridTitle, { color: theme.textMain }]} numberOfLines={2}>
+                {customer.cariIsim || "İsimsiz Cari"}
               </Text>
-              <Text style={[styles.taxLabel, { color: colors.textMuted }]}>VKN</Text>
+              <View style={styles.row}>
+                 <Tag01Icon size={12} color={theme.textMuted} />
+                 <Text style={[styles.code, { color: theme.textMuted, marginLeft: 4 }]}>{customer.cariKod}</Text>
+              </View>
             </View>
-          </View>
+            <View style={styles.gridFooter}>
+                <Location01Icon size={12} color={theme.textMuted} />
+                <Text style={[styles.footerText, { color: theme.textMuted, marginLeft: 4 }]} numberOfLines={1}>
+                  {location || customer.cariTel || "-"}
+                </Text>
+            </View>
+          </>
+        ) : (
+          // === LİSTE GÖRÜNÜMÜ ===
+          <>
+            <View style={styles.listLeft}>
+              <IconBox size={46} />
+            </View>
+            
+            <View style={styles.listContent}>
+               {/* 1. İSİM + ROZET */}
+               <View style={styles.listHeaderRow}>
+                  <Text style={[styles.listName, { color: theme.textMain }]} numberOfLines={1}>
+                    {customer.cariIsim || "İsimsiz Cari"}
+                  </Text>
+                  <View style={{ marginLeft: 8 }}>
+                    <ErpBadge />
+                  </View>
+               </View>
+
+               {/* 2. KOD */}
+               <View style={[styles.row, { marginTop: 2, marginBottom: 4 }]}>
+                  <Tag01Icon size={13} color={theme.textMuted} />
+                  <Text style={[styles.code, { color: theme.textMuted, marginLeft: 4 }]}>
+                    {customer.cariKod}
+                  </Text>
+               </View>
+
+               {/* 3. DETAYLAR */}
+               <View style={styles.listFooterColumn}>
+                  {!!customer.cariTel && (
+                    <View style={[styles.row, { marginBottom: 2 }]}>
+                      <Call02Icon size={12} color={theme.textMuted} />
+                      <Text style={[styles.listDetailText, { color: theme.textMuted }]}>
+                        {customer.cariTel}
+                      </Text>
+                    </View>
+                  )}
+                  {!!location && (
+                    <View style={styles.row}>
+                      <Location01Icon size={12} color={theme.textMuted} />
+                      <Text style={[styles.listDetailText, { color: theme.textMuted }]} numberOfLines={1}>
+                        {location}
+                      </Text>
+                    </View>
+                  )}
+               </View>
+            </View>
+          </>
         )}
-      </View>
-    </TouchableOpacity>
+      </Animated.View>
+    </TouchableWithoutFeedback>
   );
 }
 
 export const ErpCustomerCard = memo(ErpCustomerCardComponent);
 
 const styles = StyleSheet.create({
-  container: {
-    padding: 18,
-    borderRadius: 24,
-    borderWidth: 1.5,
-    marginBottom: 14,
-    overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 6 },
-        shadowOpacity: 0.08,
-        shadowRadius: 12,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+  // --- GRID STYLES ---
+  gridCard: {
+    borderRadius: 20,
+    padding: 14,
+    height: 180,
+    justifyContent: 'space-between',
+    borderWidth: 1.5, // Grid çerçevesi
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 0,
   },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    marginBottom: 16,
-  },
-  headerLeft: {
-    flex: 1,
-    marginRight: 10,
-  },
-  name: {
-    fontSize: 17,
-    fontWeight: "800",
-    marginBottom: 6,
-    letterSpacing: -0.6,
-  },
-  codeBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  code: {
-    fontSize: 11,
-    fontWeight: "700",
-    fontFamily: Platform.select({ ios: 'Menlo', android: 'monospace' }),
-    letterSpacing: 0.5,
-  },
-  erpBadge: {
+  gridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  gridBody: { flex: 1, justifyContent: 'center', paddingVertical: 8 },
+  gridTitle: { fontSize: 14, fontWeight: "700", marginBottom: 6 },
+  gridFooter: { paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.04)', flexDirection: 'row', alignItems: 'center' },
+
+  // --- LIST STYLES ---
+  listCard: {
     flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 10,
-    gap: 4,
-    shadowColor: "#ec4899",
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    shadowOffset: { width: 0, height: 2 },
+    alignItems: 'flex-start',
+    paddingVertical: 14,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1, // Sadece alt çizgi
+    minHeight: 85,
   },
-  erpBadgeText: {
-    fontSize: 10,
-    fontWeight: "900",
-    color: "#FFFFFF",
-    letterSpacing: 0.5,
+  listLeft: {
+    marginRight: 14,
+    paddingLeft: 4,
+    paddingTop: 2,
   },
-  details: {
-    gap: 10,
-  },
-  detailRow: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  iconBox: {
-    width: 28,
-    height: 28,
-    borderRadius: 10,
-    alignItems: 'center',
+  listContent: {
+    flex: 1,
     justifyContent: 'center',
-    marginRight: 12,
+    paddingRight: 8,
   },
-  detailText: {
-    fontSize: 13,
-    fontWeight: "600",
-    flex: 1,
-  },
-  taxInfo: {
-    flex: 1,
+  listHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 2,
   },
-  taxLabel: {
-    fontSize: 10,
-    fontWeight: "800",
-    opacity: 0.5,
+  listName: {
+    fontSize: 15,
+    fontWeight: "700",
+    flex: 1,
+    letterSpacing: -0.2,
   },
+  listFooterColumn: { gap: 3 },
+  listDetailText: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginLeft: 6,
+    flex: 1, 
+  },
+
+  // --- ORTAK ---
+  code: {
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    letterSpacing: 0.2,
+  },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  footerText: { fontSize: 11, fontWeight: "500" },
+  iconBox: { alignItems: 'center', justifyContent: 'center' },
+  badgeContainer: { borderRadius: 6, overflow: 'hidden' },
+  badgeGradient: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 7, paddingVertical: 3, gap: 3 },
+  badgeText: { fontSize: 10, fontWeight: "700" },
 });

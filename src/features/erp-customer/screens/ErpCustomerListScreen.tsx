@@ -1,169 +1,160 @@
 import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, Text as RNText } from "react-native";
-import { FlatListScrollView } from "@/components/FlatListScrollView";
+import {
+  View,
+  StyleSheet,
+  ActivityIndicator,
+  FlatList,
+  TouchableWithoutFeedback,
+  TouchableOpacity,
+  Dimensions,
+  Platform,
+} from "react-native";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
+import { LayoutGridIcon, ListViewIcon } from "hugeicons-react-native";
+
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
-import { CustomRefreshControl } from "../../../components/CustomRefreshControl";
 import { useUIStore } from "../../../store/ui";
-import { useErpCustomers } from "../hooks";
+import { useErpCustomers } from "../hooks/useErpCustomers";
 import { SearchInput, ErpCustomerCard } from "../components";
 import type { CariDto } from "../types";
+
+const { width } = Dimensions.get('window');
+const GAP = 12;
+const PADDING = 16;
+const GRID_WIDTH = (width - (PADDING * 2) - GAP) / 2;
 
 export function ErpCustomerListScreen(): React.ReactElement {
   const { t } = useTranslation();
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
-  
   const isDark = themeMode === "dark";
 
-  // 1. Ana zemin ve Gradient Renkleri (Standart Şablon)
+  // --- TASARIM RENKLERİ ---
   const mainBg = isDark ? "#0c0516" : "#FFFFFF";
   const gradientColors = (isDark
     ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
     : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
 
+  const theme = {
+    textMute: isDark ? "#94a3b8" : colors.textMuted,
+    primary: "#db2777",     
+    activeSwitch: "#db2777",
+    switchBg: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
+  };
+
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [searchText, setSearchText] = useState("");
 
-  const searchParam = useMemo(() => {
-    return searchText.trim().length >= 2 ? searchText.trim() : null;
-  }, [searchText]);
+  // 1. VERİ ÇEKME
+  const { data: allCustomers = [], isPending, isError, refetch, isRefetching } = useErpCustomers();
 
-  const {
-    data: customers = [],
-    isPending,
-    isError,
-    refetch,
-    isRefetching,
-  } = useErpCustomers(searchParam);
-
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
-
+  // 2. ARAMA FİLTRELEME (Performans için useMemo)
   const filteredCustomers = useMemo(() => {
-    if (!searchText.trim()) {
-      return customers;
-    }
+    if (!searchText.trim()) return allCustomers;
     const searchLower = searchText.toLowerCase().trim();
-    return customers.filter(
-      (customer) =>
-        customer.cariKod?.toLowerCase().includes(searchLower) ||
-        customer.cariIsim?.toLowerCase().includes(searchLower) ||
-        customer.cariTel?.toLowerCase().includes(searchLower) ||
-        customer.email?.toLowerCase().includes(searchLower)
+    return allCustomers.filter(customer => 
+      customer.cariIsim?.toLowerCase().includes(searchLower) ||
+      customer.cariKod?.toLowerCase().includes(searchLower)
     );
-  }, [customers, searchText]);
+  }, [allCustomers, searchText]);
 
-  const handleCustomerPress = useCallback((customer: CariDto) => {
-    console.log("ERP Customer selected:", customer);
-  }, []);
-
-  const renderEmpty = useCallback(() => {
-    if (isPending) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.accent} />
-        </View>
-      );
-    }
+  // 3. RENDER ITEM
+  const renderItem = useCallback(({ item, index }: { item: CariDto; index: number }) => {
     return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>👥</Text>
-        <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-          {t("erpCustomer.noCustomers")}
-        </Text>
+      <View style={viewMode === 'grid' ? { width: GRID_WIDTH } : { width: '100%' }}>
+        <ErpCustomerCard 
+          customer={item} 
+          viewMode={viewMode} // Card bileşeninin bu prop'u desteklediğini varsayıyoruz
+          onPress={() => console.log(item.cariKod)} 
+        />
       </View>
     );
-  }, [isPending, colors.accent, colors.textMuted, t]);
+  }, [viewMode]);
 
   return (
     <View style={[styles.container, { backgroundColor: mainBg }]}>
-      {/* StatusBar ayarı */}
       <StatusBar style={isDark ? "light" : "dark"} />
-
-      {/* KATMAN 1: Ambient Gradient (En arkada) */}
+      
+      {/* KATMAN 1: Arka Plan Geçişi */}
       <View style={StyleSheet.absoluteFill}>
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       </View>
 
-      {/* KATMAN 2: Sayfa İçeriği */}
       <View style={{ flex: 1 }}>
         <ScreenHeader title={t("erpCustomer.title")} showBackButton />
         
         <View style={styles.content}>
-          <View style={styles.topSection}>
-            <SearchInput
-              value={searchText}
-              onSearch={setSearchText}
-              placeholder={t("erpCustomer.searchPlaceholder")}
-            />
+          {/* KATMAN 2: Arama ve Görünüm Değiştirici */}
+          <View style={styles.controlsArea}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <SearchInput value={searchText} onSearch={setSearchText} placeholder={t("erpCustomer.searchPlaceholder")} />
+            </View>
+
+            <View style={[styles.viewSwitcher, { backgroundColor: theme.switchBg }]}>
+              <TouchableWithoutFeedback onPress={() => setViewMode('grid')}>
+                <View style={[styles.switchBtn, viewMode === 'grid' && { backgroundColor: theme.activeSwitch }]}>
+                   <LayoutGridIcon 
+                    size={18} 
+                    color={viewMode === 'grid' ? '#FFF' : theme.textMute} 
+                    variant="stroke" 
+                   />
+                </View>
+              </TouchableWithoutFeedback>
+              
+              <TouchableWithoutFeedback onPress={() => setViewMode('list')}>
+                <View style={[styles.switchBtn, viewMode === 'list' && { backgroundColor: theme.activeSwitch }]}>
+                   <ListViewIcon 
+                    size={18} 
+                    color={viewMode === 'list' ? '#FFF' : theme.textMute} 
+                    variant="stroke" 
+                   />
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
           </View>
 
-          {isPending && filteredCustomers.length === 0 ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
-            </View>
+          {isPending ? (
+            <View style={styles.center}><ActivityIndicator size="large" color={theme.primary} /></View>
           ) : isError ? (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{t("common.error")}</Text>
-              <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-                <Text style={[styles.retryText, { color: colors.accent }]}>{t("common.retry")}</Text>
-              </TouchableOpacity>
+            <View style={styles.center}>
+              <Text>{t("common.error")}</Text>
+              <TouchableOpacity onPress={() => refetch()}><Text style={{color: theme.primary, marginTop: 8}}>Yenile</Text></TouchableOpacity>
             </View>
           ) : (
-            <FlatListScrollView
-              style={styles.list}
-              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-              showsVerticalScrollIndicator={false}
-              refreshControl={
-                Platform.OS === "android"
-                  ? undefined
-                  : <CustomRefreshControl refreshing={isRefetching} onRefresh={handleRefresh} />
+            <FlatList
+              key={viewMode} // Grid/List arası geçişte Layout'un yenilenmesi için önemli
+              data={filteredCustomers}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => `${item.cariKod}-${index}`}
+              numColumns={viewMode === 'grid' ? 2 : 1}
+              columnWrapperStyle={viewMode === 'grid' ? { gap: GAP, paddingHorizontal: PADDING } : undefined}
+              contentContainerStyle={[
+                styles.listContent, 
+                { 
+                    paddingBottom: insets.bottom + 100,
+                    paddingHorizontal: viewMode === 'grid' ? 0 : PADDING // Grid'de padding columnWrapper'da
+                }
+              ]}
+              
+              // PERFORMANS (6.000 veri için)
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={Platform.OS === 'android'} 
+              
+              onRefresh={refetch}
+              refreshing={isRefetching}
+              ListEmptyComponent={
+                <View style={styles.center}>
+                   <Text style={{ fontSize: 40 }}>👥</Text>
+                   <Text style={{ color: theme.textMute, marginTop: 10 }}>{t("erpCustomer.noCustomers")}</Text>
+                </View>
               }
-            >
-              {filteredCustomers.length === 0 ? renderEmpty() : null}
-              {filteredCustomers.map((item, index) =>
-                Platform.OS === "android" ? (
-                  <TouchableOpacity
-                    key={`${item.cariKod}-${item.subeKodu}-${index}`}
-                    style={[
-                      styles.androidCard, 
-                      { 
-                        backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.8)",
-                        borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)" 
-                      }
-                    ]}
-                    onPress={() => handleCustomerPress(item)}
-                    activeOpacity={0.8}
-                  >
-                    <RNText style={[styles.androidCardTitle, { color: colors.text }]}>
-                      {item.cariIsim || item.cariKod}
-                    </RNText>
-                    <RNText style={[styles.androidCardSub, { color: colors.textMuted }]}>
-                      {item.cariKod}
-                    </RNText>
-                    <RNText style={[styles.androidCardSub, { color: colors.textMuted }]}>
-                      {item.cariTel || item.email || "-"}
-                    </RNText>
-                  </TouchableOpacity>
-                ) : (
-                  <ErpCustomerCard
-                    key={`${item.cariKod}-${item.subeKodu}-${index}`}
-                    customer={item}
-                    onPress={() => handleCustomerPress(item)}
-                  />
-                )
-              )}
-            </FlatListScrollView>
+            />
           )}
         </View>
       </View>
@@ -172,88 +163,32 @@ export function ErpCustomerListScreen(): React.ReactElement {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  content: { flex: 1 },
+  center: { flex: 1, justifyContent: "center", alignItems: "center", marginTop: 50 },
+  controlsArea: {
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
+    paddingVertical: 12,
   },
-  content: {
-    flex: 1,
-    backgroundColor: 'transparent', // Gradientin görünmesi için şeffaf
+  viewSwitcher: {
+    flexDirection: 'row', 
+    padding: 4, 
+    borderRadius: 12, 
+    alignItems: 'center', 
+    height: 48,
   },
-  topSection: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 8,
+  switchBtn: { 
+    padding: 8, 
+    borderRadius: 8, 
+    height: 40, 
+    width: 40, 
+    alignItems: 'center', 
+    justifyContent: 'center' 
   },
-  list: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  listContent: {
-    paddingHorizontal: 20,
+  listContent: { 
     paddingTop: 8,
-  },
-  loadingContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    marginBottom: 16,
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  retryText: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    paddingVertical: 60,
-  },
-  emptyIcon: {
-    fontSize: 48,
-    marginBottom: 16,
-  },
-  emptyText: {
-    fontSize: 16,
-  },
-  androidCard: {
-    borderWidth: 1,
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: 12,
-    // Glassmorphism etkisi
-    ...Platform.select({
-      ios: {
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 4,
-      },
-      android: {
-        elevation: 2,
-      },
-    }),
-  },
-  androidCardTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 4,
-  },
-  androidCardSub: {
-    fontSize: 13,
-    marginTop: 2,
+    gap: GAP 
   },
 });

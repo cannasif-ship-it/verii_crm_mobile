@@ -1,7 +1,17 @@
 import React, { useState, useCallback } from "react";
-import { View, TextInput, StyleSheet, TouchableOpacity } from "react-native";
-import { Text } from "../../../components/ui/text";
+import { 
+  View, 
+  TextInput, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Platform 
+} from "react-native";
 import { useUIStore } from "../../../store/ui";
+import { Search01Icon, Cancel01Icon } from "hugeicons-react-native";
+
+// --- SABİT RENKLER (Kartlarla Uyumlu) ---
+const BRAND_COLOR = "#db2777";
+const BRAND_COLOR_DARK = "#ec4899";
 
 interface SearchInputProps {
   value: string;
@@ -14,19 +24,31 @@ export function SearchInput({
   onSearch,
   placeholder = "Ara...",
 }: SearchInputProps): React.ReactElement {
-  const { colors } = useUIStore();
-  const [localValue, setLocalValue] = useState(value);
+  const { colors, themeMode } = useUIStore();
+  const isDark = themeMode === "dark";
+
+  // Focus durumunu takip ediyoruz (Çerçeve rengi için)
+  const [isFocused, setIsFocused] = useState(false);
+
+  // Tema renkleri
+  const theme = {
+    bg: isDark ? "rgba(255, 255, 255, 0.05)" : "#F1F5F9",
+    border: isDark ? "rgba(255, 255, 255, 0.1)" : "#E2E8F0",
+    activeBorder: isDark ? BRAND_COLOR_DARK : BRAND_COLOR, // Focus olunca pembe
+    icon: isDark ? "#94a3b8" : "#64748b",
+    activeIcon: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,
+    text: colors.text,
+    placeholder: isDark ? "#64748b" : "#94a3b8",
+  };
 
   const handleChangeText = useCallback(
     (text: string) => {
-      setLocalValue(text);
       onSearch(text);
     },
     [onSearch]
   );
 
   const handleClear = useCallback(() => {
-    setLocalValue("");
     onSearch("");
   }, [onSearch]);
 
@@ -34,22 +56,56 @@ export function SearchInput({
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+        { 
+          backgroundColor: theme.bg, 
+          borderColor: isFocused ? theme.activeBorder : theme.border 
+        },
       ]}
     >
-      <Text style={styles.searchIcon}>🔍</Text>
+      {/* SOL: ARAMA İKONU */}
+      <View style={styles.iconLeft}>
+        <Search01Icon 
+          size={18} 
+          color={isFocused ? theme.activeIcon : theme.icon} 
+          variant="stroke"
+          strokeWidth={2}
+        />
+      </View>
+
+      {/* ORTA: INPUT */}
       <TextInput
-        style={[styles.input, { color: colors.text }]}
-        value={localValue}
+        style={[styles.input, { color: theme.text }]}
+        value={value} // Parent component state'ini kullanıyoruz
         onChangeText={handleChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={theme.placeholder}
         autoCapitalize="none"
         autoCorrect={false}
+        
+        // Focus Olayları
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
+        
+        // İmleç Rengi
+        selectionColor={theme.activeIcon}
+        cursorColor={theme.activeIcon} // Android için
       />
-      {localValue.length > 0 && (
-        <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-          <Text style={[styles.clearIcon, { color: colors.textMuted }]}>✕</Text>
+
+      {/* SAĞ: TEMİZLE BUTONU (Sadece yazı varsa görünür) */}
+      {value.length > 0 && (
+        <TouchableOpacity 
+          onPress={handleClear} 
+          style={styles.clearButton}
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <View style={[styles.clearIconBg, { backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : '#cbd5e1' }]}>
+            <Cancel01Icon 
+                size={12} 
+                color={isDark ? "#FFF" : "#fff"} 
+                variant="stroke" // İçi dolu çarpı
+            />
+          </View>
         </TouchableOpacity>
       )}
     </View>
@@ -60,25 +116,36 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 48,
-    marginBottom: 16,
+    borderRadius: 14, // Kartlara uyumlu yuvarlaklık
+    borderWidth: 1.5, // Focus olunca belli olsun diye biraz kalın
+    height: 50, // Parmakla dokunmak için ideal yükseklik
+    marginBottom: 0, // Dış boşluğu parent yönetir
   },
-  searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
+  iconLeft: {
+    paddingLeft: 14,
+    paddingRight: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    height: '100%',
   },
   input: {
     flex: 1,
-    fontSize: 16,
-    padding: 0,
+    fontSize: 15,
+    fontWeight: "500",
+    padding: 0, // Android padding sıfırlama
+    height: '100%',
   },
   clearButton: {
-    padding: 4,
+    paddingHorizontal: 12,
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  clearIcon: {
-    fontSize: 14,
+  clearIconBg: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

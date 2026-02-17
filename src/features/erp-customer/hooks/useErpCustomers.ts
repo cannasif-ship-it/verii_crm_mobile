@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { erpCustomerApi } from "../api";
+import { erpCustomerApi } from "../api/erpCustomerApi";
 import type { CariDto } from "../types";
 
-export function useErpCustomers(cariKodu?: string | null) {
-  return useQuery<CariDto[]>({
-    queryKey: ["erpCustomers", cariKodu || "all"],
-    queryFn: () => erpCustomerApi.getCaris(cariKodu),
-    staleTime: 5 * 60 * 1000,
+export function useErpCustomers() {
+  return useQuery<CariDto[], Error>({
+    queryKey: ["erpCustomers", "fullList"],
+    queryFn: () => erpCustomerApi.getCaris(),
+    staleTime: 1000 * 60 * 10, // 10 dakika boyunca veriyi taze say, tekrar çekme
   });
 }

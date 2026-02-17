@@ -5,14 +5,14 @@ import {
   Text, 
   Dimensions, 
   TouchableWithoutFeedback,
-  DimensionValue,
   Platform
 } from "react-native";
 import { 
-  BarCode01Icon,
-  Globe02Icon,
+  Call02Icon, 
+  Mail01Icon, 
+  Location01Icon, 
   ArrowRight01Icon,
-  Building03Icon
+  UserCircleIcon
 } from "hugeicons-react-native";
 import type { CustomerDto } from "../types";
 import { useUIStore } from "../../../store/ui";
@@ -28,12 +28,14 @@ interface CustomerCardProps {
   onPress: () => void;
 }
 
+// --- YARDIMCI FONKSİYONLAR ---
+
 const getInitials = (name: string) => {
   return name?.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ ]/g, "").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "?";
 };
 
 const getAvatarColor = (name: string) => {
-  const colors = ["#db2777", "#9333ea", "#2563eb", "#059669", "#d97706", "#dc2626"];
+  const colors = ["#db2777", "#7c3aed", "#2563eb", "#059669", "#ea580c", "#dc2626", "#0891b2"];
   let hash = 0;
   for (let i = 0; i < name.length; i++) {
     hash = name.charCodeAt(i) + ((hash << 5) - hash);
@@ -41,160 +43,174 @@ const getAvatarColor = (name: string) => {
   return colors[Math.abs(hash) % colors.length];
 };
 
+const formatPhoneNumber = (phone: string | null | undefined) => {
+  if (!phone) return null;
+  const cleaned = ('' + phone).replace(/\D/g, '');
+  const match = cleaned.match(/^(\d{1})?(\d{3})(\d{3})(\d{2})(\d{2})$/);
+  if (match) {
+    return [match[2], match[3], match[4], match[5]].join(' ');
+  }
+  return phone;
+};
+
 const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProps) => {
-  const [isPressed, setIsPressed] = useState(false);
   const { themeMode } = useUIStore();
+  const [isPressed, setIsPressed] = useState(false); // Basma durumunu takip ediyoruz
+
   const isDark = themeMode === "dark";
+  const isGrid = viewMode === 'grid';
+
+  // Dinamik Veriler
+  const avatarColor = useMemo(() => getAvatarColor(customer.name || "?"), [customer.name]);
+  const initials = useMemo(() => getInitials(customer.name || "?"), [customer.name]);
+  const formattedPhone = useMemo(() => formatPhoneNumber(customer.phone), [customer.phone]);
+  
+  const displayContact = formattedPhone || customer.email || "-";
+  const ContactIcon = customer.phone ? Call02Icon : Mail01Icon;
 
   // --- TEMA ---
   const THEME = {
-    // Grid
-    gridBg: isDark ? "#1e1b29" : "#FFFFFF",
-    gridBorder: isDark ? "rgba(255,255,255,0.08)" : "#E2E8F0",
+    bg: isDark ? "rgba(30, 41, 59, 0.6)" : "#FFFFFF",
+    activeBg: isDark ? "rgba(255, 255, 255, 0.05)" : "#F8FAFC",
     
-    // List (Daha Belirgin)
-    listBg: isDark ? "#1a0b2e" : "#FFFFFF",
-    listPressed: isDark ? "rgba(255,255,255,0.05)" : "#F8FAFC",
-    // Çizgi rengini biraz daha belirgin yaptım
-    divider: isDark ? "rgba(255,255,255,0.15)" : "#CBD5E1", 
+    border: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)",
+    activeBorder: avatarColor, // 🔥 BASINCA BU RENK OLACAK
     
     text: isDark ? "#FFFFFF" : "#0F172A",
     textMute: isDark ? "#94a3b8" : "#64748B",
-    primary: "#db2777",
+    
+    avatarBg: `${avatarColor}15`,
+    avatarText: avatarColor,
   };
 
-  const initials = getInitials(customer.name);
-  const avatarColor = getAvatarColor(customer.name);
-  
   const locationText = useMemo(() => {
     const parts = [customer.cityName, customer.countryName].filter(Boolean);
     return parts.length > 0 ? parts.join(", ") : null;
   }, [customer]);
 
-  const containerStyle = useMemo(() => {
-    if (viewMode === 'grid') {
-      // GRID (KUTU)
-      return {
-        backgroundColor: THEME.gridBg,
-        borderColor: isPressed ? THEME.primary : THEME.gridBorder,
-        borderWidth: 1,
-        width: GRID_WIDTH as DimensionValue,
-        borderRadius: 16,
-        padding: 12,
-        height: 175,
-        justifyContent: 'space-between' as const,
-        shadowColor: "#000",
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: isDark ? 0.3 : 0.05,
-        shadowRadius: 4,
-        elevation: 3,
-      };
-    } else {
-      // LIST (SATIR - Daha belirgin çizgili)
-      return {
-        width: '100%' as DimensionValue,
-        flexDirection: 'row' as const,
-        alignItems: 'center' as const,
-        paddingVertical: 16, // Satır yüksekliği arttı
-        paddingHorizontal: 12,
-        backgroundColor: isPressed ? THEME.listPressed : THEME.listBg,
-        borderBottomWidth: 1, // Çizgi kalınlığı 1px (hairline değil)
-        borderBottomColor: THEME.divider, // Daha belirgin renk
-        borderRadius: 0,
-      };
-    }
-  }, [viewMode, isPressed, THEME, isDark]);
+  // --- AVATAR KUTUSU ---
+  const AvatarBox = ({ size }: { size: number }) => (
+    <View style={[styles.avatarBox, { 
+      width: size, 
+      height: size, 
+      borderRadius: isGrid ? 14 : size / 2, 
+      backgroundColor: THEME.avatarBg,
+      borderColor: `${avatarColor}30`,
+      borderWidth: 1
+    }]}>
+      <Text style={[styles.avatarText, { color: THEME.avatarText, fontSize: size * 0.38 }]}>
+        {initials}
+      </Text>
+    </View>
+  );
 
   return (
     <TouchableWithoutFeedback
       onPress={onPress}
-      onPressIn={() => setIsPressed(true)}
-      onPressOut={() => setIsPressed(false)}
+      onPressIn={() => setIsPressed(true)}  // Basınca tetiklenir
+      onPressOut={() => setIsPressed(false)} // Bırakınca tetiklenir
     >
-      <View style={containerStyle}>
-        
-        {viewMode === 'grid' ? (
-          // --- GRID MODU (AYNI) ---
+      <View
+        style={[
+          isGrid ? styles.gridCard : styles.listCard,
+          {
+            backgroundColor: isPressed && !isGrid ? THEME.activeBg : THEME.bg,
+            
+            // 🔥 HOVER BORDER MANTIĞI BURADA
+            borderColor: isPressed ? THEME.activeBorder : THEME.border,
+            
+            // Listede basınca çizgi biraz daha kalınlaşsın (belirgin olsun diye)
+            borderBottomWidth: !isGrid && isPressed ? 2 : 1,
+            
+            // Grid'de scale efekti yerine hafif gölge artışı veya transform
+            transform: isGrid && isPressed ? [{ scale: 0.98 }] : [], 
+          },
+          isGrid && { shadowColor: isDark ? "#000" : "#94a3b8" }
+        ]}
+      >
+        {isGrid ? (
+          // === GRID GÖRÜNÜMÜ ===
           <>
             <View style={styles.gridHeader}>
-              <View style={[styles.avatar, { backgroundColor: `${avatarColor}15`, borderColor: `${avatarColor}30` }]}>
-                <Text style={[styles.avatarText, { color: avatarColor }]}>{initials}</Text>
-              </View>
+              <AvatarBox size={42} />
               {customer.customerTypeName && (
-                 <View style={[styles.badge, { borderColor: THEME.divider }]}>
-                    <Text style={[styles.badgeText, { color: THEME.textMute }]} numberOfLines={1}>{customer.customerTypeName}</Text>
+                 <View style={[styles.badge, { borderColor: THEME.border }]}>
+                    <Text style={[styles.badgeText, { color: THEME.textMute }]} numberOfLines={1}>
+                       {customer.customerTypeName}
+                    </Text>
                  </View>
               )}
             </View>
-            <View style={styles.gridContent}>
-                <Text style={[styles.gridName, { color: THEME.text }]} numberOfLines={2}>
-                  {customer.name}
-                </Text>
-                <View style={styles.infoRow}>
-                   <BarCode01Icon size={14} color={THEME.textMute} variant="stroke" />
-                   <Text style={[styles.infoText, { color: THEME.textMute }]}>
-                     {customer.customerCode || "-"}
-                   </Text>
-                </View>
-                {customer.taxNumber && (
-                   <View style={[styles.infoRow, { marginTop: 2 }]}>
-                      <Building03Icon size={14} color={THEME.textMute} variant="stroke" />
-                      <Text style={[styles.infoText, { color: THEME.textMute, fontSize: 10 }]}>
-                        VN: {customer.taxNumber}
-                      </Text>
-                   </View>
-                )}
-            </View>
-            <View style={[styles.divider, { backgroundColor: THEME.divider }]} />
-            <View style={styles.gridFooter}>
-               <View style={styles.row}>
-                  <Globe02Icon size={12} color={THEME.textMute} />
-                  <Text style={[styles.footerText, { color: THEME.textMute }]} numberOfLines={1}>
-                    {locationText || "Konum Yok"}
-                  </Text>
-               </View>
-            </View>
-          </>
-        ) : (
-          // --- LIST MODU (SADELEŞTİRİLMİŞ) ---
-          <>
-            {/* Avatar */}
-            <View style={[styles.listAvatar, { backgroundColor: `${avatarColor}15`, borderColor: `${avatarColor}30` }]}>
-              <Text style={[styles.listAvatarText, { color: avatarColor }]}>{initials}</Text>
-            </View>
 
-            {/* Orta Kısım */}
-            <View style={styles.listContent}>
-              {/* İsim */}
-              <Text style={[styles.listName, { color: THEME.text }]} numberOfLines={1}>
-                  {customer.name}
+            <View style={styles.gridBody}>
+              <Text style={[styles.gridName, { color: THEME.text }]} numberOfLines={2}>
+                {customer.name}
               </Text>
               
-              {/* Sadece Kod + Lokasyon */}
-              <View style={styles.listBottomRow}>
-                  {/* Kod İkonlu */}
-                  <View style={styles.row}>
-                     <BarCode01Icon size={12} color={THEME.textMute} style={{marginRight: 4}} variant="stroke" />
-                     <Text style={[styles.listDetailText, { color: THEME.textMute }]}>
-                        {customer.customerCode || "-"}
-                     </Text>
-                  </View>
-
-                  {/* Lokasyon Varsa */}
-                  {locationText && (
-                    <>
-                      <View style={[styles.dot, { backgroundColor: THEME.textMute }]} />
-                      <Text style={[styles.listDetailText, { color: THEME.textMute, flex: 1 }]} numberOfLines={1}>
-                          {locationText}
-                      </Text>
-                    </>
-                  )}
+              <View style={styles.row}>
+                 <ContactIcon size={12} color={THEME.textMute} />
+                 <Text style={[styles.contactText, { color: THEME.textMute, marginLeft: 4 }]} numberOfLines={1}>
+                    {displayContact}
+                 </Text>
               </View>
             </View>
 
-            {/* Sağ Ok */}
-            <View style={styles.listRight}>
-               <ArrowRight01Icon size={18} color={THEME.textMute} variant="stroke" />
+            <View style={styles.gridFooter}>
+                <Location01Icon size={12} color={THEME.textMute} />
+                <Text style={[styles.footerText, { color: THEME.textMute, marginLeft: 4 }]} numberOfLines={1}>
+                  {locationText || "Konum Yok"}
+                </Text>
+            </View>
+          </>
+        ) : (
+          // === LIST GÖRÜNÜMÜ ===
+          <>
+            <View style={styles.listLeft}>
+              <AvatarBox size={46} />
+            </View>
+            
+            <View style={styles.listContent}>
+               
+               {/* 1. İSİM + OK */}
+               <View style={styles.listHeaderRow}>
+                  <Text style={[styles.listName, { color: THEME.text }]} numberOfLines={1}>
+                    {customer.name}
+                  </Text>
+                  <ArrowRight01Icon 
+                    size={16} 
+                    color={isPressed ? THEME.activeBorder : THEME.textMute} // Basınca ok da renklenir
+                    style={{ opacity: isPressed ? 1 : 0.4, marginLeft: 4 }} 
+                  />
+               </View>
+
+               {/* 2. İLETİŞİM */}
+               <View style={[styles.row, { marginTop: 2, marginBottom: 4 }]}>
+                  <ContactIcon size={13} color={THEME.textMute} />
+                  <Text style={[styles.contactText, { color: THEME.textMute, marginLeft: 5 }]} numberOfLines={1}>
+                    {displayContact}
+                  </Text>
+               </View>
+
+               {/* 3. TİP ve LOKASYON */}
+               <View style={styles.listFooterColumn}>
+                  {customer.customerTypeName ? (
+                    <View style={[styles.row, { marginRight: 10 }]}>
+                      <UserCircleIcon size={12} color={THEME.textMute} />
+                      <Text style={[styles.listDetailText, { color: THEME.textMute }]} numberOfLines={1}>
+                        {customer.customerTypeName}
+                      </Text>
+                    </View>
+                  ) : null}
+                  
+                  {locationText && (
+                    <View style={styles.row}>
+                      <Location01Icon size={12} color={THEME.textMute} />
+                      <Text style={[styles.listDetailText, { color: THEME.textMute }]} numberOfLines={1}>
+                        {locationText}
+                      </Text>
+                    </View>
+                  )}
+               </View>
             </View>
           </>
         )}
@@ -207,62 +223,93 @@ export const CustomerCard = memo(CustomerCardComponent);
 
 const styles = StyleSheet.create({
   // --- GRID STYLES ---
-  gridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 },
-  avatar: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontSize: 16, fontWeight: "700" },
-  gridContent: { flex: 1, justifyContent: 'center' },
-  gridName: { fontSize: 14, fontWeight: "700", marginBottom: 6, lineHeight: 20 },
-  infoRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 },
-  infoText: { fontSize: 11, fontWeight: "500" },
-  divider: { height: 1, marginVertical: 10 },
-  gridFooter: { flexDirection: 'row', alignItems: 'center' },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  footerText: { fontSize: 11, fontWeight: "500", marginLeft: 6 },
-  badge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8, maxWidth: '55%', borderWidth: 1 },
-  badgeText: { fontSize: 10, fontWeight: "600" },
-
-  // --- LIST STYLES (DAHA NET) ---
-  listAvatar: {
-    width: 40,
-    height: 40,
+  gridCard: {
+    width: GRID_WIDTH,
+    height: 180,
     borderRadius: 20,
-    borderWidth: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginRight: 14,
+    padding: 14,
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 10,
+    elevation: 2,
+    marginBottom: 0,
   },
-  listAvatarText: { fontSize: 15, fontWeight: "700" },
-  
-  listContent: { 
-    flex: 1, 
-    justifyContent: 'center',
-    gap: 4 // İsim ve detay arası boşluk
-  },
-  
-  listName: { 
-    fontSize: 16, // İsim biraz büyüdü
-    fontWeight: "600", 
-  },
-  
-  listBottomRow: { 
+  gridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  gridBody: { flex: 1, justifyContent: 'center', paddingVertical: 8 },
+  gridName: { fontSize: 14, fontWeight: "700", marginBottom: 6, lineHeight: 18, letterSpacing: -0.2 },
+  gridFooter: { 
+    paddingTop: 10, 
+    borderTopWidth: 1, 
+    borderTopColor: 'rgba(0,0,0,0.04)', 
     flexDirection: 'row', 
     alignItems: 'center' 
   },
-  
-  listDetailText: { 
-    fontSize: 13,
-    fontWeight: "500" 
+  badge: { 
+    paddingHorizontal: 6, 
+    paddingVertical: 3, 
+    borderRadius: 6, 
+    borderWidth: 1, 
+    maxWidth: '45%' 
   },
-  
-  dot: { 
-    width: 3, 
-    height: 3, 
-    borderRadius: 1.5, 
-    marginHorizontal: 8,
-    opacity: 0.6
+  badgeText: { fontSize: 9, fontWeight: "600" },
+
+  // --- LIST STYLES ---
+  listCard: {
+    width: '100%',
+    height: 90, // Sabit yükseklik (Kaymayı önler)
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    // borderBottomColor burada verilmez, dinamik stilde verilir
+    overflow: 'hidden',
   },
-  
-  listRight: { 
-    paddingLeft: 12 
+  listLeft: {
+    marginRight: 14,
+    paddingLeft: 4,
+    justifyContent: 'center',
+    height: '100%',
   },
+  listContent: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingRight: 6,
+    height: '100%',
+  },
+  listHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  listName: {
+    fontSize: 15,
+    fontWeight: "700",
+    flex: 1,
+    letterSpacing: -0.3,
+  },
+  listFooterColumn: { 
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  listDetailText: {
+    fontSize: 11,
+    fontWeight: "500",
+    marginLeft: 4,
+  },
+
+  // --- ORTAK ---
+  avatarBox: { alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontWeight: "800", letterSpacing: 0.5 },
+  
+  contactText: {
+    fontSize: 12,
+    fontWeight: "600",
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', 
+    letterSpacing: 0.2,
+  },
+  row: { flexDirection: 'row', alignItems: 'center' },
+  footerText: { fontSize: 11, fontWeight: "500" },
 });
