@@ -10,31 +10,37 @@ import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+
 import { ScreenHeader } from "../../../components/navigation";
-import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui"; 
 import { useCustomer, useDeleteCustomer } from "../hooks";
 import { CustomerDetailContent } from "../components/CustomerDetailContent";
-// İKONLAR (Emoji yerine)
-import { Edit02Icon, Delete02Icon } from "hugeicons-react-native";
+import { Edit02Icon, Delete02Icon, AlertCircleIcon, RefreshIcon } from "hugeicons-react-native";
 
 export function CustomerDetailScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors } = useUIStore(); 
+  const { themeMode } = useUIStore(); 
   const insets = useSafeAreaInsets();
 
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // --- TEMA (SABİT DEEP PURPLE) ---
-  const THEME = {
-    bg: "#1a0b2e", // Ana Arka Plan
-    headerButtonBg: "rgba(255, 255, 255, 0.1)", 
-    text: "#FFFFFF",
-    primary: "#db2777", // Pembe Vurgu
-    error: "#ef4444",
-    borderColor: "rgba(255,255,255,0.05)"
+  const PRIMARY_COLOR = "#db2777";
+  const ERROR_COLOR = "#ef4444";
+  const MUTED_COLOR = themeMode === "dark" ? "#94a3b8" : "#64748B";
+
+  const isDark = themeMode === "dark";
+
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
+    : ['rgba(255, 240, 225, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
+  const headerBtnStyle = {
+    bg: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)",
+    text: isDark ? "#FFFFFF" : "#111827",
   };
 
   const customerId = id ? Number(id) : undefined;
@@ -70,35 +76,42 @@ export function CustomerDetailScreen(): React.ReactElement {
   }, [t, customerId, deleteCustomer, router]);
 
   return (
-    <>
-      <StatusBar style="light" backgroundColor={THEME.bg} />
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       
-      {/* Container Arka Planı Güncellendi */}
-      <View style={[styles.container, { backgroundColor: THEME.bg }]}>
-        
-        {/* Header Stili */}
-        <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.borderColor }}>
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+      
+      <View style={{ flex: 1 }}>
+        <View style={{ zIndex: 10 }}>
             <ScreenHeader
               title={t("customer.detail")}
               showBackButton
               rightElement={
                 customer ? (
                   <View style={styles.headerActions}>
-                    {/* DÜZENLE BUTONU */}
-                    <TouchableOpacity onPress={handleEditPress} style={[styles.headerButton, { backgroundColor: THEME.headerButtonBg }]}>
-                      <Edit02Icon size={20} color="#FFFFFF" variant="stroke" />
+                    <TouchableOpacity 
+                        onPress={handleEditPress} 
+                        style={[styles.headerButton, { backgroundColor: headerBtnStyle.bg }]}
+                    >
+                      <Edit02Icon size={20} color={headerBtnStyle.text} variant="stroke" />
                     </TouchableOpacity>
                     
-                    {/* SİL BUTONU */}
                     <TouchableOpacity
                       onPress={handleDeletePress}
-                      style={[styles.headerButton, { backgroundColor: "rgba(239, 68, 68, 0.15)" }]} 
+                      style={[styles.headerButton, { backgroundColor: isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2" }]} 
                       disabled={isDeleting}
                     >
                       {isDeleting ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <ActivityIndicator size="small" color={ERROR_COLOR} />
                       ) : (
-                        <Delete02Icon size={20} color="#ef4444" variant="stroke" />
+                        <Delete02Icon size={20} color={ERROR_COLOR} variant="stroke" />
                       )}
                     </TouchableOpacity>
                   </View>
@@ -107,30 +120,28 @@ export function CustomerDetailScreen(): React.ReactElement {
             />
         </View>
 
-        {/* İçerik Alanı */}
         <View style={styles.content}>
           {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={THEME.primary} />
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color={PRIMARY_COLOR} />
             </View>
           ) : isError ? (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: THEME.error }]}>{t("common.error")}</Text>
-              <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-                <Text style={[styles.retryText, { color: THEME.primary }]}>{t("common.retry")}</Text>
+            <View style={styles.centerContainer}>
+              <AlertCircleIcon size={48} color={MUTED_COLOR} variant="stroke" />
+              <TouchableOpacity onPress={() => refetch()} style={[styles.retryButton, { backgroundColor: headerBtnStyle.bg }]}>
+                <RefreshIcon size={16} color={headerBtnStyle.text} variant="stroke" />
               </TouchableOpacity>
             </View>
           ) : customer ? (
             <CustomerDetailContent
               customer={customer}
-              colors={colors} 
               insets={insets}
               t={t}
             />
           ) : null}
         </View>
       </View>
-    </>
+    </View>
   );
 }
 
@@ -140,33 +151,22 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    // Eski yuvarlak köşeleri kaldırdık, tam ekran bütünlüğü için
+    backgroundColor: 'transparent',
   },
-  loadingContainer: {
+  centerContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
-  },
-  errorContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
+    gap: 16,
     padding: 20,
   },
-  errorText: {
-    fontSize: 16,
-    marginBottom: 16,
-  },
   retryButton: {
-    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
     paddingVertical: 10,
-    backgroundColor: "rgba(255,255,255,0.05)",
     borderRadius: 8,
-  },
-  retryText: {
-    fontSize: 16,
-    fontWeight: "600",
   },
   headerActions: {
     flexDirection: "row",

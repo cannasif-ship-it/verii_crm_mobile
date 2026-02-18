@@ -6,6 +6,8 @@ import {
   Modal,
   FlatList,
   ActivityIndicator,
+  Dimensions,
+  Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -13,7 +15,6 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useCountries, useCities, useDistricts } from "../hooks";
 import type { CountryDto, CityDto, DistrictDto } from "../types";
-// YENİ İKONLAR
 import { ArrowDown01Icon, CheckmarkCircle02Icon } from "hugeicons-react-native";
 
 interface LocationPickerProps {
@@ -43,20 +44,36 @@ export function LocationPicker({
   disabled = false,
 }: LocationPickerProps): React.ReactElement {
   const { t } = useTranslation();
-  const { colors, themeMode } = useUIStore();
+  const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
 
   const isDark = themeMode === "dark";
 
-  // --- TEMA ---
+  // --- PREMIUM TEMA (PremiumPicker ile aynı) ---
   const THEME = {
-    bg: isDark ? "#1a0b2e" : colors.background,
-    cardBg: isDark ? "#1e1b29" : colors.card,
-    text: isDark ? "#FFFFFF" : colors.text,
-    textMute: isDark ? "#94a3b8" : colors.textMuted,
-    border: isDark ? "rgba(255,255,255,0.1)" : colors.border,
-    inputBg: isDark ? "rgba(255,255,255,0.05)" : colors.backgroundSecondary,
-    primary: "#db2777",
+    // Input
+    inputBg: isDark ? "rgba(0,0,0,0.3)" : "#F8FAFC",
+    inputBorder: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)",
+    
+    // Modal
+    modalBg: isDark ? "#0f172a" : "#FFFFFF",
+    modalBorder: isDark ? "rgba(255,255,255,0.08)" : "transparent",
+    
+    // Yazılar
+    text: isDark ? "#F8FAFC" : "#0F172A",
+    textMute: isDark ? "#94a3b8" : "#64748B",
+    
+    // Ana Renk (Pembe)
+    primary: "#db2777", 
+    
+    // Liste Çizgileri
+    itemBorder: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
+    
+    // "Pembemsi" Seçili Arka Planı
+    selectedBg: isDark ? 'rgba(219, 39, 119, 0.15)' : '#FFF0F5', 
+    
+    overlay: isDark ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0.5)",
+    shadow: isDark ? "#000000" : "#64748b",
   };
 
   const [activePickerType, setActivePickerType] = useState<PickerType | null>(null);
@@ -69,6 +86,7 @@ export function LocationPicker({
   const selectedCity = cities?.find((c) => c.id === cityId);
   const selectedDistrict = districts?.find((d) => d.id === districtId);
 
+  // Şehir/İlçe sıfırlama mantığı
   useEffect(() => {
     if (countryId && cityId && cities) {
       const cityExists = cities.some((c) => c.id === cityId);
@@ -113,41 +131,20 @@ export function LocationPicker({
       }
       handlePickerClose();
     },
-    [
-      activePickerType,
-      countries,
-      cities,
-      districts,
-      onCountryChange,
-      onCityChange,
-      onDistrictChange,
-      handlePickerClose,
-    ]
+    [activePickerType, countries, cities, districts, onCountryChange, onCityChange, onDistrictChange, handlePickerClose]
   );
 
   const getPickerData = useCallback((): PickerItem[] => {
-    if (activePickerType === "country") {
-      return countries?.map((c) => ({ id: c.id, name: c.name })) || [];
-    }
-    if (activePickerType === "city") {
-      return cities?.map((c) => ({ id: c.id, name: c.name })) || [];
-    }
-    if (activePickerType === "district") {
-      return districts?.map((d) => ({ id: d.id, name: d.name })) || [];
-    }
+    if (activePickerType === "country") return countries?.map((c) => ({ id: c.id, name: c.name })) || [];
+    if (activePickerType === "city") return cities?.map((c) => ({ id: c.id, name: c.name })) || [];
+    if (activePickerType === "district") return districts?.map((d) => ({ id: d.id, name: d.name })) || [];
     return [];
   }, [activePickerType, countries, cities, districts]);
 
   const getPickerTitle = useCallback((): string => {
-    if (activePickerType === "country") {
-      return t("lookup.selectCountry");
-    }
-    if (activePickerType === "city") {
-      return t("lookup.selectCity");
-    }
-    if (activePickerType === "district") {
-      return t("lookup.selectDistrict");
-    }
+    if (activePickerType === "country") return t("lookup.selectCountry");
+    if (activePickerType === "city") return t("lookup.selectCity");
+    if (activePickerType === "district") return t("lookup.selectDistrict");
     return "";
   }, [activePickerType, t]);
 
@@ -165,19 +162,40 @@ export function LocationPicker({
 
       return (
         <TouchableOpacity
+          activeOpacity={0.7}
           style={[
-            styles.pickerItem,
-            { borderBottomColor: THEME.border },
-            isSelected && { backgroundColor: isDark ? "rgba(219, 39, 119, 0.1)" : colors.activeBackground },
+            styles.optionItem,
+            { 
+                borderBottomColor: THEME.itemBorder,
+                // Pembemsi arka plan
+                backgroundColor: isSelected ? THEME.selectedBg : 'transparent'
+            }
           ]}
           onPress={() => handleSelect(item)}
         >
-          <Text style={[styles.pickerItemText, { color: THEME.text }]}>{item.name}</Text>
-          {isSelected && <CheckmarkCircle02Icon size={20} color={THEME.primary} variant="stroke" />}
+          <Text 
+            style={[
+                styles.optionText, 
+                { 
+                    color: isSelected ? THEME.primary : THEME.text,
+                    fontWeight: isSelected ? "700" : "500"
+                }
+            ]}
+           >
+            {item.name}
+          </Text>
+          {isSelected && (
+            <CheckmarkCircle02Icon 
+                size={22} 
+                color={THEME.primary} 
+                variant="stroke" 
+                strokeWidth={2}
+            />
+          )}
         </TouchableOpacity>
       );
     },
-    [activePickerType, countryId, cityId, districtId, THEME, handleSelect, isDark, colors]
+    [activePickerType, countryId, cityId, districtId, THEME, handleSelect]
   );
 
   const renderField = (
@@ -186,74 +204,78 @@ export function LocationPicker({
     placeholder: string,
     type: PickerType,
     isDisabled: boolean
-  ): React.ReactElement => (
-    <View style={styles.fieldContainer}>
-      <Text style={[styles.label, { color: THEME.textMute }]}>{label}</Text>
-      <TouchableOpacity
-        style={[
-          styles.field,
-          { backgroundColor: THEME.inputBg, borderColor: THEME.border },
-          (isDisabled || disabled) && styles.fieldDisabled,
-        ]}
-        onPress={() => !isDisabled && handlePickerOpen(type)}
-        disabled={isDisabled || disabled}
-      >
-        <Text
-          style={[
-            styles.fieldText,
-            { color: value ? THEME.text : THEME.textMute },
-          ]}
-          numberOfLines={1}
-        >
-          {value || placeholder}
-        </Text>
-        <ArrowDown01Icon size={16} color={THEME.textMute} />
-      </TouchableOpacity>
-    </View>
-  );
+  ) => {
+    const isActuallyDisabled = isDisabled || disabled;
+    
+    return (
+        <View style={styles.fieldWrapper}>
+            <Text style={[styles.label, { color: THEME.textMute }]}>{label}</Text>
+            <TouchableOpacity
+                activeOpacity={0.7}
+                style={[
+                    styles.trigger,
+                    { 
+                        backgroundColor: THEME.inputBg, 
+                        borderColor: THEME.inputBorder,
+                        opacity: isActuallyDisabled ? 0.5 : 1
+                    },
+                ]}
+                onPress={() => !isActuallyDisabled && handlePickerOpen(type)}
+                disabled={isActuallyDisabled}
+            >
+                <Text
+                    style={[
+                        styles.triggerText,
+                        { color: value ? THEME.text : THEME.textMute },
+                    ]}
+                    numberOfLines={1}
+                >
+                    {value || placeholder}
+                </Text>
+                <ArrowDown01Icon 
+                    size={20} 
+                    color={THEME.textMute} 
+                    variant="stroke"
+                    strokeWidth={1.5}
+                />
+            </TouchableOpacity>
+        </View>
+    );
+  };
 
   return (
     <View style={styles.container}>
-      {renderField(
-        t("lookup.country"),
-        selectedCountry?.name,
-        t("lookup.selectCountry"),
-        "country",
-        false
-      )}
-      {renderField(
-        t("lookup.city"),
-        selectedCity?.name,
-        t("lookup.selectCity"),
-        "city",
-        !countryId
-      )}
-      {renderField(
-        t("lookup.district"),
-        selectedDistrict?.name,
-        t("lookup.selectDistrict"),
-        "district",
-        !cityId
-      )}
+      {renderField(t("lookup.country"), selectedCountry?.name, t("lookup.selectCountry"), "country", false)}
+      {renderField(t("lookup.city"), selectedCity?.name, t("lookup.selectCity"), "city", !countryId)}
+      {renderField(t("lookup.district"), selectedDistrict?.name, t("lookup.selectDistrict"), "district", !cityId)}
 
       <Modal
         visible={activePickerType !== null}
         transparent
         animationType="slide"
         onRequestClose={handlePickerClose}
+        statusBarTranslucent
       >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalBackdrop} onPress={handlePickerClose} />
+        <View style={[styles.modalOverlay, { backgroundColor: THEME.overlay }]}>
+          <TouchableOpacity style={styles.backdrop} onPress={handlePickerClose} activeOpacity={1} />
+          
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: THEME.cardBg, paddingBottom: insets.bottom + 16 },
+              { 
+                  backgroundColor: THEME.modalBg, 
+                  paddingBottom: insets.bottom + 10,
+                  borderColor: THEME.modalBorder,
+                  shadowColor: THEME.shadow
+              },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
-              <View style={[styles.handle, { backgroundColor: THEME.border }]} />
+            {/* Header */}
+            <View style={[styles.modalHeader, { borderBottomColor: THEME.itemBorder }]}>
+              <View style={[styles.handle, { backgroundColor: THEME.textMute }]} />
               <Text style={[styles.modalTitle, { color: THEME.text }]}>{getPickerTitle()}</Text>
             </View>
+
             {isPickerLoading ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={THEME.primary} />
@@ -264,7 +286,13 @@ export function LocationPicker({
                 keyExtractor={(item) => String(item.id)}
                 renderItem={renderPickerItem}
                 style={styles.list}
+                contentContainerStyle={styles.listContent}
                 showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                    <View style={styles.emptyContainer}>
+                        <Text style={{ color: THEME.textMute }}>{t("common.noData")}</Text>
+                    </View>
+                }
               />
             )}
           </View>
@@ -276,30 +304,32 @@ export function LocationPicker({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16, // Elemanlar arası boşluğu biraz artırdım
+    gap: 16, // Inputlar arası boşluk
   },
-  fieldContainer: {},
+  fieldWrapper: {
+    marginBottom: 0
+  },
   label: {
     fontSize: 14,
-    fontWeight: "500",
+    fontWeight: "600",
     marginBottom: 8,
+    marginLeft: 2
   },
-  field: {
+  trigger: {
+    height: 56, // PremiumPicker ile aynı yükseklik
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    height: 50, // Inputlarla aynı yükseklik
+    borderRadius: 14, // PremiumPicker ile aynı radius
+    paddingHorizontal: 16,
   },
-  fieldDisabled: {
-    opacity: 0.5,
-  },
-  fieldText: {
+  triggerText: {
     fontSize: 15,
-    flex: 1,
     fontWeight: "500",
+    flex: 1,
+    marginRight: 10,
+    marginTop: Platform.OS === 'android' ? 2 : 0 
   },
   
   // --- MODAL STİLLERİ ---
@@ -307,49 +337,64 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: "flex-end",
   },
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+  backdrop: {
+    position: 'absolute',
+    top: 0, left: 0, right: 0, bottom: 0,
   },
   modalContent: {
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    maxHeight: "60%",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    maxHeight: Dimensions.get("window").height * 0.75,
+    minHeight: 250,
+    borderWidth: Platform.OS === 'ios' ? 0 : 1,
+    shadowOffset: { width: 0, height: -8 },
+    shadowOpacity: 0.15,
+    shadowRadius: 20,
+    elevation: 24,
   },
   modalHeader: {
     alignItems: "center",
-    paddingVertical: 16,
+    paddingTop: 16,
+    paddingBottom: 16,
     borderBottomWidth: 1,
   },
   handle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    marginBottom: 12,
-    opacity: 0.5,
+    width: 48,
+    height: 5,
+    borderRadius: 3,
+    marginBottom: 14,
+    opacity: 0.25,
   },
   modalTitle: {
     fontSize: 17,
-    fontWeight: "600",
+    fontWeight: "700",
+    letterSpacing: -0.3
   },
   loadingContainer: {
-    padding: 40,
+    padding: 50,
     alignItems: "center",
   },
   list: {
     flexGrow: 0,
   },
-  pickerItem: {
+  listContent: {
+    paddingBottom: 20
+  },
+  optionItem: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
   },
-  pickerItemText: {
+  optionText: {
     fontSize: 16,
-    fontWeight: "500",
-    flex: 1,
+    letterSpacing: -0.2
   },
+  emptyContainer: {
+      padding: 30,
+      alignItems: 'center',
+      justifyContent: 'center'
+  }
 });

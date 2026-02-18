@@ -1,5 +1,5 @@
 import React from "react";
-import { View, StyleSheet, ScrollView, Platform } from "react-native";
+import { View, StyleSheet, ScrollView, Platform, Linking, TouchableOpacity } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { Text } from "../../../components/ui/text";
@@ -12,7 +12,7 @@ import {
   Location01Icon, 
   Invoice01Icon, 
   Coins01Icon, 
-  UserGroupIcon, 
+  WhatsappIcon, 
   CheckmarkCircle02Icon, 
   AlertCircleIcon,
   Calendar03Icon,
@@ -21,7 +21,11 @@ import {
   ComputerIcon,
   UserIcon,
   CreditCardIcon,
-  Shield02Icon
+  Shield02Icon,
+  Contact01Icon,
+  Briefcase01Icon,
+  Activity01Icon,
+  MapsCircle01Icon
 } from "hugeicons-react-native";
 
 const getInitials = (name: string) => {
@@ -31,45 +35,71 @@ const getInitials = (name: string) => {
 const getAvatarColor = (name: string) => {
   const colors = ["#db2777", "#9333ea", "#2563eb", "#059669", "#d97706", "#dc2626"];
   let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
+  for (let i = 0; i < name.length; i++) hash = name.charCodeAt(i) + ((hash << 5) - hash);
   return colors[Math.abs(hash) % colors.length];
 };
 
-function formatDate(dateString: string | undefined | null): string | null {
+function formatDate(dateString?: string | null): string | null {
   if (!dateString) return null;
   const date = new Date(dateString);
   return date.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
-function formatCurrency(value: number | undefined | null): string | null {
+function formatCurrency(value?: number | null): string | null {
   if (value === undefined || value === null) return null;
-  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 2 }).format(value);
+  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(value);
 }
 
-function DetailRow({ label, value, icon, theme }: { label: string; value: string | undefined | null; icon?: React.ReactNode, theme: any }) {
+interface ActionButtonProps {
+  icon: React.ReactNode;
+  onPress: () => void;
+  color: string;
+}
+
+function ActionButton({ icon, onPress, color }: ActionButtonProps) {
+  return (
+    <TouchableOpacity 
+      activeOpacity={0.7} 
+      onPress={onPress} 
+      style={[styles.actionCircle, { backgroundColor: color + "12", borderColor: color + "30" }]}
+    >
+      {icon}
+    </TouchableOpacity>
+  );
+}
+
+interface DetailRowProps {
+  label: string;
+  value: string | number | undefined | null;
+  icon?: React.ReactNode;
+  theme: any;
+  isLast?: boolean;
+}
+
+function DetailRow({ label, value, icon, theme, isLast }: DetailRowProps) {
   if (!value) return null;
   return (
-    <View style={[styles.detailRow, { borderBottomColor: theme.divider }]}>
+    <View style={[styles.detailRow, !isLast && { borderBottomColor: theme.divider, borderBottomWidth: 1 }]}>
       <View style={styles.detailLabelRow}>
-        {icon && <View style={styles.iconWrapper}>{icon}</View>}
+        {icon && <View style={styles.miniIconWrapper}>{icon}</View>}
         <Text style={[styles.detailLabel, { color: theme.textMute }]}>{label}</Text>
       </View>
-      <Text style={[styles.detailValue, { color: theme.text }]}>{value}</Text>
+      <Text style={[styles.detailValue, { color: theme.text }]}>{String(value)}</Text>
     </View>
   );
 }
 
-function StatusBadge({ isActive, activeText, inactiveText, theme }: { isActive: boolean; activeText: string; inactiveText: string, theme: any }) {
+interface StatusBadgeProps {
+  isActive: boolean;
+  activeText: string;
+  inactiveText: string;
+}
+
+function StatusBadge({ isActive, activeText, inactiveText }: StatusBadgeProps) {
   const color = isActive ? "#10B981" : "#EF4444";
-  const bgColor = isActive 
-    ? (theme.isDark ? "rgba(16, 185, 129, 0.1)" : "#D1FAE5") 
-    : (theme.isDark ? "rgba(239, 68, 68, 0.1)" : "#FEE2E2");
-  
   return (
-    <View style={[styles.statusBadge, { backgroundColor: bgColor, borderColor: theme.isDark ? color + "40" : "transparent" }]}>
-      {isActive ? <CheckmarkCircle02Icon size={14} color={color} variant="stroke" /> : <AlertCircleIcon size={14} color={color} variant="stroke" />}
+    <View style={[styles.statusBadge, { backgroundColor: color + "15", borderColor: color + "30" }]}>
+      <View style={[styles.statusDot, { backgroundColor: color }]} />
       <Text style={[styles.statusText, { color }]}>{isActive ? activeText : inactiveText}</Text>
     </View>
   );
@@ -77,193 +107,146 @@ function StatusBadge({ isActive, activeText, inactiveText, theme }: { isActive: 
 
 interface CustomerDetailContentProps {
   customer: CustomerDto | undefined;
-  colors: Record<string, string>;
   insets: { bottom: number };
   t: (key: string) => string;
 }
 
 export function CustomerDetailContent({ customer, insets, t }: CustomerDetailContentProps): React.ReactElement {
-  const { colors, themeMode } = useUIStore();
+  const { themeMode } = useUIStore();
   const isDark = themeMode === "dark";
+
+  const initials = getInitials(customer?.name || "");
+  const avatarColor = getAvatarColor(customer?.name || ""); 
 
   const mainBg = isDark ? "#0c0516" : "#FFFFFF";
   const gradientColors = (isDark
     ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
-    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+    : ['rgba(255, 240, 225, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
 
   const THEME = {
-    isDark,
-    bg: "transparent",
-    cardBg: isDark ? "rgba(30, 27, 41, 0.5)" : "rgba(255, 255, 255, 0.8)",
-    borderColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.05)",
-    divider: isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9",
-    text: isDark ? "#FFFFFF" : colors.text,
-    textMute: isDark ? "#94a3b8" : colors.textMuted,
+    cardBg: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(255, 255, 255, 0.95)",
+    borderColor: "rgba(219, 39, 119, 0.3)", 
+    divider: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+    text: isDark ? "#FFFFFF" : "#0F172A",
+    textMute: isDark ? "rgba(255, 255, 255, 0.5)" : "#64748B",
     primary: "#db2777",
-    badgeBg: isDark ? "rgba(219, 39, 119, 0.15)" : "#FCE7F3",
-    badgeText: "#db2777",
-    yearBadgeBg: isDark ? "rgba(147, 51, 234, 0.15)" : "#F3E8FF",
-    yearBadgeText: "#9333ea"
   };
 
-  const safeT = (key: string, fallback: string) => {
-    const translation = t(key);
-    return translation === key ? fallback : translation;
+  const handleMapOpen = () => {
+    const address = `${customer?.address || ""} ${customer?.cityName || ""}`;
+    const url = Platform.select({
+      ios: `maps:0,0?q=${address}`,
+      android: `geo:0,0?q=${address}`,
+    });
+    Linking.openURL(url || "");
   };
-
-  const initials = getInitials(customer?.name || "");
-  const avatarColor = getAvatarColor(customer?.name || "");
-
-  const locationParts: string[] = [];
-  if (customer?.countryName) locationParts.push(customer.countryName);
-  if (customer?.cityName) locationParts.push(customer.cityName);
-  if (customer?.districtName) locationParts.push(customer.districtName);
-
-  const hasContactInfo = customer?.phone || customer?.phone2 || customer?.email || customer?.website;
-  const hasLocationInfo = customer?.address || locationParts.length > 0;
-  const hasTaxInfo = customer?.taxNumber || customer?.taxOffice || customer?.tcknNumber;
-  const hasBusinessInfo = customer?.salesRepCode || customer?.groupCode || customer?.creditLimit !== undefined;
-  const hasApprovalInfo = customer?.approvalStatus || customer?.isPendingApproval || customer?.isCompleted !== undefined || customer?.rejectedReason;
-  const hasERPInfo = customer?.erpIntegrationNumber || customer?.isERPIntegrated !== undefined || customer?.lastSyncDate;
 
   return (
     <View style={[styles.container, { backgroundColor: mainBg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
-      
       <View style={StyleSheet.absoluteFill}>
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       </View>
 
       <ScrollView 
         style={styles.content}
-        contentContainerStyle={{ padding: 20, paddingBottom: insets.bottom + 100 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 160 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.card, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <View style={styles.headerContent}>
-            <View style={[styles.avatar, { backgroundColor: `${avatarColor}20`, borderColor: `${avatarColor}40` }]}>
-              <Text style={[styles.avatarText, { color: avatarColor }]}>{initials}</Text>
+        <View style={[styles.profileCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+          <View style={[styles.avatarWrapper, { borderColor: `${avatarColor}40` }]}>
+            <LinearGradient colors={[`${avatarColor}40`, `${avatarColor}10`]} style={styles.avatarInner}>
+                <Text style={[styles.avatarText, { color: avatarColor }]}>{initials}</Text>
+            </LinearGradient>
+          </View>
+          <View style={styles.kunyeInfo}>
+            <Text style={[styles.customerNameLarge, { color: THEME.text }]}>{customer?.name}</Text>
+            <View style={styles.idTagCentered}>
+              <Text style={styles.codeTagTextLarge}>#{customer?.customerCode || '---'}</Text>
             </View>
-            <Text style={[styles.customerName, { color: THEME.text }]}>{customer?.name}</Text>
-            {customer?.customerCode && (
-               <Text style={[styles.customerCode, { color: THEME.textMute }]}>#{customer.customerCode}</Text>
-            )}
-            <View style={styles.badgeRow}>
-              {customer?.customerTypeName && (
-                <View style={[styles.badge, { backgroundColor: THEME.badgeBg }]}>
-                  <Text style={[styles.badgeText, { color: THEME.badgeText }]}>{customer.customerTypeName}</Text>
-                </View>
+            <View style={styles.quickActionsRow}>
+              {customer?.phone && (
+                <ActionButton color="#6366f1" icon={<Call02Icon size={22} color="#6366f1" variant="stroke" />} onPress={() => Linking.openURL(`tel:${customer?.phone}`)} />
               )}
-              {customer?.year && (
-                 <View style={[styles.badge, { backgroundColor: THEME.yearBadgeBg }]}>
-                    <Text style={[styles.badgeText, { color: THEME.yearBadgeText }]}>{customer.year}</Text>
-                 </View>
+              {customer?.phone && (
+                <ActionButton color="#25D366" icon={<WhatsappIcon size={22} color="#25D366" variant="stroke" />} onPress={() => Linking.openURL(`https://wa.me/${customer?.phone?.replace(/\D/g, "")}`)} />
               )}
+              {customer?.email && (
+                <ActionButton color="#3b82f6" icon={<Mail01Icon size={22} color="#3b82f6" variant="stroke" />} onPress={() => Linking.openURL(`mailto:${customer?.email}`)} />
+              )}
+              <ActionButton color="#ef4444" icon={<MapsCircle01Icon size={22} color="#ef4444" variant="stroke" />} onPress={handleMapOpen} />
             </View>
           </View>
         </View>
 
-        {hasContactInfo && (
-          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.contactInfo", "İLETİŞİM BİLGİLERİ")}</Text>
-            <DetailRow theme={THEME} label={safeT("customer.phone", "Telefon")} value={customer?.phone} icon={<Call02Icon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("customer.phone2", "Telefon 2")} value={customer?.phone2} icon={<Call02Icon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("customer.email", "E-Posta")} value={customer?.email} icon={<Mail01Icon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("customer.website", "Web Sitesi")} value={customer?.website} icon={<Globe02Icon size={16} color={THEME.textMute} />} />
+        <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+          <View style={styles.sectionHeader}>
+            <Contact01Icon size={18} color={THEME.primary} variant="stroke" />
+            <Text style={[styles.sectionTitle, { color: THEME.text }]}>İLETİŞİM BİLGİLERİ</Text>
           </View>
-        )}
+          <DetailRow theme={THEME} label="Telefon" value={customer?.phone} icon={<Call02Icon size={14} color={THEME.textMute} />} />
+          <DetailRow theme={THEME} label="E-Posta" value={customer?.email} icon={<Mail01Icon size={14} color={THEME.textMute} />} />
+          <DetailRow theme={THEME} label="Web Sitesi" value={customer?.website} icon={<Globe02Icon size={14} color={THEME.textMute} />} isLast />
+        </View>
 
-        {hasLocationInfo && (
-          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("lookup.location", "ADRES BİLGİLERİ")}</Text>
-            <DetailRow theme={THEME} label={safeT("customer.address", "Adres")} value={customer?.address} icon={<Location01Icon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("lookup.country", "Ülke")} value={customer?.countryName} />
-            <DetailRow theme={THEME} label={safeT("lookup.city", "Şehir")} value={customer?.cityName} />
-            <DetailRow theme={THEME} label={safeT("lookup.district", "İlçe")} value={customer?.districtName} />
+        <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+          <View style={styles.sectionHeader}>
+            <Location01Icon size={18} color={THEME.primary} variant="stroke" />
+            <Text style={[styles.sectionTitle, { color: THEME.text }]}>ADRES & KONUM</Text>
           </View>
-        )}
-
-        {hasBusinessInfo && (
-          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.businessInfo", "TİCARİ BİLGİLER")}</Text>
-            <DetailRow theme={THEME} label={safeT("customer.salesRepCode", "Satış Temsilcisi")} value={customer?.salesRepCode} icon={<UserIcon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("customer.groupCode", "Grup Kodu")} value={customer?.groupCode} icon={<UserGroupIcon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("customer.creditLimit", "Kredi Limiti")} value={formatCurrency(customer?.creditLimit)} icon={<Coins01Icon size={16} color="#10b981" />} />
-            <DetailRow theme={THEME} label={safeT("customer.branchCode", "Şube Kodu")} value={customer?.branchCode ? String(customer.branchCode) : null} />
-          </View>
-        )}
-
-        {hasTaxInfo && (
-          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.taxInfo", "VERGİ BİLGİLERİ")}</Text>
-            <DetailRow theme={THEME} label={safeT("customer.taxNumber", "Vergi Numarası")} value={customer?.taxNumber} icon={<Invoice01Icon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("customer.taxOffice", "Vergi Dairesi")} value={customer?.taxOffice} icon={<Building03Icon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("customer.tcknNumber", "TCKN")} value={customer?.tcknNumber} icon={<CreditCardIcon size={16} color={THEME.textMute} />} />
-          </View>
-        )}
-
-        {hasApprovalInfo && (
-          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.approvalInfo", "ONAY BİLGİLERİ")}</Text>
-            <View style={styles.badgeRow}>
-               {customer?.isCompleted !== undefined && (
-                  <StatusBadge 
-                    theme={THEME}
-                    isActive={customer.isCompleted} 
-                    activeText={safeT("customer.statusCompleted", "Tamamlandı")} 
-                    inactiveText={safeT("customer.statusPending", "Beklemede")} 
-                  />
-               )}
-               {customer?.isPendingApproval && (
-                  <View style={[styles.pendingBadge, { backgroundColor: isDark ? "rgba(245, 158, 11, 0.15)" : "#FEF3C7" }]}>
-                     <Text style={[styles.pendingText, { color: "#F59E0B" }]}>{safeT("customer.isPendingApproval", "Onay Bekliyor")}</Text>
-                  </View>
-               )}
+          <Text style={[styles.addressText, { color: THEME.text }]}>{customer?.address || 'Adres bilgisi girilmemiş.'}</Text>
+          <View style={styles.locationGrid}>
+            <View style={styles.locItem}>
+              <Text style={[styles.gridLabel, { color: THEME.textMute }]}>Şehir / İlçe</Text>
+              <Text style={[styles.gridValue, { color: THEME.text }]}>{customer?.cityName || '---'} / {customer?.districtName || '---'}</Text>
             </View>
-            <DetailRow theme={THEME} label={safeT("customer.approvalStatus", "Onay Durumu")} value={customer?.approvalStatus} icon={<Shield02Icon size={16} color={THEME.textMute} />} />
-            <DetailRow theme={THEME} label={safeT("customer.approvalDate", "Onay Tarihi")} value={formatDate(customer?.approvalDate)} />
-            <DetailRow theme={THEME} label={safeT("customer.rejectedReason", "Red Nedeni")} value={customer?.rejectedReason} />
-          </View>
-        )}
-
-        {hasERPInfo && (
-          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-            <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.erpIntegration", "ERP ENTEGRASYONU")}</Text>
-            <DetailRow theme={THEME} label={safeT("customer.erpIntegrationNumber", "ERP No")} value={customer?.erpIntegrationNumber} icon={<ComputerIcon size={16} color={THEME.textMute} />} />
-            {customer?.isERPIntegrated !== undefined && (
-               <View style={[styles.detailRow, { borderBottomColor: THEME.divider }]}>
-                  <View style={styles.detailLabelRow}>
-                     <View style={styles.iconWrapper}><ComputerIcon size={16} color={THEME.textMute} /></View>
-                     <Text style={[styles.detailLabel, { color: THEME.textMute }]}>{safeT("customer.isERPIntegrated", "ERP Entegre")}</Text>
-                  </View>
-                  <StatusBadge theme={THEME} isActive={customer.isERPIntegrated} activeText={safeT("customer.statusYes", "Evet")} inactiveText={safeT("customer.statusNo", "Hayır")} />
-               </View>
-            )}
-            <DetailRow theme={THEME} label={safeT("customer.lastSyncDate", "Son Senkronizasyon")} value={formatDate(customer?.lastSyncDate)} />
-          </View>
-        )}
-
-        {customer?.notes && (
-          <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-            <View style={styles.detailLabelRow}>
-               <Note01Icon size={16} color={THEME.textMute} style={{marginRight: 8}} />
-               <Text style={[styles.sectionTitle, { color: THEME.primary, marginBottom: 0 }]}>{safeT("customer.notes", "NOTLAR")}</Text>
+            <View style={styles.locItem}>
+              <Text style={[styles.gridLabel, { color: THEME.textMute }]}>Ülke</Text>
+              <Text style={[styles.gridValue, { color: THEME.text }]}>{customer?.countryName || 'Türkiye'}</Text>
             </View>
-            <Text style={[styles.notesText, { color: THEME.text }]}>{customer.notes}</Text>
           </View>
-        )}
+        </View>
 
-        <View style={[styles.section, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
-          <Text style={[styles.sectionTitle, { color: THEME.primary }]}>{safeT("customer.systemInfo", "SİSTEM BİLGİLERİ")}</Text>
-          <DetailRow theme={THEME} label={safeT("customer.createdBy", "Oluşturan")} value={customer?.createdByFullUser} icon={<UserIcon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={safeT("customer.createdDate", "Oluşturulma")} value={formatDate(customer?.createdDate)} icon={<Calendar03Icon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={safeT("customer.updatedBy", "Güncelleyen")} value={customer?.updatedByFullUser} icon={<UserIcon size={16} color={THEME.textMute} />} />
-          <DetailRow theme={THEME} label={safeT("customer.updatedDate", "Güncellenme")} value={formatDate(customer?.updatedDate)} icon={<Calendar03Icon size={16} color={THEME.textMute} />} />
+        <View style={styles.gridRow}>
+          <View style={[styles.gridCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+             <Coins01Icon size={20} color="#10B981" style={{marginBottom: 8}} variant="stroke" />
+             <Text style={[styles.gridLabel, { color: THEME.textMute }]}>Kredi Limiti</Text>
+             <Text style={[styles.gridValue, { color: "#10B981", fontSize: 16 }]}>{formatCurrency(customer?.creditLimit) || '₺0,00'}</Text>
+          </View>
+          <View style={[styles.gridCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+             <Invoice01Icon size={20} color={THEME.primary} style={{marginBottom: 8}} variant="stroke" />
+             <Text style={[styles.gridLabel, { color: THEME.textMute }]}>Vergi No</Text>
+             <Text style={[styles.gridValue, { color: THEME.text, fontSize: 16 }]}>{customer?.taxNumber || '---'}</Text>
+          </View>
+        </View>
+
+        <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+          <View style={styles.sectionHeader}>
+            <Activity01Icon size={18} color={THEME.primary} variant="stroke" />
+            <Text style={[styles.sectionTitle, { color: THEME.text }]}>SİSTEM DURUMU</Text>
+          </View>
+          <View style={styles.statusContainer}>
+             <StatusBadge isActive={!!customer?.isCompleted} activeText="Tamamlandı" inactiveText="Beklemede" />
+             {customer?.isPendingApproval && (
+                <View style={styles.pendingBadge}><Text style={styles.pendingText}>Onay Bekliyor</Text></View>
+             )}
+          </View>
+          <DetailRow theme={THEME} label="Onay Durumu" value={customer?.approvalStatus} icon={<Shield02Icon size={14} color={THEME.textMute} />} isLast />
+        </View>
+
+        <View style={[styles.footerCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+           <View style={styles.footerRow}>
+             <UserIcon size={14} color={THEME.textMute} />
+             <Text style={[styles.footerText, { color: THEME.textMute }]}>
+                Oluşturan: <Text style={{color: THEME.text, fontWeight: '700'}}>{customer?.createdByFullUser || 'Sistem'}</Text>
+             </Text>
+           </View>
+           <View style={[styles.footerRow, { marginTop: 4 }]}>
+             <Calendar03Icon size={14} color={THEME.textMute} />
+             <Text style={[styles.footerText, { color: THEME.textMute }]}>
+                Tarih: <Text style={{color: THEME.text, fontWeight: '700'}}>{formatDate(customer?.createdDate)}</Text>
+             </Text>
+           </View>
         </View>
       </ScrollView>
     </View>
@@ -273,73 +256,52 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, backgroundColor: 'transparent' },
-  card: {
+  profileCard: {
     padding: 24,
-    borderRadius: 24,
-    borderWidth: 1,
-    marginBottom: 20,
-    alignItems: 'center',
-    ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 8 },
-      android: { elevation: 2 }
-    })
-  },
-  headerContent: { alignItems: 'center' },
-  avatar: {
-    width: 84,
-    height: 84,
-    borderRadius: 28,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderRadius: 32,
     borderWidth: 1.5,
+    alignItems: 'center',
     marginBottom: 16,
   },
-  avatarText: { fontSize: 30, fontWeight: "800" },
-  customerName: { fontSize: 22, fontWeight: "800", textAlign: "center", marginBottom: 4 },
-  customerCode: { fontSize: 13, fontFamily: Platform.select({ ios: 'Courier', android: 'monospace' }), opacity: 0.6, marginBottom: 16 },
-  badgeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginTop: 8 },
-  badge: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 10 },
-  badgeText: { fontSize: 11, fontWeight: "700" },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: 6,
-  },
-  statusText: { fontSize: 11, fontWeight: "700" },
-  pendingBadge: { paddingHorizontal: 10, paddingVertical: 5, borderRadius: 8 },
-  pendingText: { fontSize: 11, fontWeight: "700" },
-  section: {
-    padding: 20,
-    borderRadius: 24,
-    borderWidth: 1,
+  avatarWrapper: {
+    width: 90,
+    height: 90,
+    borderRadius: 32,
+    borderWidth: 1.5,
+    overflow: 'hidden',
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 13,
-    fontWeight: "800",
-    marginBottom: 18,
-    letterSpacing: 1,
-    textTransform: 'uppercase'
-  },
-  detailRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
+  avatarInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontSize: 32, fontWeight: '800' },
+  kunyeInfo: { alignItems: 'center', width: '100%' },
+  customerNameLarge: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: -0.5 },
+  idTagCentered: { backgroundColor: 'rgba(0,0,0,0.12)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginBottom: 20 },
+  codeTagTextLarge: { color: '#AAA', fontSize: 13, fontWeight: '700', letterSpacing: 1 },
+  quickActionsRow: { flexDirection: 'row', gap: 18, justifyContent: 'center', width: '100%' },
+  actionCircle: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  sectionCard: { padding: 16, borderRadius: 24, borderWidth: 1.5, marginBottom: 12 },
+  sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
+  sectionTitle: { fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
+  detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
   detailLabelRow: { flexDirection: 'row', alignItems: 'center' },
-  iconWrapper: { marginRight: 10, opacity: 0.8 },
-  detailLabel: { fontSize: 13, fontWeight: "600" },
-  detailValue: {
-    fontSize: 13,
-    fontWeight: "700",
-    maxWidth: '65%',
-    textAlign: 'right',
-  },
-  notesText: { marginTop: 12, fontSize: 14, lineHeight: 22, opacity: 0.9 },
+  miniIconWrapper: { marginRight: 8, opacity: 0.7 },
+  detailLabel: { fontSize: 13, fontWeight: '500' },
+  detailValue: { fontSize: 13, fontWeight: '700', maxWidth: '60%', textAlign: 'right' },
+  addressText: { fontSize: 14, lineHeight: 22, marginBottom: 12, opacity: 0.9 },
+  locationGrid: { flexDirection: 'row', gap: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
+  locItem: { flex: 1 },
+  gridRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
+  gridCard: { flex: 1, padding: 16, borderRadius: 24, borderWidth: 1.5 },
+  gridLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4 },
+  gridValue: { fontWeight: '800' },
+  statusContainer: { flexDirection: 'row', gap: 8, marginBottom: 12 },
+  statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, gap: 6 },
+  statusDot: { width: 6, height: 6, borderRadius: 3 },
+  statusText: { fontSize: 11, fontWeight: '700' },
+  pendingBadge: { backgroundColor: 'rgba(245, 158, 11, 0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
+  pendingText: { color: '#F59E0B', fontSize: 11, fontWeight: '700' },
+  notesText: { fontSize: 13, lineHeight: 20, opacity: 0.9 },
+  footerCard: { padding: 16, borderRadius: 24, borderWidth: 1.5, marginTop: 12 },
+  footerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  footerText: { fontSize: 12, fontWeight: '500' },
 });
