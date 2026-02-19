@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, TextInput, StyleSheet } from "react-native";
+import { View, TextInput, StyleSheet, type StyleProp, type ViewStyle } from "react-native";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 
@@ -16,6 +16,7 @@ interface FormFieldProps {
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   editable?: boolean;
   maxLength?: number;
+  containerStyle?: StyleProp<ViewStyle>;
 }
 
 export function FormField({
@@ -31,24 +32,23 @@ export function FormField({
   autoCapitalize = "sentences",
   editable = true,
   maxLength,
+  containerStyle,
 }: FormFieldProps): React.ReactElement {
   const { colors, themeMode } = useUIStore();
   const [isFocused, setIsFocused] = useState(false);
 
   const isDark = themeMode === "dark";
 
-  // --- TEMA AYARLARI ---
   const THEME = {
-    label: isDark ? "#94a3b8" : colors.textSecondary, // Slate-400
+    label: isDark ? "#94a3b8" : colors.textSecondary,
     inputBg: isDark ? "rgba(255,255,255,0.05)" : colors.backgroundSecondary,
     border: isDark ? "rgba(255,255,255,0.1)" : colors.border,
-    focusBorder: "#db2777", // Neon Pembe (Focus Rengi)
+    focusBorder: "#db2777",
     text: isDark ? "#FFFFFF" : colors.text,
     placeholder: isDark ? "#64748B" : colors.textMuted,
     error: "#ef4444"
   };
 
-  // Kenarlık Rengi Belirleme (Hata > Focus > Normal)
   const getBorderColor = () => {
     if (error) return THEME.error;
     if (isFocused) return THEME.focusBorder;
@@ -56,9 +56,9 @@ export function FormField({
   };
 
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, containerStyle]}>
       <View style={styles.labelContainer}>
-        <Text style={[styles.label, { color: THEME.label }]}>{label}</Text>
+        <Text style={[styles.label, { color: THEME.label }]} numberOfLines={1}>{label}</Text>
         {required && <Text style={[styles.required, { color: THEME.error }]}>*</Text>}
       </View>
       
@@ -70,7 +70,9 @@ export function FormField({
             borderColor: getBorderColor(),
             color: THEME.text,
           },
-          multiline && { height: numberOfLines * 24 + 24, textAlignVertical: "top" },
+          multiline 
+            ? { height: numberOfLines * 24 + 20, textAlignVertical: "top", paddingTop: 10 }
+            : { height: 34 },
           !editable && styles.inputDisabled,
         ]}
         value={value}
@@ -83,7 +85,6 @@ export function FormField({
         autoCapitalize={autoCapitalize}
         editable={editable}
         maxLength={maxLength}
-        // Focus Olayları
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
@@ -94,36 +95,17 @@ export function FormField({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  labelContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8, // Biraz daha boşluk
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: "500",
-  },
-  required: {
-    fontSize: 14,
-    marginLeft: 4,
-  },
+  container: { marginBottom: 0 },
+  labelContainer: { flexDirection: "row", alignItems: "center", marginBottom: 2 },
+  label: { fontSize: 11, fontWeight: "600" },
+  required: { fontSize: 11, marginLeft: 2 },
   input: {
     borderWidth: 1,
-    borderRadius: 12, // Modern Squircle
-    paddingHorizontal: 14,
-    paddingVertical: 14, // Biraz daha yüksek (Touch target için)
-    fontSize: 15,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    fontSize: 13,
     fontWeight: "500",
   },
-  inputDisabled: {
-    opacity: 0.5,
-  },
-  error: {
-    fontSize: 12,
-    marginTop: 6,
-    fontWeight: "500",
-  },
+  inputDisabled: { opacity: 0.6, backgroundColor: "rgba(0,0,0,0.02)" },
+  error: { fontSize: 10, marginTop: 2, fontWeight: "500" },
 });

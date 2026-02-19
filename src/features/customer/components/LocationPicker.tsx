@@ -49,29 +49,16 @@ export function LocationPicker({
 
   const isDark = themeMode === "dark";
 
-  // --- PREMIUM TEMA (PremiumPicker ile aynı) ---
   const THEME = {
-    // Input
     inputBg: isDark ? "rgba(0,0,0,0.3)" : "#F8FAFC",
     inputBorder: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)",
-    
-    // Modal
     modalBg: isDark ? "#0f172a" : "#FFFFFF",
     modalBorder: isDark ? "rgba(255,255,255,0.08)" : "transparent",
-    
-    // Yazılar
     text: isDark ? "#F8FAFC" : "#0F172A",
     textMute: isDark ? "#94a3b8" : "#64748B",
-    
-    // Ana Renk (Pembe)
     primary: "#db2777", 
-    
-    // Liste Çizgileri
     itemBorder: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-    
-    // "Pembemsi" Seçili Arka Planı
     selectedBg: isDark ? 'rgba(219, 39, 119, 0.15)' : '#FFF0F5', 
-    
     overlay: isDark ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0.5)",
     shadow: isDark ? "#000000" : "#64748b",
   };
@@ -86,7 +73,6 @@ export function LocationPicker({
   const selectedCity = cities?.find((c) => c.id === cityId);
   const selectedDistrict = districts?.find((d) => d.id === districtId);
 
-  // Şehir/İlçe sıfırlama mantığı
   useEffect(() => {
     if (countryId && cityId && cities) {
       const cityExists = cities.some((c) => c.id === cityId);
@@ -106,13 +92,8 @@ export function LocationPicker({
     }
   }, [cityId, districtId, districts, onDistrictChange]);
 
-  const handlePickerOpen = useCallback((type: PickerType) => {
-    setActivePickerType(type);
-  }, []);
-
-  const handlePickerClose = useCallback(() => {
-    setActivePickerType(null);
-  }, []);
+  const handlePickerOpen = useCallback((type: PickerType) => setActivePickerType(type), []);
+  const handlePickerClose = useCallback(() => setActivePickerType(null), []);
 
   const handleSelect = useCallback(
     (item: PickerItem) => {
@@ -167,7 +148,6 @@ export function LocationPicker({
             styles.optionItem,
             { 
                 borderBottomColor: THEME.itemBorder,
-                // Pembemsi arka plan
                 backgroundColor: isSelected ? THEME.selectedBg : 'transparent'
             }
           ]}
@@ -184,27 +164,14 @@ export function LocationPicker({
            >
             {item.name}
           </Text>
-          {isSelected && (
-            <CheckmarkCircle02Icon 
-                size={22} 
-                color={THEME.primary} 
-                variant="stroke" 
-                strokeWidth={2}
-            />
-          )}
+          {isSelected && <CheckmarkCircle02Icon size={18} color={THEME.primary} variant="stroke" strokeWidth={2} />}
         </TouchableOpacity>
       );
     },
     [activePickerType, countryId, cityId, districtId, THEME, handleSelect]
   );
 
-  const renderField = (
-    label: string,
-    value: string | undefined,
-    placeholder: string,
-    type: PickerType,
-    isDisabled: boolean
-  ) => {
+  const renderField = (label: string, value: string | undefined, placeholder: string, type: PickerType, isDisabled: boolean) => {
     const isActuallyDisabled = isDisabled || disabled;
     
     return (
@@ -232,12 +199,7 @@ export function LocationPicker({
                 >
                     {value || placeholder}
                 </Text>
-                <ArrowDown01Icon 
-                    size={20} 
-                    color={THEME.textMute} 
-                    variant="stroke"
-                    strokeWidth={1.5}
-                />
+                <ArrowDown01Icon size={14} color={THEME.textMute} variant="stroke" strokeWidth={1.5} />
             </TouchableOpacity>
         </View>
     );
@@ -245,9 +207,9 @@ export function LocationPicker({
 
   return (
     <View style={styles.container}>
-      {renderField(t("lookup.country"), selectedCountry?.name, t("lookup.selectCountry"), "country", false)}
-      {renderField(t("lookup.city"), selectedCity?.name, t("lookup.selectCity"), "city", !countryId)}
-      {renderField(t("lookup.district"), selectedDistrict?.name, t("lookup.selectDistrict"), "district", !cityId)}
+      {renderField("Ülke", selectedCountry?.name, "Seç", "country", false)}
+      {renderField("Şehir", selectedCity?.name, "Seç", "city", !countryId)}
+      {renderField("İlçe", selectedDistrict?.name, "Seç", "district", !cityId)}
 
       <Modal
         visible={activePickerType !== null}
@@ -270,7 +232,6 @@ export function LocationPicker({
               },
             ]}
           >
-            {/* Header */}
             <View style={[styles.modalHeader, { borderBottomColor: THEME.itemBorder }]}>
               <View style={[styles.handle, { backgroundColor: THEME.textMute }]} />
               <Text style={[styles.modalTitle, { color: THEME.text }]}>{getPickerTitle()}</Text>
@@ -304,35 +265,35 @@ export function LocationPicker({
 
 const styles = StyleSheet.create({
   container: {
-    gap: 16, // Inputlar arası boşluk
+    flexDirection: 'row',
+    gap: 8,
   },
   fieldWrapper: {
+    flex: 1,
     marginBottom: 0
   },
   label: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "600",
-    marginBottom: 8,
+    marginBottom: 4,
     marginLeft: 2
   },
   trigger: {
-    height: 56, // PremiumPicker ile aynı yükseklik
+    height: 30,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderRadius: 14, // PremiumPicker ile aynı radius
-    paddingHorizontal: 16,
+    borderRadius: 8,
+    paddingHorizontal: 10,
   },
   triggerText: {
-    fontSize: 15,
+    fontSize: 13,
     fontWeight: "500",
     flex: 1,
-    marginRight: 10,
+    marginRight: 6,
     marginTop: Platform.OS === 'android' ? 2 : 0 
   },
-  
-  // --- MODAL STİLLERİ ---
   modalOverlay: {
     flex: 1,
     justifyContent: "flex-end",
@@ -342,9 +303,9 @@ const styles = StyleSheet.create({
     top: 0, left: 0, right: 0, bottom: 0,
   },
   modalContent: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    maxHeight: Dimensions.get("window").height * 0.75,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: Dimensions.get("window").height * 0.70,
     minHeight: 250,
     borderWidth: Platform.OS === 'ios' ? 0 : 1,
     shadowOffset: { width: 0, height: -8 },
@@ -354,24 +315,24 @@ const styles = StyleSheet.create({
   },
   modalHeader: {
     alignItems: "center",
-    paddingTop: 16,
-    paddingBottom: 16,
+    paddingTop: 10,
+    paddingBottom: 12,
     borderBottomWidth: 1,
   },
   handle: {
-    width: 48,
-    height: 5,
-    borderRadius: 3,
-    marginBottom: 14,
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    marginBottom: 10,
     opacity: 0.25,
   },
   modalTitle: {
-    fontSize: 17,
+    fontSize: 12,
     fontWeight: "700",
-    letterSpacing: -0.3
+    letterSpacing: -0.2
   },
   loadingContainer: {
-    padding: 50,
+    padding: 40,
     alignItems: "center",
   },
   list: {
@@ -384,16 +345,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 18,
-    paddingHorizontal: 24,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderBottomWidth: 1,
   },
   optionText: {
-    fontSize: 16,
+    fontSize: 14,
     letterSpacing: -0.2
   },
   emptyContainer: {
-      padding: 30,
+      padding: 20,
       alignItems: 'center',
       justifyContent: 'center'
   }

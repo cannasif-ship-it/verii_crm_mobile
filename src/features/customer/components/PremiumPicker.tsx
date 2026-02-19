@@ -40,31 +40,18 @@ export function PremiumPicker({
   const insets = useSafeAreaInsets();
   const isDark = themeMode === "dark";
 
-  // Seçili öğeyi bul
   const selectedItem = items.find((item) => item.value === value);
 
   const THEME = {
-    // Input
     inputBg: isDark ? "rgba(0,0,0,0.3)" : "#F8FAFC",
     inputBorder: isDark ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.15)",
-    
-    // Modal
     modalBg: isDark ? "#0f172a" : "#FFFFFF",
     modalBorder: isDark ? "rgba(255,255,255,0.08)" : "transparent",
-    
-    // Yazılar
     text: isDark ? "#F8FAFC" : "#0F172A",
     textMute: isDark ? "#94a3b8" : "#64748B",
-    
-    // Ana Renk (Pembe)
     primary: "#db2777", 
-    
-    // Liste Çizgileri
     itemBorder: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)",
-    
-    // "Pembemsi" Seçili Arka Planı (Hafif ve Premium)
     selectedBg: isDark ? 'rgba(219, 39, 119, 0.15)' : '#FFF0F5', 
-    
     overlay: isDark ? "rgba(0,0,0,0.8)" : "rgba(0,0,0,0.5)",
     shadow: isDark ? "#000000" : "#64748b",
   };
@@ -78,7 +65,6 @@ export function PremiumPicker({
     <View style={styles.container}>
       {label && <Text style={[styles.label, { color: THEME.textMute }]}>{label}</Text>}
 
-      {/* TETİKLEYİCİ */}
       <TouchableOpacity
         activeOpacity={0.7}
         onPress={() => setIsOpen(true)}
@@ -100,7 +86,7 @@ export function PremiumPicker({
           {selectedItem ? selectedItem.label : placeholder}
         </Text>
         <ArrowDown01Icon 
-            size={20} 
+            size={14}
             color={THEME.textMute} 
             variant="stroke"
             strokeWidth={1.5} 
@@ -109,7 +95,6 @@ export function PremiumPicker({
 
       {error && <Text style={styles.errorText}>{error}</Text>}
 
-      {/* MODAL */}
       <Modal 
         visible={isOpen} 
         transparent 
@@ -130,7 +115,6 @@ export function PremiumPicker({
               }
             ]}>
             
-            {/* Başlık */}
             <View style={[styles.header, { borderBottomColor: THEME.itemBorder }]}>
               <View style={[styles.handle, { backgroundColor: THEME.textMute }]} />
               <Text style={[styles.modalTitle, { color: THEME.text }]}>
@@ -147,13 +131,12 @@ export function PremiumPicker({
                 const isSelected = item.value === value;
                 return (
                   <TouchableOpacity
-                    activeOpacity={0.7} // Dokunma hissi için
+                    activeOpacity={0.7} 
                     onPress={() => handleSelect(item.value)}
                     style={[
                         styles.optionItem,
                         { 
                             borderBottomColor: THEME.itemBorder,
-                            // SEÇİLİ OLUNCA PEMBEMSİ ARKA PLAN
                             backgroundColor: isSelected ? THEME.selectedBg : 'transparent'
                         }
                     ]}
@@ -171,9 +154,9 @@ export function PremiumPicker({
                     </Text>
                     {isSelected && (
                         <CheckmarkCircle02Icon 
-                            size={22} 
+                            size={18}
                             color={THEME.primary} 
-                            variant="stroke" // İSTEDİĞİN GİBİ STROKE
+                            variant="stroke" 
                             strokeWidth={2}
                         />
                     )}
@@ -198,32 +181,32 @@ const styles = StyleSheet.create({
     marginBottom: 0 
   },
   label: { 
-    fontSize: 14, 
+    fontSize: 12,
     fontWeight: "600", 
-    marginBottom: 8,
+    marginBottom: 4,
     marginLeft: 2
   },
   trigger: {
-    height: 56,
+    height: 40,
     borderWidth: 1,
-    borderRadius: 14,
+    borderRadius: 8,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
+    paddingHorizontal: 10,
   },
   triggerText: { 
-    fontSize: 15, 
+    fontSize: 13,
     fontWeight: "500",
     flex: 1,
-    marginRight: 10,
+    marginRight: 6,
     marginTop: Platform.OS === 'android' ? 2 : 0 
   },
   errorText: { 
     color: "#ef4444", 
-    fontSize: 12, 
-    marginTop: 6, 
-    marginLeft: 4,
+    fontSize: 11,
+    marginTop: 4, 
+    marginLeft: 2,
     fontWeight: '500'
   },
   modalOverlay: { 
@@ -235,9 +218,9 @@ const styles = StyleSheet.create({
     top: 0, left: 0, right: 0, bottom: 0,
   },
   modalContent: {
-    borderTopLeftRadius: 28,
-    borderTopRightRadius: 28,
-    maxHeight: Dimensions.get("window").height * 0.75,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    maxHeight: Dimensions.get("window").height * 0.70,
     minHeight: 250,
     borderWidth: Platform.OS === 'ios' ? 0 : 1,
     shadowOffset: { width: 0, height: -8 },
@@ -247,21 +230,21 @@ const styles = StyleSheet.create({
   },
   header: { 
     alignItems: "center", 
-    paddingTop: 16,
-    paddingBottom: 16, 
+    paddingTop: 12,
+    paddingBottom: 12, 
     borderBottomWidth: 1,
   },
   handle: { 
-    width: 48, 
-    height: 5, 
-    borderRadius: 3, 
-    marginBottom: 14,
+    width: 40,
+    height: 4,
+    borderRadius: 2, 
+    marginBottom: 10,
     opacity: 0.25
   },
   modalTitle: { 
-    fontSize: 17, 
+    fontSize: 15,
     fontWeight: "700",
-    letterSpacing: -0.3
+    letterSpacing: -0.2
   },
   listContent: {
       paddingBottom: 20
@@ -270,16 +253,16 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingVertical: 18, 
-    paddingHorizontal: 24,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     borderBottomWidth: 1,
   },
   optionText: { 
-    fontSize: 16,
+    fontSize: 14,
     letterSpacing: -0.2
   },
   emptyContainer: {
-      padding: 30,
+      padding: 20,
       alignItems: 'center',
       justifyContent: 'center'
   }
