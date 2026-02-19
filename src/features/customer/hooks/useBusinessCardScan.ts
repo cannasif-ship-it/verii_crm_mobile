@@ -10,6 +10,35 @@ import {
 import { parseBusinessCardText } from "../utils/parseBusinessCardText";
 import type { BusinessCardOcrResult } from "../types/businessCard";
 
+function fallbackToStructuredInput(parsed: BusinessCardOcrResult): {
+  name: string | null;
+  title: string | null;
+  company: string | null;
+  phones: string[];
+  emails: string[];
+  website: string | null;
+  address: string | null;
+  social: { linkedin: null; instagram: null; x: null; facebook: null };
+  notes: string[];
+} {
+  return {
+    name: parsed.customerName ?? null,
+    title: null,
+    company: parsed.customerName ?? null,
+    phones: parsed.phone1 ? [parsed.phone1] : [],
+    emails: parsed.email ? [parsed.email] : [],
+    website: parsed.website ?? null,
+    address: parsed.address ?? null,
+    social: {
+      linkedin: null,
+      instagram: null,
+      x: null,
+      facebook: null,
+    },
+    notes: [],
+  };
+}
+
 export function useBusinessCardScan(): {
   scanBusinessCard: (onResult: (data: BusinessCardOcrResult) => void) => Promise<void>;
   isScanning: boolean;
@@ -69,12 +98,16 @@ export function useBusinessCardScan(): {
           }
 
           const parsedJson = JSON.parse(repaired) as unknown;
-          const normalized = validateAndNormalizeBusinessCardExtraction(parsedJson);
+          const normalized = validateAndNormalizeBusinessCardExtraction(parsedJson, rawText);
           onResult(toBusinessCardOcrResult(normalized));
           extractedByLlm = true;
         } catch {
           const parsed = parseBusinessCardText(rawText);
-          onResult(parsed);
+          const normalizedFallback = validateAndNormalizeBusinessCardExtraction(
+            fallbackToStructuredInput(parsed),
+            rawText
+          );
+          onResult(toBusinessCardOcrResult(normalizedFallback));
         }
 
         if (!extractedByLlm && __DEV__) {
