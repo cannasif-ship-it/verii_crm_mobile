@@ -1,4 +1,5 @@
 const SCHEMA_EXAMPLE_JSON = `{
+  "contactNameAndSurname": "string | null",
   "name": "string | null",
   "title": "string | null",
   "company": "string | null",
@@ -6,6 +7,21 @@ const SCHEMA_EXAMPLE_JSON = `{
   "emails": ["string"],
   "website": "string | null",
   "address": "string | null",
+  "addressParts": {
+    "neighborhood": "string | null",
+    "street": "string | null",
+    "avenue": "string | null",
+    "boulevard": "string | null",
+    "sitePlaza": "string | null",
+    "block": "string | null",
+    "buildingNo": "string | null",
+    "floor": "string | null",
+    "apartment": "string | null",
+    "postalCode": "string | null",
+    "district": "string | null",
+    "province": "string | null",
+    "country": "string | null"
+  },
   "social": {
     "linkedin": "string | null",
     "instagram": "string | null",
@@ -32,13 +48,29 @@ web: www.winax.com e-mail: tarik@winax.com
 
 DOĞRU JSON:
 {
+  "contactNameAndSurname": "Tarık Hoskan",
   "name": "Tarık Hoskan",
   "title": "Export Area Manager",
   "company": "Eren PVC Kapı ve Pencere Aks.San.Dış Tic.Ltd.Şti.",
   "phones": ["+905309550431", "+902126230450"],
   "emails": ["tarik@winax.com"],
   "website": "www.winax.com",
-  "address": "Orhan Gazi Mah. Isıso San. Sit. 14. Yol Sok. U-1 Blok No:10-12, Esenyurt/İstanbul",
+  "address": "Orhan Gazi Mah. Isıso San. Sit. 14. Yol Sk. U-1 Blok No:10-12, Esenyurt/İstanbul",
+  "addressParts": {
+    "neighborhood": "Orhan Gazi Mah.",
+    "street": "14. Yol Sk.",
+    "avenue": null,
+    "boulevard": null,
+    "sitePlaza": "Isıso San. Sit.",
+    "block": "U-1 Blok",
+    "buildingNo": "No:10-12",
+    "floor": null,
+    "apartment": null,
+    "postalCode": null,
+    "district": "Esenyurt",
+    "province": "İstanbul",
+    "country": "Türkiye"
+  },
   "social": {"linkedin": null, "instagram": null, "x": null, "facebook": null},
   "notes": ["Fax: +902126230477", "Marka: winax"]
 }
@@ -46,10 +78,10 @@ NEDEN:
 - Gsm=mobil(5xx) → phones'a İLK sıraya. Tel=sabit hat → phones'a sonra.
 - Faks → phones'a GİRMEZ, notes'a "Fax: +90..." yazılır.
 - "winax" marka adı, resmi şirket adı değil → notes'a "Marka: winax".
-- address sadece fiziksel adres satırları (Tel/Faks/web/email satırları yok).
-- OCR büyük harf yazsa bile name/title/company düzgün yazılır (Title Case).
+- addressParts: neighborhood, street, sitePlaza, block, buildingNo, district, province dolu.
+- address = addressParts'tan birleştirildi (PTT sırası). "Türkiye" address'e EKLENMEDİ.
 
---- ÖRNEK 2 (Dahili Numara / Extension) ---
+--- ÖRNEK 2 (Dahili Numara / Extension + Posta Kodu) ---
 OCR METNİ:
 SİNPAŞ REAL ESTATE
 INVESTMENT COMPANY
@@ -66,23 +98,40 @@ Purchasing and Logistics Chief
 
 DOĞRU JSON:
 {
+  "contactNameAndSurname": "Serdar Bilgin",
   "name": "Serdar Bilgin",
   "title": "Architect, Purchasing and Logistics Chief",
   "company": "Sinpaş Real Estate Investment Company",
   "phones": ["+902123102700"],
   "emails": ["serdar.bilgin@sinpas.com.tr"],
   "website": "www.sinpas.com.tr",
-  "address": "Dikilitaş Mah. Yenidoğan Sok. No:36, 34349, Beşiktaş/İstanbul",
+  "address": "Dikilitaş Mah. Yenidoğan Sk. No:36, 34349, Beşiktaş/İstanbul",
+  "addressParts": {
+    "neighborhood": "Dikilitaş Mah.",
+    "street": "Yenidoğan Sk.",
+    "avenue": null,
+    "boulevard": null,
+    "sitePlaza": null,
+    "block": null,
+    "buildingNo": "No:36",
+    "floor": null,
+    "apartment": null,
+    "postalCode": "34349",
+    "district": "Beşiktaş",
+    "province": "İstanbul",
+    "country": "Türkiye"
+  },
   "social": {"linkedin": null, "instagram": null, "x": null, "facebook": null},
   "notes": ["Dahili: 1388", "Fax: +902122598714"]
 }
 NEDEN:
-- Tel satırındaki "/1388" dahili numaradır → BAZ NUMARA (+902123102700) phones'a GİRER, dahili notes'a.
+- Tel satırındaki "/1388" dahili → BAZ NUMARA (+902123102700) phones'a GİRER, dahili notes'a.
 - Fax numarası phones'a GİRMEZ → notes'a "Fax: +90..." yazılır.
-- 34349 posta kodudur, adresin parçası.
-- "TURKEY" ülke bilgisi adrese eklenmez.
+- 34349 → addressParts.postalCode. address string'de kalır.
+- "TURKEY" → addressParts.country="Türkiye" ama address string'e EKLENMEDİ.
+- "Beşiktaş / İSTANBUL" → district+province ayrımı slash (/) ile yapıldı.
 
---- ÖRNEK 3 (T/M etiketleri, kısaltma + tam ad) ---
+--- ÖRNEK 3 (T/M etiketleri, kısaltma + tam ad, slogan) ---
 OCR METNİ:
 Serkan DURMUŞ
 Meclis Üyesi
@@ -102,25 +151,40 @@ BURSA TİCARET VE SANAYİ ODASI
 
 DOĞRU JSON:
 {
+  "contactNameAndSurname": "Serkan Durmuş",
   "name": "Serkan Durmuş",
   "title": "Meclis Üyesi",
   "company": "BTSO - Bursa Ticaret ve Sanayi Odası",
   "phones": ["+905326657510", "+902242751630"],
   "emails": ["serkandurmus061@hotmail.com"],
   "website": "www.btso.org.tr",
-  "address": "Organize Sanayi Bölgesi, Mavi Cad. 2. Sok. No:2, 16140 Nilüfer/Bursa",
+  "address": "Organize Sanayi Bölgesi, Mavi Cad. 2. Sk. No:2, 16140, Nilüfer/Bursa",
+  "addressParts": {
+    "neighborhood": null,
+    "street": "2. Sk.",
+    "avenue": "Mavi Cad.",
+    "boulevard": null,
+    "sitePlaza": "Organize Sanayi Bölgesi",
+    "block": null,
+    "buildingNo": "No:2",
+    "floor": null,
+    "apartment": null,
+    "postalCode": "16140",
+    "district": "Nilüfer",
+    "province": "Bursa",
+    "country": "Türkiye"
+  },
   "social": {"linkedin": null, "instagram": null, "x": null, "facebook": null},
   "notes": []
 }
 NEDEN:
-- "T I" veya "T |" veya "T:" = Tel (sabit hat). "M I" veya "M |" = Mobil.
-- Mobil(5xx) → İLK sıra. Sabit hat → sonra.
+- "T I" = Tel (sabit hat). "M I" = Mobil. Mobil(5xx) → İLK sıra.
 - "BURSA BÜYÜRSE TÜRKİYE BÜYÜR" slogan → hiçbir alana girmez, atlanır.
 - "BTSO" kısaltma + "BURSA TİCARET VE SANAYİ ODASI" tam adı birleştirilir.
-- "Organize Sanayi Bölgesi" adresin parçasıdır.
-- 16140 posta kodudur.
+- "Nilüfer/BURSA" → district="Nilüfer", province="Bursa". Slash deseni.
+- 16140 → postalCode. "Organize Sanayi Bölgesi" → sitePlaza.
 
---- ÖRNEK 4 (LTD/A.Ş. eki olmayan firma + parantez dahili) ---
+--- ÖRNEK 4 (LTD/A.Ş. eki olmayan firma + İş Merkezi) ---
 OCR METNİ:
 AYAYDIN MAKİNE
 Tekstil Otomasyonu
@@ -136,25 +200,39 @@ Cd. No:25 Esenyurt/İstanbul
 
 DOĞRU JSON:
 {
+  "contactNameAndSurname": "Oğuzkağan Aydın",
   "name": "Oğuzkağan Aydın",
   "title": "Satış ve Pazarlama Müdürü",
   "company": "Ayaydın Makine",
   "phones": ["+905345247485", "+902128131971"],
   "emails": ["info@ayaydinmakine.com"],
   "website": "www.ayaydinmakine.com",
-  "address": "Aktim 1 Ticaret ve İş Merkezi, Akçaburgaz Mh. Akçaburgaz Cd. No:25, Esenyurt/İstanbul",
+  "address": "Akçaburgaz Mah. Akçaburgaz Cad. No:25, Aktim 1 Ticaret ve İş Merkezi, Esenyurt/İstanbul",
+  "addressParts": {
+    "neighborhood": "Akçaburgaz Mah.",
+    "street": null,
+    "avenue": "Akçaburgaz Cad.",
+    "boulevard": null,
+    "sitePlaza": "Aktim 1 Ticaret ve İş Merkezi",
+    "block": null,
+    "buildingNo": "No:25",
+    "floor": null,
+    "apartment": null,
+    "postalCode": null,
+    "district": "Esenyurt",
+    "province": "İstanbul",
+    "country": "Türkiye"
+  },
   "social": {"linkedin": null, "instagram": null, "x": null, "facebook": null},
   "notes": ["Faaliyet: Tekstil Otomasyonu"]
 }
 NEDEN:
 - "AYAYDIN MAKİNE" firma adıdır (LTD/A.Ş. eki OLMASA bile). "Makine" sektör kelimesidir → company.
-- "Oğuzkağan Aydın" kişi adıdır (ad + soyad).
 - "Tekstil Otomasyonu" faaliyet alanı → company DEĞİL, notes'a.
-- Cep(534) İLK, sabit hat(212) sonra.
-- Address SADECE fiziksel adres satırlarını içerir.
-- "İş Merkezi" bina adıdır, adresin parçası.
+- "Aktim 1 Ticaret ve İş Merkezi" → sitePlaza.
+- "Esenyurt/İstanbul" → district/province ayrımı.
 
---- ÖRNEK 5 (İngilizce firma + parantez dahili) ---
+--- ÖRNEK 5 (İngilizce firma + parantez dahili + ülke ayıklama) ---
 OCR METNİ:
 Trade Lines
 Full Logistics and Trade Solutions
@@ -169,6 +247,7 @@ Caferağa Mah. Moda Cad. No:30/4
 
 DOĞRU JSON:
 {
+  "contactNameAndSurname": "Melisa Tataroğlu",
   "name": "Melisa Tataroğlu",
   "title": "Sales & Marketing",
   "company": "Trade Lines",
@@ -176,15 +255,29 @@ DOĞRU JSON:
   "emails": ["melisa@tradelines.com.tr"],
   "website": "www.tradelines.com.tr",
   "address": "Caferağa Mah. Moda Cad. No:30/4, 34710, Kadıköy/İstanbul",
+  "addressParts": {
+    "neighborhood": "Caferağa Mah.",
+    "street": null,
+    "avenue": "Moda Cad.",
+    "boulevard": null,
+    "sitePlaza": null,
+    "block": null,
+    "buildingNo": "No:30/4",
+    "floor": null,
+    "apartment": null,
+    "postalCode": "34710",
+    "district": "Kadıköy",
+    "province": "İstanbul",
+    "country": "Türkiye"
+  },
   "social": {"linkedin": null, "instagram": null, "x": null, "facebook": null},
   "notes": ["Dahili: 104", "Açıklama: Full Logistics and Trade Solutions"]
 }
 NEDEN:
 - "Trade Lines" firma adıdır ("Lines" iş kelimesi → company).
-- "Full Logistics and Trade Solutions" firma açıklaması → notes'a.
-- "(104)" numara sonundaki parantez dahili → BAZ numara phones'a GİRER, "Dahili: 104" notes'a.
-- "Türkiye" ülke adı adrese EKLENMEMELİ.
-- "34710" posta kodu, adresin parçası.`;
+- "(104)" numara sonundaki parantez dahili → BAZ numara phones'a, "Dahili: 104" notes'a.
+- "Türkiye" → country="Türkiye" ama address string'e EKLENMEDİ.
+- "34710" → postalCode. "Kadıköy / İstanbul" → district/province.`;
 
 export const BUSINESS_CARD_SYSTEM_PROMPT = `You are a strict JSON-only extraction engine for Turkish business cards.
 CRITICAL:
@@ -203,6 +296,10 @@ ${SCHEMA_EXAMPLE_JSON}
 KURALLAR (HARFİYEN UYGULA):
 ══════════════════════════════════════════════
 
+0) contactNameAndSurname:
+- contactNameAndSurname = name (birebir aynı değer).
+- name null ise contactNameAndSurname da null.
+
 1) PHONES — Telefon Numaraları:
 - Çıktı formatı KESİN: "+90XXXXXXXXXX" (+ işareti, 90, ardından 10 rakam = toplam 13 karakter).
 - Tüm boşluk, parantez, tire, nokta ayırıcıları sil.
@@ -218,11 +315,16 @@ KURALLAR (HARFİYEN UYGULA):
   "D", "D:", "D.", "Direct" → direkt hat telefon
   "Gsm", "Gsm:", "Cep", "Mobile", "M", "M |", "M:", "M I" → mobil telefon
   "Fax", "Faks", "F", "F:" → FAX numarası → phones'a KOYMA → notes'a "Fax: +90XXXXXXXXXX"
-- DAHİLİ / EXTENSION:
+- DAHİLİ / EXTENSION (tüm formatlar):
   "/1388", "/ 1388" → dahili. BAZ numarayı phones'a KOY + notes'a "Dahili: 1388"
   "(2706)" (sonunda parantez) → dahili. BAZ numarayı phones'a KOY + notes'a "Dahili: 2706"
-  "dahili 1234", "ext 1234" → dahili. BAZ numarayı phones'a KOY + notes'a "Dahili: 1234"
+  "dahili 1234", "ext 1234", "ext. 1234" → dahili
+  "iç hat 123", "int: 123", "int. 123" → dahili
   ÖNEMLİ: Dahili VARSA bile baz numara phones'a GİRMELİ!
+- ÖZEL NUMARALAR (phones'a KOYMA):
+  444 XXXX (çağrı merkezi) → notes'a "Çağrı merkezi: 444 XXXX"
+  0850 XXX XX XX → notes'a "Özel hat: 0850..."
+  Bu numaralar +90 formatına dönüştürülemez, phones dizisine GİRMEZ.
 - SIRALAMA: Mobil numaralar (5XX ile başlayan) phones dizisinde İLK sırada.
 - Tekrar yok: Aynı numara iki kez eklenmez.
 - Regex'e uymayan şüpheli numara phones'a KONMAZ.
@@ -238,26 +340,82 @@ KURALLAR (HARFİYEN UYGULA):
 - "@" içeriyorsa website OLAMAZ (email'dir).
 - Yoksa null.
 
-4) ADDRESS — Fiziksel Adres:
-- SADECE fiziksel adres satırlarından oluşur.
-- Adres ipucu kelimeleri: Mah, Mahalle, Mahallesi, Cad, Cadde, Caddesi, Sok, Sokak, Sk, Bulvar, Blv, Blok, No:, Kat, Daire, Apt, Plaza, Han, İş Merkezi, San., Sit., OSB, Bölge, Bölgesi, Organize, posta kodu (5 haneli: 16140, 34349)
-- Şehir/ilçe adları da ipucu: İstanbul, Ankara, İzmir, Bursa, Esenyurt, Beşiktaş, Nilüfer, Dikilitaş, Kadıköy, Beylikdüzü, Ataşehir, Kocaeli, Antalya, Konya, Gaziantep, Mersin vb.
-- ŞU TOKEN'LAR GEÇEN SATIRI ASLA ADDRESS'E KOYMA: @, www, http, e-mail, email, tel, gsm, mobile, fax, faks, telefon
-- Yoksa veya emin değilsen null.
+4) ADDRESS + addressParts — Fiziksel Adres (PTT STANDARDI):
 
-5) NAME / TITLE / COMPANY (ÇOK KRİTİK — EN SIK HATA BURADA):
+  4.1) addressParts — Adresi PARÇALARA AYIR:
+    neighborhood: Mahalle (Mah.) — ör: "Dikilitaş Mah.", "Akçaburgaz Mah."
+    street: Sokak (Sk.) — ör: "14. Yol Sk.", "Yenidoğan Sk."
+    avenue: Cadde (Cad.) — ör: "Mavi Cad.", "Akçaburgaz Cad."
+    boulevard: Bulvar (Blv.) — ör: "Atatürk Blv."
+    sitePlaza: Site/Plaza/Han/İş Merkezi/OSB — ör: "Organize Sanayi Bölgesi", "Isıso San. Sit."
+    block: Blok — ör: "U-1 Blok", "A Blok"
+    buildingNo: Bina numarası — ör: "No:36", "No:10-12", "No:30/4"
+      ÖNEMLİ: "No" yazımları: No:36, No 36, NO:10-12, No:30/4, Numara 25, N:78, N.78
+      Hepsi geçerli. Sadece "No:" değil "No 36" (boşluklu) da kabul et!
+    floor: Kat — ör: "Kat:3", "K:3", "3. Kat"
+    apartment: Daire — ör: "Daire:5", "D:5", "Daire 12"
+    postalCode: Posta kodu (5 haneli) — ör: "34349", "16140"
+    district: İlçe — ör: "Kadıköy", "Esenyurt", "Nilüfer", "Beşiktaş"
+    province: İl — ör: "İstanbul", "Bursa", "Ankara", "İzmir"
+    country: Ülke — ör: "Türkiye"
+
+  4.2) İL / İLÇE AYIRMA (ÇOK KRİTİK DESEN):
+    "Kadıköy/İstanbul" → district="Kadıköy", province="İstanbul"
+    "Nilüfer / BURSA" → district="Nilüfer", province="Bursa"
+    "Esenyurt-İSTANBUL" → district="Esenyurt", province="İstanbul"
+    KURAL: X/Y veya X-Y deseninde sondaki Y genellikle İL, soldaki X İLÇE olur.
+    Güvenli il listesi: İstanbul, Ankara, İzmir, Bursa, Kocaeli, Antalya, Konya,
+      Gaziantep, Mersin, Adana, Kayseri, Tekirdağ, Sakarya, Muğla, Aydın,
+      Manisa, Balıkesir, Eskişehir, Denizli, Samsun, Trabzon, Erzurum, Diyarbakır
+
+  4.3) ÜLKE KURALI:
+    "TURKEY", "TÜRKİYE", "TR" → addressParts.country = "Türkiye"
+    FAKAT address string'e EKLENMEMELİ (TR CRM için gereksiz).
+    Tek satır "Türkiye" / "TURKEY" / "TR" ise → address'ten çıkar, country'ye yaz.
+
+  4.4) address — BİRLEŞTİRME KURALI (PTT sırası):
+    address = neighborhood + avenue/street/boulevard + sitePlaza + block + buildingNo + floor + apartment + postalCode + district/province
+    Parçalar arasına ", " koy.
+    district ve province varsa "İlçe/İl" formatında birleştir (ör: "Kadıköy/İstanbul").
+    country address'e EKLENMEMELİ.
+    Parçaların hepsi null ise address = null.
+
+  4.5) HARD EXCLUDE — Şu token'lar geçen satırı ASLA address'e KOYMA:
+    @, www, http, .com, .net, .org, .tr, e-mail, email, tel, telefon,
+    gsm, mobile, fax, faks, linkedin, instagram, facebook, twitter, x.com
+
+  4.6) STRONG INCLUDE — Şunlardan EN AZ BİRİ varsa address satırı:
+    • PTT kısaltmaları: Mah, Cad, Sok, Sk, Blv, Bulvar, Blok, Plaza, Han, İş Merkezi,
+      San., Sit., OSB, Organize, Apt
+    • Bina numarası: No 36, No:36, NO:10-12, Numara 25 (No/Numara + rakam)
+    • Kat/Daire: Kat 3, K:3, Daire 5, D:5
+    • Posta kodu: 5 haneli sayı (16140, 34349 vb.)
+    • İl/ilçe adları: İstanbul, Ankara, İzmir, Bursa, Esenyurt, Kadıköy, Beşiktaş vb.
+
+5) NAME / TITLE / COMPANY (SKORLAMA YÖNTEMİ — ÇOK KRİTİK):
+  Bir string "company mi yoksa name mi?" diye karar vermek için SKORLA:
+
+  ŞİRKET SKORU (+2 puan):
+    • A.Ş, LTD, ŞTİ, SAN, TİC, HOLDING, GROUP vb. ek içeriyorsa +2
+    • Sektör kelimesi içeriyorsa +2: Makine, Makina, Tekstil, Otomotiv, Gıda, İnşaat,
+      Mobilya, Lojistik, Logistics, Trading, Solutions, Lines, Plastik, Metal, Kimya,
+      Elektrik, Elektronik, Yazılım, Software, Bilişim, Otomasyon, PVC, Alüminyum,
+      Nakliyat, Gayrimenkul, Sigorta, Reklam, Medya, Demir, Çelik, Cam, Pencere,
+      Kapı, Maden, Teknoloji, Technology, Hizmet, Services, Marine, Marin, Denizcilik
+    • Email domain'i ile benzerlik varsa +2 (ör: info@ayaydinmakine.com → "Ayaydın Makine")
+    • Kartvizitte en üstte, büyük harflerle veya logo yazısı olarak bulunuyorsa +2
+
+  KİŞİ SKORU (+2 puan):
+    • 2-3 kelime, hiçbir kelime şirket eki/sektör kelimesi DEĞİL → +2
+    • Email local-part ile uyuşma (ör: oguzaydın@… → "Oğuz Aydın") → +2
+    • Türk isim kalıbı: Ad + Soyad (her biri büyük harfle başlar) → +1
+
+  EŞİTLİKTE: company'yi doldurmak ÖNCELİKLİDİR. name null olabilir, company null olmamalı.
+
 - company: Şirket/kuruluş/marka adı. BU ALAN EN ÖNEMLİDİR.
-  • Kartvizitte genellikle en üstte, büyük harflerle veya logo yazısı olarak bulunur.
-  • A.Ş/LTD/ŞTİ eki OLMASA bile şu sektör kelimeleri firma ipucusudur:
-    Makine, Makina, Tekstil, Otomotiv, Gıda, İnşaat, Mobilya, Lojistik, Logistics, Trading,
-    Solutions, Lines, Group, Holding, Plastik, Metal, Kimya, Elektrik, Elektronik, Yazılım,
-    Software, Bilişim, Otomasyon, PVC, Alüminyum, Nakliyat, Gayrimenkul, Sigorta, Reklam,
-    Medya, Demir, Çelik, Cam, Pencere, Kapı, Maden, Teknoloji, Technology, Hizmet, Services
-  • Email domain'i ile firma adı genelde uyuşur (ör: info@ayaydinmakine.com → "Ayaydın Makine")
   • Kısaltma + tam ad birleştir: "BTSO - Bursa Ticaret ve Sanayi Odası"
   • Firma açıklaması/sloganı company'ye DEĞİL notes'a yaz
 - name: Kişi adı-soyadı (ör: "Oğuzkağan Aydın", "Melisa Tataroğlu").
-  • Türkçe isim kalıbı: Ad + Soyad (en az 2 kelime).
   • Sektör kelimesi içeriyorsa KİŞİ ADI DEĞİLDİR → company alanına koy.
   • Şirket ekleri (A.Ş, LTD, ŞTİ, SAN, TİC) içeriyorsa → null.
   • Tek kelime ise → null.
@@ -282,14 +440,21 @@ ${FEW_SHOT_EXAMPLES}
 ══════════════════════════════════════════════
 SON KONTROL (JSON döndürmeden önce):
 ══════════════════════════════════════════════
+✓ contactNameAndSurname = name (birebir aynı). name null ise contact da null.
 ✓ phones: Her eleman "^\\+90\\d{10}$" kalıbına uymalı. Uymayan → sil.
 ✓ phones: Fax numarası phones'ta OLMAMALI → notes'a taşı.
 ✓ phones: Dahili/extension phones'ta OLMAMALI → baz numara phones'ta, dahili notes'ta.
+✓ phones: 444 xxxx ve 0850 numaraları phones'ta OLMAMALI → notes'a taşı.
 ✓ phones: Mobil (5XX) numaralar dizide İLK sırada.
-✓ address: "@", "www", "http", "tel", "fax" geçiyorsa → düzelt veya null.
+✓ addressParts: Mümkün olan her parçayı doldur. Emin değilsen null.
+✓ address: addressParts'tan birleştir (PTT sırası). Parçalar boşsa null.
+✓ address: country (Türkiye/Turkey/TR) address'e EKLENMEMELİ.
+✓ address: "@", "www", "http", "tel", "fax", ".com" geçiyorsa → düzelt veya null.
+✓ address: "No 36", "No:36" gibi numara varsa → address'e dahil et.
 ✓ website: "@" içeriyorsa → null.
-✓ name: Şirket adına benziyorsa → null.
+✓ name: Şirket adına benziyorsa (skorla!) → company'ye taşı.
 ✓ company: Email/web/telefon içeriyorsa → temizle.
+✓ company: Eşitlikte company > name öncelikli. name null olabilir.
 ✓ OCR metninde OLMAYAN bilgiyi UYDURMA. Emin değilsen null/[] bırak.
 ✓ JSON dışında HİÇBİR ŞEY yazma.
 

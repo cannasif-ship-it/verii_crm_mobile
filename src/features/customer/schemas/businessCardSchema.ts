@@ -1,7 +1,24 @@
 import { z } from "zod";
-import type { BusinessCardExtraction, BusinessCardOcrResult } from "../types/businessCard";
+import type { AddressParts, BusinessCardExtraction, BusinessCardOcrResult } from "../types/businessCard";
+
+const AddressPartsSchema = z.object({
+  neighborhood: z.string().nullable(),
+  street: z.string().nullable(),
+  avenue: z.string().nullable(),
+  boulevard: z.string().nullable(),
+  sitePlaza: z.string().nullable(),
+  block: z.string().nullable(),
+  buildingNo: z.string().nullable(),
+  floor: z.string().nullable(),
+  apartment: z.string().nullable(),
+  postalCode: z.string().nullable(),
+  district: z.string().nullable(),
+  province: z.string().nullable(),
+  country: z.string().nullable(),
+});
 
 export const BusinessCardExtractionSchema = z.object({
+  contactNameAndSurname: z.string().nullable().optional(),
   name: z.string().nullable(),
   title: z.string().nullable(),
   company: z.string().nullable(),
@@ -9,6 +26,7 @@ export const BusinessCardExtractionSchema = z.object({
   emails: z.array(z.string()),
   website: z.string().nullable(),
   address: z.string().nullable(),
+  addressParts: AddressPartsSchema.optional(),
   social: z.object({
     linkedin: z.string().nullable(),
     instagram: z.string().nullable(),
@@ -18,11 +36,33 @@ export const BusinessCardExtractionSchema = z.object({
   notes: z.array(z.string()),
 });
 
+const EMPTY_ADDRESS_PARTS: AddressParts = {
+  neighborhood: null,
+  street: null,
+  avenue: null,
+  boulevard: null,
+  sitePlaza: null,
+  block: null,
+  buildingNo: null,
+  floor: null,
+  apartment: null,
+  postalCode: null,
+  district: null,
+  province: null,
+  country: null,
+};
+
 const PHONE_E164_TR_REGEX = /^\+90\d{10}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONTACT_TOKEN_REGEX = /@|www\.|https?:\/\/|e-?mail|email|tel\.?|telefon|gsm|mobile|fax|faks/i;
 const ADDRESS_HINT_REGEX =
-  /\b(mah(?:\.|alle(?:si)?)?|cad(?:\.|de(?:si)?)?|sok(?:\.|ak|ağı)?|sk\.?|bulvar[ıi]?|bulv\.?|blv\.?|blok|no\s*:|kat\b|daire|apt|plaza|han|merkez(?:i)?|san\.?\s*sit\.?|sit\.?|osb|bölge(?:si)?|organize|posta|pk|ilçe|istanbul|ankara|izmir|adana|bursa|kocaeli|esenyurt|beşiktaş|nilüfer|dikilitaş|bayrampaşa|ataşehir|kadıköy|üsküdar|beylikdüzü|başakşehir|bağcılar|ümraniye|maltepe|pendik|kartal|çekmeköy|sancaktepe|sultanbeyli|tuzla|şile|silivri|bakırköy|zeytinburnu|güngören|esenler|gaziosmanpaşa|sarıyer|eyüpsultan|fatih|beyoğlu|şişli|kağıthane|arnavutköy|sultangazi|çatalca|büyükçekmece|küçükçekmece|avcılar|antalya|konya|gaziantep|mersin|kayseri|gebze|beykoz|kavacık|akçaburgaz|caferağa|moda|rüzgarlıbahçe|misis)\b/i;
+  /\b(mah(?:\.|alle(?:si)?)?|cad(?:\.|de(?:si)?)?|sok(?:\.|ak|ağı)?|sk\.?|bulvar[ıi]?|bulv\.?|blv\.?|blok|kat\b|daire|apt|plaza|han|merkez(?:i)?|san\.?\s*sit\.?|sit\.?|osb|bölge(?:si)?|organize|posta|pk)\b/i;
+const ADDRESS_NO_REGEX = /\b(?:no|numara)\s*[:.]?\s*\d{1,5}(?:\s*[-/]\s*\w{1,5})?|\bn\s*[:.]\s*\d{1,5}(?:\s*[-/]\s*\w{1,5})?/i;
+const POSTAL_CODE_REGEX = /\b\d{5}\b/;
+const ADDRESS_EXCLUDE_REGEX =
+  /@|www\.|https?:\/\/|\.com|\.net|\.org|\.tr|e-?mail|email|tel\.?|telefon|gsm|mobile|fax|faks|linkedin|instagram|facebook|x\.com|twitter/i;
+const COUNTRY_SUFFIX_REGEX = /\s*[-/–,]\s*(?:türkiye|turkey|turkiye)\s*$/i;
+const COUNTRY_LINE_REGEX = /^\s*(?:türkiye|turkey|turkiye|tr)\s*$/i;
 const WEBSITE_CANDIDATE_REGEX =
   /(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9.-]*\.(?:com(?:\.tr)?|net|org|tr|edu(?:\.tr)?|gov(?:\.tr)?|io|biz|info|me|tv)(?:\/[^\s]*)?/gi;
 const WEBSITE_TLD_REGEX = /\.(?:com(?:\.tr)?|net|org|tr|edu(?:\.tr)?|gov(?:\.tr)?|io|biz|info|me|tv)(?:\/|$)/i;
@@ -32,6 +72,38 @@ const INDUSTRY_KEYWORD_REGEX =
   /\b(makine|makina|tekstil|otomotiv|gıda|inşaat|mobilya|lojistik|logistics|trading|solutions|import|export|mühendislik|danışmanlık|turizm|enerji|group|holding|plastik|metal|kimya|elektrik|elektronik|yazılım|software|bilişim|otomasyon|otomasyonu|pvc|alüminyum|nakliyat|gayrimenkul|sigorta|reklam|medya|ambalaj|demir|çelik|cam|pencere|kapı|vinç|maden|lines|teknoloji|technology|iletişim|hizmet|hizmetleri|services|marin|marine|denizcilik|hafriyat|peyzaj|tarım|mimarlık|müteahhit|depolama|soğutma|jeneratör|asansör|matbaa|ajans|eczane|optik|kozmetik|giyim|konfeksiyon|ayakkabı|deri|kuyumculuk|mücevher|oto|otobüs|araç|lastik|akü|yedek\s*parça|rulman|conta|boya|hırdavat|nalburiye|seramik|mermer|parke|halı|perde|aydınlatma|mutfak|banyo|beyaz\s*eşya|klima|kombi|doğalgaz|ısıtma|iklimlendirme|havalandırma|yangın|güvenlik|temizlik|catering|gümrük|antrepo|freight|cargo|kargo|kurye|taşımacılık)\b/i;
 const PHONE_CANDIDATE_REGEX =
   /(?:\+?\s*90[\s().-]*)?(?:0[\s().-]*)?\(?\d{3}\)?[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}(?:\s*\/\s*\d{1,6}|\s*\(\d{1,6}\))?/gi;
+
+const SAFE_PROVINCES = new Set([
+  "istanbul", "ankara", "izmir", "bursa", "kocaeli", "antalya", "konya",
+  "gaziantep", "mersin", "adana", "kayseri", "tekirdağ", "sakarya",
+  "muğla", "aydın", "manisa", "balıkesir", "eskişehir", "denizli",
+  "samsun", "trabzon", "erzurum", "diyarbakır", "malatya", "van",
+  "şanlıurfa", "hatay", "kahramanmaraş", "ordu", "düzce", "edirne",
+  "çanakkale", "yalova", "bolu", "isparta", "aksaray", "sivas",
+  "kırklareli", "osmaniye", "batman", "mardin", "bingöl", "elazığ",
+  "afyonkarahisar", "kütahya", "zonguldak", "bartın", "karabük",
+  "tokat", "amasya", "giresun", "rize", "artvin", "niğde", "nevşehir",
+]);
+
+const KNOWN_DISTRICTS = new Set([
+  "esenyurt", "beşiktaş", "nilüfer", "dikilitaş", "bayrampaşa", "ataşehir",
+  "kadıköy", "üsküdar", "beylikdüzü", "başakşehir", "bağcılar", "ümraniye",
+  "maltepe", "pendik", "kartal", "çekmeköy", "sancaktepe", "sultanbeyli",
+  "tuzla", "şile", "silivri", "bakırköy", "zeytinburnu", "güngören",
+  "esenler", "gaziosmanpaşa", "sarıyer", "eyüpsultan", "fatih", "beyoğlu",
+  "şişli", "kağıthane", "arnavutköy", "sultangazi", "çatalca",
+  "büyükçekmece", "küçükçekmece", "avcılar", "beykoz", "kavacık",
+  "gebze", "akçaburgaz", "caferağa", "moda", "rüzgarlıbahçe",
+  "osmangazi", "yıldırım", "inegöl", "mudanya", "gemlik",
+  "çankaya", "keçiören", "mamak", "etimesgut", "sincan", "yenimahalle",
+  "bornova", "karşıyaka", "konak", "buca", "bayraklı", "çiğli",
+  "seyhan", "çukurova", "yüreğir", "sarıçam",
+  "şahinbey", "şehitkamil",
+  "toroslar", "akdeniz", "yenişehir", "mezitli", "tarsus",
+  "melikgazi", "kocasinan", "talas",
+  "kepez", "muratpaşa", "konyaaltı", "alanya",
+  "selçuklu", "meram", "karatay",
+]);
 
 function normalizeNullable(value: string | null | undefined): string | null {
   if (typeof value !== "string") return null;
@@ -44,10 +116,6 @@ function normalizeCompanySuffix(value: string | null): string | null {
   return value
     .replace(/\bA\.?\s?S\.?\b/gi, "A.Ş.")
     .replace(/\bLTD\.?\s*STI\.?\b/gi, "Ltd. Şti.");
-}
-
-function normalizeAddress(value: string | null): string | null {
-  return sanitizeAddress(value);
 }
 
 function uniqueStrings(values: string[]): string[] {
@@ -85,7 +153,15 @@ function normalizePhone(raw: string): { phone: string | null; note?: string } {
   const source = raw.replace(/\s+/g, " ").trim();
   if (!source) return { phone: null };
 
-  const extByWord = source.match(/\b(?:dahili|ext\.?|x)\s*[:.]?\s*(\d{1,6})\b/i)?.[1];
+  const digitsOnly = source.replace(/[^\d]/g, "");
+  if (/^444\d{4,5}$/.test(digitsOnly)) {
+    return { phone: null, note: `Çağrı merkezi: ${source}` };
+  }
+  if (/^0?850\d{7}$/.test(digitsOnly)) {
+    return { phone: null, note: `Özel hat: ${source}` };
+  }
+
+  const extByWord = source.match(/\b(?:dahili|ext\.?|iç\s*hat|int\.?|x)\s*[:.]?\s*(\d{1,6})\b/i)?.[1];
   const extBySlash = source.match(/\/\s*(\d{2,6})\b/)?.[1];
   const extByTailParen = source.match(/\((\d{2,6})\)\s*$/)?.[1];
   const extension = extByWord || extBySlash || extByTailParen;
@@ -94,7 +170,7 @@ function normalizePhone(raw: string): { phone: string | null; note?: string } {
   let baseSource = source;
   if (extension) {
     if (extByWord) {
-      baseSource = source.replace(/\b(?:dahili|ext\.?|x)\s*[:.]?\s*\d{1,6}\b/i, "").trim();
+      baseSource = source.replace(/\b(?:dahili|ext\.?|iç\s*hat|int\.?|x)\s*[:.]?\s*\d{1,6}\b/i, "").trim();
     } else if (extBySlash) {
       baseSource = source.replace(/\/\s*\d{2,6}\b/, "").trim();
     } else if (extByTailParen) {
@@ -302,6 +378,129 @@ function splitMixedAddressLine(line: string): string[] {
   return [prefix, addressPart];
 }
 
+function containsKnownLocation(line: string): boolean {
+  const lower = line.toLocaleLowerCase("tr-TR");
+  const words = lower.split(/[\s,/\-–.]+/).filter(Boolean);
+  for (const word of words) {
+    if (SAFE_PROVINCES.has(word)) return true;
+    if (KNOWN_DISTRICTS.has(word)) return true;
+  }
+  return false;
+}
+
+function isStrongAddressLine(line: string): boolean {
+  if (ADDRESS_HINT_REGEX.test(line)) return true;
+  if (ADDRESS_NO_REGEX.test(line)) return true;
+  if (POSTAL_CODE_REGEX.test(line) && /[A-Za-zÇĞİÖŞÜçğıöşü]{2,}/.test(line)) return true;
+  if (containsKnownLocation(line)) return true;
+  return false;
+}
+
+function stripCountrySuffix(line: string): string {
+  return line.replace(COUNTRY_SUFFIX_REGEX, "").trim();
+}
+
+function extractProvinceDistrict(text: string): { district: string | null; province: string | null } {
+  const match = text.match(/([A-Za-zÇĞİÖŞÜçğıöşüâîûÂÎÛ]+)\s*[/\-–]\s*([A-Za-zÇĞİÖŞÜçğıöşüâîûÂÎÛ]+)/);
+  if (!match) return { district: null, province: null };
+
+  const left = match[1]!.trim();
+  const right = match[2]!.trim();
+
+  if (SAFE_PROVINCES.has(right.toLocaleLowerCase("tr-TR"))) {
+    return { district: left, province: right };
+  }
+  if (SAFE_PROVINCES.has(left.toLocaleLowerCase("tr-TR"))) {
+    return { district: null, province: left };
+  }
+  return { district: null, province: null };
+}
+
+function normalizeAddressParts(raw: z.infer<typeof AddressPartsSchema> | undefined): AddressParts {
+  if (!raw) return { ...EMPTY_ADDRESS_PARTS };
+
+  return {
+    neighborhood: normalizeNullable(raw.neighborhood),
+    street: normalizeNullable(raw.street),
+    avenue: normalizeNullable(raw.avenue),
+    boulevard: normalizeNullable(raw.boulevard),
+    sitePlaza: normalizeNullable(raw.sitePlaza),
+    block: normalizeNullable(raw.block),
+    buildingNo: normalizeNullable(raw.buildingNo),
+    floor: normalizeNullable(raw.floor),
+    apartment: normalizeNullable(raw.apartment),
+    postalCode: validatePostalCode(normalizeNullable(raw.postalCode)),
+    district: normalizeNullable(raw.district),
+    province: validateProvince(normalizeNullable(raw.province)),
+    country: normalizeNullable(raw.country),
+  };
+}
+
+function validatePostalCode(value: string | null): string | null {
+  if (!value) return null;
+  const digits = value.replace(/\D/g, "");
+  if (/^\d{5}$/.test(digits)) return digits;
+  return null;
+}
+
+function validateProvince(value: string | null): string | null {
+  if (!value) return null;
+  if (SAFE_PROVINCES.has(value.toLocaleLowerCase("tr-TR"))) return value;
+  return value;
+}
+
+function assembleAddressFromParts(parts: AddressParts): string | null {
+  const segments: string[] = [];
+
+  if (parts.neighborhood) segments.push(parts.neighborhood);
+  if (parts.avenue) segments.push(parts.avenue);
+  if (parts.street) segments.push(parts.street);
+  if (parts.boulevard) segments.push(parts.boulevard);
+  if (parts.sitePlaza) segments.push(parts.sitePlaza);
+  if (parts.block) segments.push(parts.block);
+  if (parts.buildingNo) segments.push(parts.buildingNo);
+  if (parts.floor) segments.push(parts.floor);
+  if (parts.apartment) segments.push(parts.apartment);
+  if (parts.postalCode) segments.push(parts.postalCode);
+
+  if (parts.district && parts.province) {
+    segments.push(`${parts.district}/${parts.province}`);
+  } else if (parts.province) {
+    segments.push(parts.province);
+  } else if (parts.district) {
+    segments.push(parts.district);
+  }
+
+  if (segments.length === 0) return null;
+
+  return segments
+    .join(", ")
+    .replace(/\b(mahallesi|mahalle|mah\.?|mh\.?)\b/gi, "Mah.")
+    .replace(/\b(caddesi|cadde|cad\.?)\b/gi, "Cad.")
+    .replace(/\b(sokağı|sokak|sok\.?|sk\.?)\b/gi, "Sk.")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function enrichAddressPartsFromText(parts: AddressParts, addressText: string | null): AddressParts {
+  if (!addressText) return parts;
+
+  const enriched = { ...parts };
+
+  if (!enriched.postalCode) {
+    const postalMatch = addressText.match(/\b(\d{5})\b/);
+    if (postalMatch) enriched.postalCode = postalMatch[1]!;
+  }
+
+  if (!enriched.province || !enriched.district) {
+    const pd = extractProvinceDistrict(addressText);
+    if (pd.province && !enriched.province) enriched.province = pd.province;
+    if (pd.district && !enriched.district) enriched.district = pd.district;
+  }
+
+  return enriched;
+}
+
 export function sanitizeAddress(address: string | null): string | null {
   if (!address) return null;
 
@@ -310,32 +509,43 @@ export function sanitizeAddress(address: string | null): string | null {
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
 
-  const lines: string[] = [];
+  const expandedLines: string[] = [];
   for (const line of rawLines) {
-    if (line.length > 60 && ADDRESS_HINT_REGEX.test(line)) {
-      lines.push(...splitMixedAddressLine(line));
+    if (line.length > 60 && isStrongAddressLine(line)) {
+      expandedLines.push(...splitMixedAddressLine(line));
     } else {
-      lines.push(line);
+      expandedLines.push(line);
     }
   }
 
-  const kept = lines
-    .map((line) => stripContactFragments(line))
-    .filter((line) => !CONTACT_TOKEN_REGEX.test(line) && line.length > 0);
+  const kept: string[] = [];
+  for (const line of expandedLines) {
+    if (COUNTRY_LINE_REGEX.test(line)) continue;
+    if (ADDRESS_EXCLUDE_REGEX.test(line)) {
+      const stripped = stripContactFragments(line);
+      if (stripped && isStrongAddressLine(stripped)) {
+        kept.push(stripCountrySuffix(stripped));
+      }
+      continue;
+    }
+    kept.push(stripCountrySuffix(line));
+  }
   if (kept.length === 0) return null;
 
-  const filtered = kept.filter((line) => ADDRESS_HINT_REGEX.test(line) || (/\d/.test(line) && /[A-Za-zÇĞİÖŞÜçğıöşü]/.test(line)));
+  const filtered = kept.filter((line) => isStrongAddressLine(line));
   if (filtered.length === 0) return null;
+
   const merged = filtered.join(", ");
   const normalized = merged
     .replace(/\b(mahallesi|mahalle|mah\.?|mh\.?)\b/gi, "Mah.")
     .replace(/\b(caddesi|cadde|cad\.?)\b/gi, "Cad.")
     .replace(/\b(sokağı|sokak|sok\.?|sk\.?)\b/gi, "Sk.")
+    .replace(COUNTRY_SUFFIX_REGEX, "")
     .replace(/\s+/g, " ")
     .trim();
 
   if (!normalized) return null;
-  if (CONTACT_TOKEN_REGEX.test(normalized)) return null;
+  if (ADDRESS_EXCLUDE_REGEX.test(normalized)) return null;
   return normalized;
 }
 
@@ -348,16 +558,16 @@ function buildAddressFromRawText(rawText: string | undefined, notes: string[]): 
 
   const addressLines: string[] = [];
   for (const line of lines) {
-    if (CONTACT_TOKEN_REGEX.test(line)) {
-      pushNote(notes, `Adres dışı iletişim satırı: ${line}`);
+    if (COUNTRY_LINE_REGEX.test(line)) continue;
+    if (ADDRESS_EXCLUDE_REGEX.test(line)) {
       const stripped = stripContactFragments(line);
-      if (stripped && ADDRESS_HINT_REGEX.test(stripped)) {
-        addressLines.push(stripped);
+      if (stripped && isStrongAddressLine(stripped)) {
+        addressLines.push(stripCountrySuffix(stripped));
       }
       continue;
     }
-    if (ADDRESS_HINT_REGEX.test(line)) {
-      addressLines.push(line);
+    if (isStrongAddressLine(line)) {
+      addressLines.push(stripCountrySuffix(line));
     }
   }
 
@@ -450,9 +660,15 @@ export function validateAndNormalizeBusinessCardExtraction(
   const website =
     normalizeWebsite(normalizeNullable(parsed.data.website), notes) ??
     pickWebsiteFromRawText(rawText, emails, notes);
-  const address =
-    normalizeAddress(normalizeNullable(parsed.data.address)) ??
-    buildAddressFromRawText(rawText, notes);
+
+  let addressParts = normalizeAddressParts(parsed.data.addressParts);
+
+  const assembledAddress = assembleAddressFromParts(addressParts);
+  const sanitizedLlmAddress = sanitizeAddress(normalizeNullable(parsed.data.address));
+  const fallbackAddress = buildAddressFromRawText(rawText, notes);
+  const address = assembledAddress ?? sanitizedLlmAddress ?? fallbackAddress;
+
+  addressParts = enrichAddressPartsFromText(addressParts, address);
 
   const rawName = normalizeNullable(parsed.data.name);
   const rawCompany = normalizeNullable(parsed.data.company);
@@ -482,7 +698,10 @@ export function validateAndNormalizeBusinessCardExtraction(
     }
   }
 
+  const contactNameAndSurname = name;
+
   return {
+    contactNameAndSurname,
     name,
     title: sanitizeTitle(normalizeNullable(parsed.data.title)),
     company,
@@ -490,6 +709,7 @@ export function validateAndNormalizeBusinessCardExtraction(
     emails,
     website,
     address,
+    addressParts,
     social: {
       linkedin: normalizeSocialHandle(normalizeNullable(parsed.data.social.linkedin)),
       instagram: normalizeSocialHandle(normalizeNullable(parsed.data.social.instagram)),
@@ -514,6 +734,7 @@ export function toBusinessCardOcrResult(extraction: BusinessCardExtraction): Bus
 
   return {
     customerName: extraction.company ?? extraction.name ?? undefined,
+    contactNameAndSurname: extraction.contactNameAndSurname ?? undefined,
     phone1: extraction.phones[0],
     phone2: extraction.phones[1],
     email: extraction.emails[0],
