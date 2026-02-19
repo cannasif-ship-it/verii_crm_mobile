@@ -22,12 +22,14 @@ const PHONE_E164_TR_REGEX = /^\+90\d{10}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONTACT_TOKEN_REGEX = /@|www\.|https?:\/\/|e-?mail|email|tel\.?|telefon|gsm|mobile|fax|faks/i;
 const ADDRESS_HINT_REGEX =
-  /\b(mah(?:\.|alle(?:si)?)?|cad(?:\.|de(?:si)?)?|sok(?:\.|ak|ağı)?|sk\.?|bulvar[ıi]?|bulv\.?|blv\.?|blok|no\s*:|kat\b|daire|apt|plaza|han|san\.?\s*sit\.?|sit\.?|osb|bölge(?:si)?|organize|posta|pk|ilçe|istanbul|ankara|izmir|adana|bursa|kocaeli|esenyurt|beşiktaş|nilüfer|dikilitaş|bayrampaşa|ataşehir|kadıköy|üsküdar|beylikdüzü|başakşehir|antalya|konya|gaziantep|mersin|kayseri|gebze|misis)\b/i;
+  /\b(mah(?:\.|alle(?:si)?)?|cad(?:\.|de(?:si)?)?|sok(?:\.|ak|ağı)?|sk\.?|bulvar[ıi]?|bulv\.?|blv\.?|blok|no\s*:|kat\b|daire|apt|plaza|han|merkez(?:i)?|san\.?\s*sit\.?|sit\.?|osb|bölge(?:si)?|organize|posta|pk|ilçe|istanbul|ankara|izmir|adana|bursa|kocaeli|esenyurt|beşiktaş|nilüfer|dikilitaş|bayrampaşa|ataşehir|kadıköy|üsküdar|beylikdüzü|başakşehir|bağcılar|ümraniye|maltepe|pendik|kartal|çekmeköy|sancaktepe|sultanbeyli|tuzla|şile|silivri|bakırköy|zeytinburnu|güngören|esenler|gaziosmanpaşa|sarıyer|eyüpsultan|fatih|beyoğlu|şişli|kağıthane|arnavutköy|sultangazi|çatalca|büyükçekmece|küçükçekmece|avcılar|antalya|konya|gaziantep|mersin|kayseri|gebze|beykoz|kavacık|akçaburgaz|caferağa|moda|rüzgarlıbahçe|misis)\b/i;
 const WEBSITE_CANDIDATE_REGEX =
   /(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9.-]*\.(?:com(?:\.tr)?|net|org|tr|edu(?:\.tr)?|gov(?:\.tr)?|io|biz|info|me|tv)(?:\/[^\s]*)?/gi;
 const WEBSITE_TLD_REGEX = /\.(?:com(?:\.tr)?|net|org|tr|edu(?:\.tr)?|gov(?:\.tr)?|io|biz|info|me|tv)(?:\/|$)/i;
 const WEBSITE_BLACKLIST_REGEX = /\b(A\.?\s?Ş|AŞ|LTD|ŞT[İI]|SAN|T[İI]C|DIŞ|AKS|ORTAKLIĞI)\b/i;
 const COMPANY_MARKER_REGEX = /\b(A\.?\s?Ş|AŞ|LTD|ŞT[İI]|SAN|T[İI]C|ORTAKLIĞI)\b/i;
+const INDUSTRY_KEYWORD_REGEX =
+  /\b(makine|makina|tekstil|otomotiv|gıda|inşaat|mobilya|lojistik|logistics|trading|solutions|import|export|mühendislik|danışmanlık|turizm|enerji|group|holding|plastik|metal|kimya|elektrik|elektronik|yazılım|software|bilişim|otomasyon|otomasyonu|pvc|alüminyum|nakliyat|gayrimenkul|sigorta|reklam|medya|ambalaj|demir|çelik|cam|pencere|kapı|vinç|maden|lines|teknoloji|technology|iletişim|hizmet|hizmetleri|services|marin|marine|denizcilik|hafriyat|peyzaj|tarım|mimarlık|müteahhit|depolama|soğutma|jeneratör|asansör|matbaa|ajans|eczane|optik|kozmetik|giyim|konfeksiyon|ayakkabı|deri|kuyumculuk|mücevher|oto|otobüs|araç|lastik|akü|yedek\s*parça|rulman|conta|boya|hırdavat|nalburiye|seramik|mermer|parke|halı|perde|aydınlatma|mutfak|banyo|beyaz\s*eşya|klima|kombi|doğalgaz|ısıtma|iklimlendirme|havalandırma|yangın|güvenlik|temizlik|catering|gümrük|antrepo|freight|cargo|kargo|kurye|taşımacılık)\b/i;
 const PHONE_CANDIDATE_REGEX =
   /(?:\+?\s*90[\s().-]*)?(?:0[\s().-]*)?\(?\d{3}\)?[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}(?:\s*\/\s*\d{1,6}|\s*\(\d{1,6}\))?/gi;
 
@@ -66,8 +68,8 @@ function pushNote(notes: string[], note: string): void {
 
 function stripPhoneLabel(value: string): string {
   return value
-    .replace(/\b(tel|telefon|gsm|mobile|cep|fax|faks)\b\s*:?/gi, " ")
-    .replace(/^[TM]\s*[|:I]\s+/i, "")
+    .replace(/\b(tel|telefon|gsm|mobile|cep|fax|faks|phone|direct)\b\s*:?/gi, " ")
+    .replace(/^[TMDPF]\s*[|:I.]\s*/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -282,13 +284,40 @@ function pickWebsiteFromRawText(rawText: string | undefined, emails: string[], n
   return candidates[0] ?? null;
 }
 
+function splitMixedAddressLine(line: string): string[] {
+  const hintRegex = new RegExp(ADDRESS_HINT_REGEX.source, "i");
+  const match = hintRegex.exec(line);
+  if (!match || match.index === undefined || match.index < 15) {
+    return [line];
+  }
+
+  const beforeHint = line.slice(0, match.index).trimEnd();
+  const lastSpaceIdx = beforeHint.lastIndexOf(" ");
+  if (lastSpaceIdx < 5) return [line];
+
+  const prefix = beforeHint.slice(0, lastSpaceIdx).trim();
+  const addressPart = line.slice(lastSpaceIdx + 1).trim();
+
+  if (!prefix || !addressPart) return [line];
+  return [prefix, addressPart];
+}
+
 export function sanitizeAddress(address: string | null): string | null {
   if (!address) return null;
 
-  const lines = address
+  const rawLines = address
     .split(/\n+/)
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
+
+  const lines: string[] = [];
+  for (const line of rawLines) {
+    if (line.length > 60 && ADDRESS_HINT_REGEX.test(line)) {
+      lines.push(...splitMixedAddressLine(line));
+    } else {
+      lines.push(line);
+    }
+  }
 
   const kept = lines
     .map((line) => stripContactFragments(line))
@@ -296,7 +325,8 @@ export function sanitizeAddress(address: string | null): string | null {
   if (kept.length === 0) return null;
 
   const filtered = kept.filter((line) => ADDRESS_HINT_REGEX.test(line) || (/\d/.test(line) && /[A-Za-zÇĞİÖŞÜçğıöşü]/.test(line)));
-  const merged = (filtered.length > 0 ? filtered : kept).join(", ");
+  if (filtered.length === 0) return null;
+  const merged = filtered.join(", ");
   const normalized = merged
     .replace(/\b(mahallesi|mahalle|mah\.?|mh\.?)\b/gi, "Mah.")
     .replace(/\b(caddesi|cadde|cad\.?)\b/gi, "Cad.")
@@ -339,9 +369,15 @@ export function sanitizePhones(phones: string[]): string[] {
   return normalizePhones(phones, []);
 }
 
+function looksLikeCompany(value: string): boolean {
+  if (COMPANY_MARKER_REGEX.test(value)) return true;
+  if (INDUSTRY_KEYWORD_REGEX.test(value)) return true;
+  return false;
+}
+
 function sanitizeName(value: string | null): string | null {
   if (!value) return null;
-  if (COMPANY_MARKER_REGEX.test(value)) return null;
+  if (looksLikeCompany(value)) return null;
   if (CONTACT_TOKEN_REGEX.test(value)) return null;
   const tokens = value.split(/\s+/).filter(Boolean);
   if (tokens.length < 2) return null;
@@ -418,10 +454,38 @@ export function validateAndNormalizeBusinessCardExtraction(
     normalizeAddress(normalizeNullable(parsed.data.address)) ??
     buildAddressFromRawText(rawText, notes);
 
+  const rawName = normalizeNullable(parsed.data.name);
+  const rawCompany = normalizeNullable(parsed.data.company);
+
+  let name = sanitizeName(rawName);
+  let company = sanitizeCompany(rawCompany);
+
+  if (!company && rawName && looksLikeCompany(rawName)) {
+    company = normalizeCompanySuffix(rawName);
+  }
+
+  if (!company && rawCompany && looksLikeCompany(rawCompany)) {
+    company = normalizeCompanySuffix(rawCompany);
+  }
+
+  if (!company && emails.length > 0) {
+    const domain = emails[0]?.split("@")[1]?.split(".")[0];
+    if (domain && rawText) {
+      const domainUpper = domain.toUpperCase();
+      const lines = rawText.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
+      for (const line of lines) {
+        if (line.toUpperCase().includes(domainUpper) && !CONTACT_TOKEN_REGEX.test(line) && !/@/.test(line)) {
+          company = line.replace(/\s+/g, " ").trim();
+          break;
+        }
+      }
+    }
+  }
+
   return {
-    name: sanitizeName(normalizeNullable(parsed.data.name)),
+    name,
     title: sanitizeTitle(normalizeNullable(parsed.data.title)),
-    company: sanitizeCompany(normalizeNullable(parsed.data.company)),
+    company,
     phones,
     emails,
     website,
