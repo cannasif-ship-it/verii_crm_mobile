@@ -3,6 +3,7 @@ import type { ApiResponse } from "../../auth/types";
 import type {
   CustomerGetDto,
   CustomerDto,
+  CustomerImageDto,
   CreateCustomerDto,
   UpdateCustomerDto,
   PagedParams,
@@ -101,5 +102,45 @@ export const customerApi = {
         "Müşteri silinemedi";
       throw new Error(msg);
     }
+  },
+
+  uploadCustomerImage: async (
+    customerId: number,
+    imageUri: string,
+    imageDescription?: string
+  ): Promise<CustomerImageDto[]> => {
+    const fileName = imageUri.split("/").pop() || `customer_${Date.now()}.jpg`;
+    const extension = fileName.includes(".") ? fileName.split(".").pop()?.toLowerCase() : "jpg";
+    const mimeType = extension === "png" ? "image/png" : "image/jpeg";
+
+    const formData = new FormData();
+    formData.append("files", {
+      uri: imageUri,
+      type: mimeType,
+      name: fileName,
+    } as unknown as Blob);
+
+    if (imageDescription?.trim()) {
+      formData.append("imageDescriptions", imageDescription.trim());
+    }
+
+    const response = await apiClient.post<ApiResponse<CustomerImageDto[]>>(
+      `/api/CustomerImage/upload/${customerId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    if (!response.data.success) {
+      const msg =
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
+        "Müşteri görseli yüklenemedi";
+      throw new Error(msg);
+    }
+
+    return response.data.data;
   },
 };

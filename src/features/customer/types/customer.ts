@@ -98,3 +98,12 @@ export interface UpdateCustomerDto {
   completedDate?: string;
   isCompleted?: boolean;
 }
+
+export interface CustomerImageDto {
+  id: number;
+  customerId: number;
+  customerName?: string;
+  imageUrl: string;
+  imageDescription?: string;
+  createdDate?: string;
+}

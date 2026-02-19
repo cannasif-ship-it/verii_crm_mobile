@@ -10,6 +10,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
+  Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -24,6 +25,7 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
 import { useCustomer, useCreateCustomer, useUpdateCustomer, useCustomerTypes, useBusinessCardScan } from "../hooks";
+import { customerApi } from "../api/customerApi";
 import { useCustomerShippingAddresses } from "../../shipping-address/hooks/useShippingAddresses";
 // BURASI GÜNCELLENDİ: PremiumPicker eklendi
 import { FormField, LocationPicker, PremiumPicker } from "../components";
@@ -94,13 +96,14 @@ export function CustomerFormScreen(): React.ReactElement {
 
   // customerTypeModalOpen STATE'İ KALDIRILDI
   const [shippingAddressModalOpen, setShippingAddressModalOpen] = useState(false);
+  const [scannedImageUri, setScannedImageUri] = useState<string | null>(null);
 
   const { data: existingCustomer, isLoading: customerLoading } = useCustomer(customerId);
   const { data: customerTypes } = useCustomerTypes();
   const { data: customerShippingAddresses = [] } = useCustomerShippingAddresses(customerId);
   const createCustomer = useCreateCustomer();
   const updateCustomer = useUpdateCustomer();
-  const { scanBusinessCard, isScanning, error: scanError } = useBusinessCardScan();
+  const { scanBusinessCard, pickBusinessCardFromGallery, isScanning, error: scanError } = useBusinessCardScan();
 
   const schema = useMemo(() => createCustomerSchema(), []);
 
@@ -244,28 +247,48 @@ export function CustomerFormScreen(): React.ReactElement {
         await updateCustomer.mutateAsync({ id: customerId, data: updatePayload });
         Alert.alert("", t("customer.updateSuccess"));
       } else {
-        await createCustomer.mutateAsync(base);
+        const createdCustomer = await createCustomer.mutateAsync(base);
+
+        if (scannedImageUri) {
+          try {
+            await customerApi.uploadCustomerImage(
+              createdCustomer.id,
+              scannedImageUri,
+              "Kartvizit görseli"
+            );
+          } catch {
+            Alert.alert("Uyarı", "Müşteri kaydedildi fakat kartvizit görseli yüklenemedi.");
+          }
+        }
+
         Alert.alert("", t("customer.createSuccess"));
       }
       router.back();
     } catch {
       Alert.alert(t("common.error"), t("common.error"));
     }
-  }, [isEditMode, customerId, existingCustomer?.completionDate, createCustomer, updateCustomer, router, t, toNumber, toNumberOptional]);
+  }, [isEditMode, customerId, existingCustomer?.completionDate, createCustomer, updateCustomer, router, t, toNumber, toNumberOptional, scannedImageUri]);
 
   useEffect(() => {
     if (scanError) Alert.alert("Kartvizit Tarama", scanError);
   }, [scanError]);
 
+  const applyBusinessCardResult = useCallback((data: { customerName?: string; email?: string; phone1?: string; address?: string; website?: string; imageUri?: string }) => {
+    if (data.customerName) setValue("name", data.customerName);
+    if (data.email) setValue("email", data.email ?? "");
+    if (data.phone1) setValue("phone", data.phone1);
+    if (data.address) setValue("address", data.address ?? "");
+    if (data.website) setValue("website", data.website ?? "");
+    if (data.imageUri) setScannedImageUri(data.imageUri);
+  }, [setValue]);
+
   const handleScanBusinessCard = useCallback(() => {
-    scanBusinessCard((data) => {
-      if (data.customerName) setValue("name", data.customerName);
-      if (data.email) setValue("email", data.email ?? "");
-      if (data.phone1) setValue("phone", data.phone1);
-      if (data.address) setValue("address", data.address ?? "");
-      if (data.website) setValue("website", data.website ?? "");
-    });
-  }, [scanBusinessCard, setValue]);
+    scanBusinessCard(applyBusinessCardResult);
+  }, [scanBusinessCard, applyBusinessCardResult]);
+
+  const handlePickBusinessCardFromGallery = useCallback(() => {
+    pickBusinessCardFromGallery(applyBusinessCardResult);
+  }, [pickBusinessCardFromGallery, applyBusinessCardResult]);
 
   // renderCustomerTypeItem KALDIRILDI
 
@@ -356,16 +379,40 @@ export function CustomerFormScreen(): React.ReactElement {
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.scannerTitle, { color: THEME.text }]}>Kartvizit Tara</Text>
-                    <Text style={[styles.scannerSubtitle, { color: THEME.textMute }]}>Bilgileri kamerayla otomatik doldur</Text>
+                    <Text style={[styles.scannerSubtitle, { color: THEME.textMute }]}>Kamera veya galeriden secip bilgileri otomatik doldur</Text>
                   </View>
-                  <TouchableOpacity
-                    style={[styles.scannerButton, { borderColor: THEME.primary }]}
-                    onPress={handleScanBusinessCard}
-                    disabled={isScanning}
-                  >
-                    {isScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Text style={{color: THEME.primary, fontWeight: '700', fontSize: 13}}>TARA</Text>}
-                  </TouchableOpacity>
+                  <View style={styles.scannerButtonsRow}>
+                    <TouchableOpacity
+                      style={[styles.scannerButton, { borderColor: THEME.primary }]}
+                      onPress={handleScanBusinessCard}
+                      disabled={isScanning}
+                    >
+                      {isScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Text style={{color: THEME.primary, fontWeight: '700', fontSize: 13}}>KAMERA</Text>}
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[styles.scannerButton, { borderColor: THEME.primary }]}
+                      onPress={handlePickBusinessCardFromGallery}
+                      disabled={isScanning}
+                    >
+                      <Text style={{color: THEME.primary, fontWeight: '700', fontSize: 13}}>GALERI</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
+
+                {scannedImageUri ? (
+                  <View style={[styles.previewContainer, { borderColor: THEME.border, backgroundColor: isDark ? "rgba(15,23,42,0.6)" : "#FFFFFF" }]}>
+                    <Image source={{ uri: scannedImageUri }} style={styles.previewImage} resizeMode="cover" />
+                    <View style={styles.previewTextContainer}>
+                      <Text style={[styles.previewTitle, { color: THEME.text }]}>Secilen Kartvizit</Text>
+                      <Text style={[styles.previewSubtitle, { color: THEME.textMute }]} numberOfLines={2}>
+                        Kayitla birlikte bu gorsel de yuklenecek.
+                      </Text>
+                      <TouchableOpacity onPress={() => setScannedImageUri(null)} style={[styles.previewRemoveBtn, { borderColor: THEME.primary }]}>
+                        <Text style={[styles.previewRemoveText, { color: THEME.primary }]}>KALDIR</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : null}
               </View>
             )}
 
@@ -747,6 +794,48 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     borderRadius: 10,
     borderWidth: 1,
+  },
+  scannerButtonsRow: {
+    gap: 8,
+  },
+  previewContainer: {
+    marginTop: 14,
+    borderRadius: 14,
+    borderWidth: 1,
+    padding: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  previewImage: {
+    width: 74,
+    height: 74,
+    borderRadius: 10,
+  },
+  previewTextContainer: {
+    flex: 1,
+    gap: 4,
+  },
+  previewTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  previewSubtitle: {
+    fontSize: 12,
+    lineHeight: 16,
+  },
+  previewRemoveBtn: {
+    marginTop: 4,
+    alignSelf: "flex-start",
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+  },
+  previewRemoveText: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.4,
   },
   fieldContainer: { marginBottom: 0 },
   label: { fontSize: 14, fontWeight: "600", marginBottom: 8 },

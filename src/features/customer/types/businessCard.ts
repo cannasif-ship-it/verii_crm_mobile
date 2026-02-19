@@ -4,6 +4,7 @@ export interface BusinessCardOcrResult {
   email?: string;
   address?: string;
   website?: string;
+  imageUri?: string;
 }
 
 export interface BusinessCardExtractionSocial {
