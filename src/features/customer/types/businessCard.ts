@@ -1,9 +1,11 @@
 export interface BusinessCardOcrResult {
   customerName?: string;
   phone1?: string;
+  phone2?: string;
   email?: string;
   address?: string;
   website?: string;
+  notes?: string;
   imageUri?: string;
 }
 

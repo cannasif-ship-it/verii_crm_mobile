@@ -273,12 +273,14 @@ export function CustomerFormScreen(): React.ReactElement {
     if (scanError) Alert.alert("Kartvizit Tarama", scanError);
   }, [scanError]);
 
-  const applyBusinessCardResult = useCallback((data: { customerName?: string; email?: string; phone1?: string; address?: string; website?: string; imageUri?: string }) => {
+  const applyBusinessCardResult = useCallback((data: { customerName?: string; email?: string; phone1?: string; phone2?: string; address?: string; website?: string; notes?: string; imageUri?: string }) => {
     if (data.customerName) setValue("name", data.customerName);
     if (data.email) setValue("email", data.email ?? "");
     if (data.phone1) setValue("phone", data.phone1);
+    if (data.phone2) setValue("phone2", data.phone2);
     if (data.address) setValue("address", data.address ?? "");
     if (data.website) setValue("website", data.website ?? "");
+    if (data.notes) setValue("notes", data.notes);
     if (data.imageUri) setScannedImageUri(data.imageUri);
   }, [setValue]);
 

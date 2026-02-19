@@ -22,7 +22,7 @@ const PHONE_E164_TR_REGEX = /^\+90\d{10}$/;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CONTACT_TOKEN_REGEX = /@|www\.|https?:\/\/|e-?mail|email|tel\.?|telefon|gsm|mobile|fax|faks/i;
 const ADDRESS_HINT_REGEX =
-  /\b(mah(?:\.|allesi)?|cad(?:\.|desi)?|sk(?:\.|ok(?:ak)?)?|bulv?|blv\.?|no:?|kat|daire|apt|plaza|san\.?|sit\.?|osb|posta|pk|ilçe|istanbul|ankara|izmir|adana|bursa|kocaeli|esenyurt|beşiktaş|misis)\b/i;
+  /\b(mah(?:\.|alle(?:si)?)?|cad(?:\.|de(?:si)?)?|sok(?:\.|ak|ağı)?|sk\.?|bulvar[ıi]?|bulv\.?|blv\.?|blok|no\s*:|kat\b|daire|apt|plaza|han|san\.?\s*sit\.?|sit\.?|osb|bölge(?:si)?|organize|posta|pk|ilçe|istanbul|ankara|izmir|adana|bursa|kocaeli|esenyurt|beşiktaş|nilüfer|dikilitaş|bayrampaşa|ataşehir|kadıköy|üsküdar|beylikdüzü|başakşehir|antalya|konya|gaziantep|mersin|kayseri|gebze|misis)\b/i;
 const WEBSITE_CANDIDATE_REGEX =
   /(?:https?:\/\/)?(?:www\.)?[a-z0-9][a-z0-9.-]*\.(?:com(?:\.tr)?|net|org|tr|edu(?:\.tr)?|gov(?:\.tr)?|io|biz|info|me|tv)(?:\/[^\s]*)?/gi;
 const WEBSITE_TLD_REGEX = /\.(?:com(?:\.tr)?|net|org|tr|edu(?:\.tr)?|gov(?:\.tr)?|io|biz|info|me|tv)(?:\/|$)/i;
@@ -67,6 +67,7 @@ function pushNote(notes: string[], note: string): void {
 function stripPhoneLabel(value: string): string {
   return value
     .replace(/\b(tel|telefon|gsm|mobile|cep|fax|faks)\b\s*:?/gi, " ")
+    .replace(/^[TM]\s*[|:I]\s+/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }
@@ -88,20 +89,27 @@ function normalizePhone(raw: string): { phone: string | null; note?: string } {
   const extension = extByWord || extBySlash || extByTailParen;
   const isFax = /\bfax|faks\b/i.test(source);
 
+  let baseSource = source;
   if (extension) {
-    return {
-      phone: null,
-      note: isFax ? `Fax Dahili: ${extension}` : `Dahili: ${extension}`,
-    };
+    if (extByWord) {
+      baseSource = source.replace(/\b(?:dahili|ext\.?|x)\s*[:.]?\s*\d{1,6}\b/i, "").trim();
+    } else if (extBySlash) {
+      baseSource = source.replace(/\/\s*\d{2,6}\b/, "").trim();
+    } else if (extByTailParen) {
+      baseSource = source.replace(/\(\d{2,6}\)\s*$/, "").trim();
+    }
   }
 
-  const phoneLikeMatch = source.match(
+  const phoneLikeMatch = baseSource.match(
     /(?:\+?\s*90[\s().-]*)?(?:0[\s().-]*)?\(?\d{3}\)?[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}/
   );
-  const sourceForNormalization = phoneLikeMatch?.[0] ?? source;
+  const sourceForNormalization = phoneLikeMatch?.[0] ?? baseSource;
 
   let compact = stripPhoneLabel(sourceForNormalization).replace(/[^\d+]/g, "");
   if (!compact) {
+    if (extension) {
+      return { phone: null, note: isFax ? `Fax Dahili: ${extension}` : `Dahili: ${extension}` };
+    }
     return { phone: null };
   }
 
@@ -121,19 +129,27 @@ function normalizePhone(raw: string): { phone: string | null; note?: string } {
   } else if (digits.length === 10) {
     digits = `90${digits}`;
   } else if (!digits.startsWith("90")) {
+    if (extension) {
+      return { phone: null, note: isFax ? `Fax Dahili: ${extension}` : `Dahili: ${extension}` };
+    }
     return { phone: null, note: `Şüpheli telefon: ${source}` };
   }
 
   const normalized = `+${digits}`;
   if (!PHONE_E164_TR_REGEX.test(normalized)) {
+    if (extension) {
+      return { phone: null, note: isFax ? `Fax Dahili: ${extension}` : `Dahili: ${extension}` };
+    }
     return { phone: null, note: `Şüpheli telefon: ${source}` };
   }
 
   if (isFax) {
-    return { phone: null, note: `Fax: ${normalized}` };
+    const note = extension ? `Fax: ${normalized}, Dahili: ${extension}` : `Fax: ${normalized}`;
+    return { phone: null, note };
   }
 
-  return { phone: normalized };
+  const note = extension ? `Dahili: ${extension}` : undefined;
+  return { phone: normalized, note };
 }
 
 function normalizePhones(values: string[], notes: string[]): string[] {
@@ -282,9 +298,9 @@ export function sanitizeAddress(address: string | null): string | null {
   const filtered = kept.filter((line) => ADDRESS_HINT_REGEX.test(line) || (/\d/.test(line) && /[A-Za-zÇĞİÖŞÜçğıöşü]/.test(line)));
   const merged = (filtered.length > 0 ? filtered : kept).join(", ");
   const normalized = merged
-    .replace(/\b(mahalle|mah\.?|mh\.?)\b/gi, "Mah.")
-    .replace(/\b(caddesi|cad\.?)\b/gi, "Cad.")
-    .replace(/\b(sokak|sk\.?)\b/gi, "Sk.")
+    .replace(/\b(mahallesi|mahalle|mah\.?|mh\.?)\b/gi, "Mah.")
+    .replace(/\b(caddesi|cadde|cad\.?)\b/gi, "Cad.")
+    .replace(/\b(sokağı|sokak|sok\.?|sk\.?)\b/gi, "Sk.")
     .replace(/\s+/g, " ")
     .trim();
 
@@ -421,11 +437,24 @@ export function validateAndNormalizeBusinessCardExtraction(
 }
 
 export function toBusinessCardOcrResult(extraction: BusinessCardExtraction): BusinessCardOcrResult {
+  const noteParts: string[] = [];
+  if (extraction.company && extraction.name) {
+    noteParts.push(`İlgili: ${extraction.name}`);
+  }
+  if (extraction.title) {
+    noteParts.push(`Ünvan: ${extraction.title}`);
+  }
+  for (const note of extraction.notes) {
+    noteParts.push(note);
+  }
+
   return {
-    customerName: extraction.name ?? extraction.company ?? undefined,
+    customerName: extraction.company ?? extraction.name ?? undefined,
     phone1: extraction.phones[0],
+    phone2: extraction.phones[1],
     email: extraction.emails[0],
     address: extraction.address ?? undefined,
     website: extraction.website ?? undefined,
+    notes: noteParts.length > 0 ? noteParts.join(", ") : undefined,
   };
 }
