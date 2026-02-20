@@ -498,7 +498,7 @@ export function CustomerFormScreen(): React.ReactElement {
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <ScrollView
             style={{ flex: 1, backgroundColor: 'transparent' }}
-            contentContainerStyle={[styles.contentContainer, { flexGrow: 1, paddingBottom: insets.bottom + 65}]}            
+            contentContainerStyle={[styles.contentContainer, { flexGrow: 1, paddingBottom: insets.bottom + 75}]}            
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
@@ -848,40 +848,40 @@ const styles = StyleSheet.create({
   contentContainer: { padding: 10, gap: 5 }, 
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   
-  tabContainer: {
+ tabContainer: {
     flexDirection: 'row',
-    marginHorizontal: 4,
+    marginHorizontal: 12, 
     marginTop: 0,
     marginBottom: 16,
     borderRadius: 32,
-    padding: 4, 
+    padding: 2, 
     borderWidth: 1.5, 
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.03,
     shadowRadius: 4,
     elevation: 1,
   },
-  tabButton: {
+ tabButton: {
     flex: 1,
-    paddingVertical: 10, 
+    paddingVertical: 6, 
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 28,
     borderWidth: 1.5, 
     borderColor: 'transparent', 
   },
+  tabText: {
+    fontSize: 11, 
+    fontWeight: '700',
+    letterSpacing: 0.5, 
+    textTransform: 'uppercase',
+  },
   activeTabPremium: {
-    shadowColor: '#db2777',
+    shadowColor: '#ff0073ff',
     shadowOffset: { width: 0, height: 0 }, 
     shadowOpacity: 0.2,
     shadowRadius: 6,
     elevation: 2,
-  },
-  tabText: {
-    fontSize: 12,
-    fontWeight: '700',
-    letterSpacing: 0.8,
-    textTransform: 'uppercase',
   },
   card: {
     borderRadius: 12, 
