@@ -314,8 +314,12 @@ export function CustomerFormScreen(): React.ReactElement {
               scannedImageUri,
               "Kartvizit görseli"
             );
-          } catch {
-            Alert.alert("Uyarı", "Müşteri kaydedildi fakat kartvizit görseli yüklenemedi.");
+          } catch (uploadError) {
+            const uploadErrorMessage =
+              uploadError instanceof Error && uploadError.message.trim().length > 0
+                ? uploadError.message
+                : "Müşteri kaydedildi fakat kartvizit görseli yüklenemedi.";
+            Alert.alert("Uyarı", uploadErrorMessage);
           }
         }
 

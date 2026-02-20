@@ -129,7 +129,18 @@ export const customerApi = {
   ): Promise<CustomerImageDto[]> => {
     const fileName = imageUri.split("/").pop() || `customer_${Date.now()}.jpg`;
     const extension = fileName.includes(".") ? fileName.split(".").pop()?.toLowerCase() : "jpg";
-    const mimeType = extension === "png" ? "image/png" : "image/jpeg";
+    const mimeType =
+      extension === "png"
+        ? "image/png"
+        : extension === "webp"
+          ? "image/webp"
+          : extension === "gif"
+            ? "image/gif"
+            : extension === "heic"
+              ? "image/heic"
+              : extension === "heif"
+                ? "image/heif"
+                : "image/jpeg";
 
     const formData = new FormData();
     formData.append("files", {
@@ -142,15 +153,7 @@ export const customerApi = {
       formData.append("imageDescriptions", imageDescription.trim());
     }
 
-    const response = await apiClient.post<ApiResponse<CustomerImageDto[]>>(
-      `/api/CustomerImage/upload/${customerId}`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+    const response = await apiClient.post<ApiResponse<CustomerImageDto[]>>(`/api/CustomerImage/upload/${customerId}`, formData);
 
     if (!response.data.success) {
       const msg =
