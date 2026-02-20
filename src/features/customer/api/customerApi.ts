@@ -5,6 +5,8 @@ import type {
   CustomerDto,
   CustomerImageDto,
   CreateCustomerDto,
+  CreateCustomerFromMobileDto,
+  CreateCustomerFromMobileResultDto,
   UpdateCustomerDto,
   PagedParams,
   PagedResponse,
@@ -74,6 +76,22 @@ export const customerApi = {
       const msg =
         [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
         "Müşteri oluşturulamadı";
+      throw new Error(msg);
+    }
+
+    return response.data.data;
+  },
+
+  createFromMobile: async (data: CreateCustomerFromMobileDto): Promise<CreateCustomerFromMobileResultDto> => {
+    const response = await apiClient.post<ApiResponse<CreateCustomerFromMobileResultDto>>(
+      "/api/Customer/mobile/create-from-ocr",
+      data
+    );
+
+    if (!response.data.success) {
+      const msg =
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
+        "Mobil OCR müşteri oluşturma başarısız";
       throw new Error(msg);
     }
 

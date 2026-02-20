@@ -73,6 +73,36 @@ export interface CreateCustomerDto {
   isCompleted?: boolean;
 }
 
+export interface CreateCustomerFromMobileDto {
+  name: string;
+  contactName?: string;
+  title?: string;
+  email?: string;
+  phone?: string;
+  phone2?: string;
+  address?: string;
+  website?: string;
+  notes?: string;
+  countryId?: number;
+  cityId?: number;
+  districtId?: number;
+  customerTypeId?: number;
+  salesRepCode?: string;
+  groupCode?: string;
+  creditLimit?: number;
+  branchCode?: number;
+  businessUnitCode?: number;
+}
+
+export interface CreateCustomerFromMobileResultDto {
+  customerId: number;
+  customerCreated: boolean;
+  contactId?: number;
+  contactCreated: boolean;
+  titleId?: number;
+  titleCreated: boolean;
+}
+
 export interface UpdateCustomerDto {
   customerCode?: string;
   name: string;

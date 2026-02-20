@@ -2,7 +2,14 @@ import { useMutation, useQueryClient, type InfiniteData } from "@tanstack/react-
 import { useTranslation } from "react-i18next";
 import { customerApi } from "../api/customerApi";
 import { useToastStore } from "../../../store/toast";
-import type { CreateCustomerDto, UpdateCustomerDto, CustomerDto, PagedResponse } from "../types";
+import type {
+  CreateCustomerDto,
+  CreateCustomerFromMobileDto,
+  CreateCustomerFromMobileResultDto,
+  UpdateCustomerDto,
+  CustomerDto,
+  PagedResponse
+} from "../types";
 
 export function useCreateCustomer() {
   const queryClient = useQueryClient();
@@ -11,6 +18,23 @@ export function useCreateCustomer() {
 
   return useMutation<CustomerDto, Error, CreateCustomerDto>({
     mutationFn: customerApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["customer", "list"] });
+      showToast("success", t("customer.createSuccess"));
+    },
+    onError: (error) => {
+      showToast("error", error.message || t("common.unknownError"));
+    },
+  });
+}
+
+export function useCreateCustomerFromMobile() {
+  const queryClient = useQueryClient();
+  const { t } = useTranslation();
+  const showToast = useToastStore((state) => state.showToast);
+
+  return useMutation<CreateCustomerFromMobileResultDto, Error, CreateCustomerFromMobileDto>({
+    mutationFn: customerApi.createFromMobile,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["customer", "list"] });
       showToast("success", t("customer.createSuccess"));
