@@ -24,7 +24,17 @@ import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
-import { useCustomer, useCreateCustomer, useUpdateCustomer, useCustomerTypes, useBusinessCardScan } from "../hooks";
+import {
+  useCustomer,
+  useCreateCustomer,
+  useCreateCustomerFromMobile,
+  useCountries,
+  useCities,
+  useDistricts,
+  useUpdateCustomer,
+  useCustomerTypes,
+  useBusinessCardScan
+} from "../hooks";
 import { customerApi } from "../api/customerApi";
 import { useCustomerShippingAddresses } from "../../shipping-address/hooks/useShippingAddresses";
 import { FormField, LocationPicker, PremiumPicker } from "../components";
@@ -96,11 +106,17 @@ export function CustomerFormScreen(): React.ReactElement {
 
   const [shippingAddressModalOpen, setShippingAddressModalOpen] = useState(false);
   const [scannedImageUri, setScannedImageUri] = useState<string | null>(null);
+  const [scannedContactName, setScannedContactName] = useState<string | null>(null);
+  const [scannedTitle, setScannedTitle] = useState<string | null>(null);
+  const [ocrCountryName, setOcrCountryName] = useState<string | null>(null);
+  const [ocrCityName, setOcrCityName] = useState<string | null>(null);
+  const [ocrDistrictName, setOcrDistrictName] = useState<string | null>(null);
 
   const { data: existingCustomer, isLoading: customerLoading } = useCustomer(customerId);
   const { data: customerTypes } = useCustomerTypes();
   const { data: customerShippingAddresses = [] } = useCustomerShippingAddresses(customerId);
   const createCustomer = useCreateCustomer();
+  const createCustomerFromMobile = useCreateCustomerFromMobile();
   const updateCustomer = useUpdateCustomer();
   const { scanBusinessCard, pickBusinessCardFromGallery, isScanning, error: scanError } = useBusinessCardScan();
 
@@ -138,7 +154,11 @@ export function CustomerFormScreen(): React.ReactElement {
 
   const watchCountryId = watch("countryId");
   const watchCityId = watch("cityId");
+  const watchDistrictId = watch("districtId");
   const watchDefaultShippingAddressId = watch("defaultShippingAddressId");
+  const { data: countries } = useCountries();
+  const { data: cities } = useCities(watchCountryId);
+  const { data: districts } = useDistricts(watchCityId);
 
   const selectedShippingAddress = customerShippingAddresses.find((address) => address.id === watchDefaultShippingAddressId);
 
@@ -193,6 +213,29 @@ export function CustomerFormScreen(): React.ReactElement {
     setValue("districtId", district?.id);
   }, [setValue]);
 
+  const normalizeLookupName = useCallback((value?: string | null): string => {
+    if (!value) return "";
+    return value
+      .toLocaleLowerCase("tr-TR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9çğıöşü]+/g, "")
+      .trim();
+  }, []);
+
+  const findLookupByName = useCallback(<T extends { id: number; name: string }>(
+    items: T[] | undefined,
+    name?: string | null
+  ): T | undefined => {
+    if (!items || items.length === 0 || !name) return undefined;
+    const target = normalizeLookupName(name);
+    if (!target) return undefined;
+    return items.find((item) => {
+      const normalized = normalizeLookupName(item.name);
+      return normalized === target || normalized.includes(target) || target.includes(normalized);
+    });
+  }, [normalizeLookupName]);
+
   const handleShippingAddressSelect = useCallback((shippingAddressId: number) => {
     setValue("defaultShippingAddressId", shippingAddressId);
     setShippingAddressModalOpen(false);
@@ -240,12 +283,34 @@ export function CustomerFormScreen(): React.ReactElement {
         await updateCustomer.mutateAsync({ id: customerId, data: updatePayload });
         Alert.alert("", t("customer.updateSuccess"));
       } else {
-        const createdCustomer = await createCustomer.mutateAsync(base);
+        const hasOcrPayload = Boolean(scannedContactName || scannedTitle || scannedImageUri);
+        const createdCustomerId = hasOcrPayload
+          ? (await createCustomerFromMobile.mutateAsync({
+              name: base.name,
+              contactName: scannedContactName || undefined,
+              title: scannedTitle || undefined,
+              email: base.email,
+              phone: base.phone,
+              phone2: base.phone2,
+              address: base.address,
+              website: base.website,
+              notes: base.notes,
+              countryId: base.countryId,
+              cityId: base.cityId,
+              districtId: base.districtId,
+              customerTypeId: base.customerTypeId,
+              salesRepCode: base.salesRepCode,
+              groupCode: base.groupCode,
+              creditLimit: base.creditLimit,
+              branchCode: base.branchCode,
+              businessUnitCode: base.businessUnitCode,
+            })).customerId
+          : (await createCustomer.mutateAsync(base)).id;
 
         if (scannedImageUri) {
           try {
             await customerApi.uploadCustomerImage(
-              createdCustomer.id,
+              createdCustomerId,
               scannedImageUri,
               "Kartvizit görseli"
             );
@@ -260,14 +325,79 @@ export function CustomerFormScreen(): React.ReactElement {
     } catch {
       Alert.alert(t("common.error"), t("common.error"));
     }
-  }, [isEditMode, customerId, existingCustomer?.completionDate, createCustomer, updateCustomer, router, t, toNumber, toNumberOptional, scannedImageUri]);
+  }, [
+    isEditMode,
+    customerId,
+    existingCustomer?.completionDate,
+    createCustomer,
+    createCustomerFromMobile,
+    updateCustomer,
+    router,
+    t,
+    toNumber,
+    toNumberOptional,
+    scannedImageUri,
+    scannedContactName,
+    scannedTitle
+  ]);
 
   useEffect(() => {
     if (scanError) Alert.alert("Kartvizit Tarama", scanError);
   }, [scanError]);
 
-  const applyBusinessCardResult = useCallback((data: { customerName?: string; email?: string; phone1?: string; phone2?: string; address?: string; website?: string; notes?: string; imageUri?: string }) => {
+  useEffect(() => {
+    if (!ocrCountryName) return;
+    if (watchCountryId) return;
+    const matchedCountry = findLookupByName(countries, ocrCountryName);
+    if (matchedCountry) {
+      handleCountryChange(matchedCountry);
+      setOcrCountryName(null);
+    }
+  }, [ocrCountryName, watchCountryId, countries, findLookupByName, handleCountryChange]);
+
+  useEffect(() => {
+    if (!ocrCityName) return;
+    if (!watchCountryId) return;
+    if (watchCityId) return;
+    const matchedCity = findLookupByName(cities, ocrCityName);
+    if (matchedCity) {
+      handleCityChange(matchedCity);
+      setOcrCityName(null);
+    }
+  }, [ocrCityName, watchCountryId, watchCityId, cities, findLookupByName, handleCityChange]);
+
+  useEffect(() => {
+    if (!ocrDistrictName) return;
+    if (!watchCityId) return;
+    if (watchDistrictId) return;
+    const matchedDistrict = findLookupByName(districts, ocrDistrictName);
+    if (matchedDistrict) {
+      handleDistrictChange(matchedDistrict);
+      setOcrDistrictName(null);
+    }
+  }, [ocrDistrictName, watchCityId, watchDistrictId, districts, findLookupByName, handleDistrictChange]);
+
+  const applyBusinessCardResult = useCallback((data: {
+    customerName?: string;
+    contactNameAndSurname?: string;
+    title?: string;
+    countryName?: string;
+    cityName?: string;
+    districtName?: string;
+    email?: string;
+    phone1?: string;
+    phone2?: string;
+    address?: string;
+    website?: string;
+    notes?: string;
+    imageUri?: string;
+  }) => {
     if (data.customerName) setValue("name", data.customerName);
+    if (data.contactNameAndSurname) setScannedContactName(data.contactNameAndSurname);
+    if (data.title) setScannedTitle(data.title);
+    if (data.countryName) setOcrCountryName(data.countryName);
+    if (data.cityName) setOcrCityName(data.cityName);
+    if (data.districtName) setOcrDistrictName(data.districtName);
     if (data.email) setValue("email", data.email ?? "");
     if (data.phone1) setValue("phone", data.phone1);
     if (data.phone2) setValue("phone2", data.phone2);

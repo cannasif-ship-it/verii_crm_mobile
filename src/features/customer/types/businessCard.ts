@@ -17,6 +17,10 @@ export interface AddressParts {
 export interface BusinessCardOcrResult {
   customerName?: string;
   contactNameAndSurname?: string;
+  title?: string;
+  countryName?: string;
+  cityName?: string;
+  districtName?: string;
   phone1?: string;
   phone2?: string;
   email?: string;

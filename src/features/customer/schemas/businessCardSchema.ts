@@ -793,6 +793,10 @@ export function toBusinessCardOcrResult(extraction: BusinessCardExtraction): Bus
   return {
     customerName: extraction.company ?? extraction.name ?? undefined,
     contactNameAndSurname: extraction.contactNameAndSurname ?? undefined,
+    title: extraction.title ?? undefined,
+    countryName: extraction.addressParts.country ?? undefined,
+    cityName: extraction.addressParts.province ?? undefined,
+    districtName: extraction.addressParts.district ?? undefined,
     phone1: extraction.phones[0],
     phone2: extraction.phones[1],
     email: extraction.emails[0],
