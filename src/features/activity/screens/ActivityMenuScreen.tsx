@@ -11,7 +11,8 @@ import { MenuCard } from "../components";
 import { 
   Calendar03Icon,
   TaskDaily01Icon,
-  ArrowRight01Icon 
+  ArrowRight01Icon,
+  MapsIcon,
 } from "hugeicons-react-native";
 
 export function ActivityMenuScreen(): React.ReactElement {
@@ -37,6 +38,10 @@ export function ActivityMenuScreen(): React.ReactElement {
 
   const handleDailyTasksPress = useCallback(() => {
     router.push("/(tabs)/activities/daily-tasks");
+  }, [router]);
+
+  const handleRotaPress = useCallback(() => {
+    router.push("/(tabs)/activities/rota");
   }, [router]);
 
   const menuItems = [
@@ -67,6 +72,20 @@ export function ActivityMenuScreen(): React.ReactElement {
         />
       ),
       onPress: handleDailyTasksPress,
+    },
+    {
+      key: "rota",
+      title: t("activityMenu.rota"),
+      description: t("activityMenu.rotaDesc"),
+      icon: (
+        <MapsIcon
+          size={24}
+          color={THEME_PINK}
+          variant="stroke"
+          strokeWidth={1.5}
+        />
+      ),
+      onPress: handleRotaPress,
     },
   ];
 
