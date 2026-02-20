@@ -1,10 +1,22 @@
 import { apiClient } from "../../../lib/axios";
-import { buildBusinessCardUserPrompt, BUSINESS_CARD_SYSTEM_PROMPT } from "./businessCardPromptTemplates";
+import {
+  buildBusinessCardUserPrompt,
+  BUSINESS_CARD_SYSTEM_PROMPT,
+  type BusinessCardPromptCandidateHints,
+} from "./businessCardPromptTemplates";
+
+export interface ExtractBusinessCardViaLlmInput {
+  rawText: string;
+  ocrLines?: string[];
+  candidateHints?: BusinessCardPromptCandidateHints;
+}
 
 type LlmExtractRequest = {
   systemPrompt: string;
   userPrompt: string;
   rawText: string;
+  ocrLines?: string[];
+  candidateHints?: BusinessCardPromptCandidateHints;
 };
 
 type LlmExtractResponse = {
@@ -27,7 +39,10 @@ function coerceToString(value: unknown): string | null {
   return null;
 }
 
-export async function extractBusinessCardViaLLM(rawText: string): Promise<string> {
+export async function extractBusinessCardViaLLM(input: string | ExtractBusinessCardViaLlmInput): Promise<string> {
+  const rawText = typeof input === "string" ? input : input.rawText;
+  const ocrLines = typeof input === "string" ? undefined : input.ocrLines;
+  const candidateHints = typeof input === "string" ? undefined : input.candidateHints;
   const text = rawText?.trim();
   if (!text) {
     throw new Error("Empty OCR text.");
@@ -35,8 +50,10 @@ export async function extractBusinessCardViaLLM(rawText: string): Promise<string
 
   const payload: LlmExtractRequest = {
     systemPrompt: BUSINESS_CARD_SYSTEM_PROMPT,
-    userPrompt: buildBusinessCardUserPrompt(text),
+    userPrompt: buildBusinessCardUserPrompt(text, { ocrLines, candidateHints }),
     rawText: text,
+    ocrLines,
+    candidateHints,
   };
 
   const response = await apiClient.post<LlmExtractResponse>("/api/ai/business-card/extract", payload);

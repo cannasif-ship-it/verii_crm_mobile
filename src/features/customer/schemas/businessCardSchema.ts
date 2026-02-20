@@ -60,7 +60,7 @@ const ADDRESS_HINT_REGEX =
 const ADDRESS_NO_REGEX = /\b(?:no|numara)\s*[:.]?\s*\d{1,5}(?:\s*[-/]\s*\w{1,5})?|\bn\s*[:.]\s*\d{1,5}(?:\s*[-/]\s*\w{1,5})?/i;
 const POSTAL_CODE_REGEX = /\b\d{5}\b/;
 const ADDRESS_EXCLUDE_REGEX =
-  /@|www\.|https?:\/\/|\.com|\.net|\.org|\.tr|e-?mail|email|tel\.?|telefon|gsm|mobile|fax|faks|linkedin|instagram|facebook|x\.com|twitter/i;
+  /@|www\.|https?:\/\/|\.com|\.net|\.org|\.tr|e-?mail|email|tel\.?|telefon|gsm|mobile|fax|faks|linkedin|instagram|facebook|x\.com|twitter|\+?\s*90[\s().-]*\d{3}[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}|(?:^|\D)0[\s().-]*\d{3}[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}(?:\D|$)/i;
 const COUNTRY_SUFFIX_REGEX = /\s*[-/–,]\s*(?:türkiye|turkey|turkiye)\s*$/i;
 const COUNTRY_LINE_REGEX = /^\s*(?:türkiye|turkey|turkiye|tr)\s*$/i;
 const WEBSITE_CANDIDATE_REGEX =
@@ -72,6 +72,8 @@ const INDUSTRY_KEYWORD_REGEX =
   /\b(makine|makina|tekstil|otomotiv|gıda|inşaat|mobilya|lojistik|logistics|trading|solutions|import|export|mühendislik|danışmanlık|turizm|enerji|group|holding|plastik|metal|kimya|elektrik|elektronik|yazılım|software|bilişim|otomasyon|otomasyonu|pvc|alüminyum|nakliyat|gayrimenkul|sigorta|reklam|medya|ambalaj|demir|çelik|cam|pencere|kapı|vinç|maden|lines|teknoloji|technology|iletişim|hizmet|hizmetleri|services|marin|marine|denizcilik|hafriyat|peyzaj|tarım|mimarlık|müteahhit|depolama|soğutma|jeneratör|asansör|matbaa|ajans|eczane|optik|kozmetik|giyim|konfeksiyon|ayakkabı|deri|kuyumculuk|mücevher|oto|otobüs|araç|lastik|akü|yedek\s*parça|rulman|conta|boya|hırdavat|nalburiye|seramik|mermer|parke|halı|perde|aydınlatma|mutfak|banyo|beyaz\s*eşya|klima|kombi|doğalgaz|ısıtma|iklimlendirme|havalandırma|yangın|güvenlik|temizlik|catering|gümrük|antrepo|freight|cargo|kargo|kurye|taşımacılık)\b/i;
 const PHONE_CANDIDATE_REGEX =
   /(?:\+?\s*90[\s().-]*)?(?:0[\s().-]*)?\(?\d{3}\)?[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}(?:\s*\/\s*\d{1,6}|\s*\(\d{1,6}\))?/gi;
+const PHONE_IN_TEXT_REGEX =
+  /(?:\+?\s*90[\s().-]*)?(?:0[\s().-]*)?\(?\d{3}\)?[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}(?:\s*\/\s*\d{1,6}|\s*\(\d{1,6}\))?/i;
 
 const SAFE_PROVINCES = new Set([
   "istanbul", "ankara", "izmir", "bursa", "kocaeli", "antalya", "konya",
@@ -143,10 +145,27 @@ function stripPhoneLabel(value: string): string {
 }
 
 function stripContactFragments(value: string): string {
-  const marker = /\b(e-?mail|email|www|http|tel\.?|telefon|gsm|mobile|fax|faks)\b|@/i;
-  const idx = value.search(marker);
-  if (idx === -1) return value.trim();
-  return value.slice(0, idx).replace(/[-,:;|/]+$/g, "").trim();
+  const cleaned = value
+    .replace(/\b(e-?mail|email|www|http|tel\.?|telefon|gsm|mobile|fax|faks)\b\s*[:.]?/gi, " | ")
+    .replace(/[^\s@]+@[^\s@]+\.[^\s@]+/g, " | ")
+    .replace(/(?:https?:\/\/|www\.)\S+/gi, " | ")
+    .replace(PHONE_CANDIDATE_REGEX, " | ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!cleaned) return "";
+  const parts = cleaned
+    .split("|")
+    .map((part) => part.replace(/[-,:;|/]+$/g, "").trim())
+    .filter(Boolean);
+  if (parts.length === 0) return "";
+
+  const strong = parts.filter((part) => isStrongAddressLine(part));
+  if (strong.length > 0) {
+    return strong.sort((a, b) => b.length - a.length)[0]!;
+  }
+
+  return parts[parts.length - 1]!;
 }
 
 function normalizePhone(raw: string): { phone: string | null; note?: string } {
@@ -389,6 +408,7 @@ function containsKnownLocation(line: string): boolean {
 }
 
 function isStrongAddressLine(line: string): boolean {
+  if (PHONE_IN_TEXT_REGEX.test(line)) return false;
   if (ADDRESS_HINT_REGEX.test(line)) return true;
   if (ADDRESS_NO_REGEX.test(line)) return true;
   if (POSTAL_CODE_REGEX.test(line) && /[A-Za-zÇĞİÖŞÜçğıöşü]{2,}/.test(line)) return true;
@@ -545,16 +565,52 @@ export function sanitizeAddress(address: string | null): string | null {
     .trim();
 
   if (!normalized) return null;
-  if (ADDRESS_EXCLUDE_REGEX.test(normalized)) return null;
-  return normalized;
+  const safeSegments = uniqueStrings(
+    normalized
+      .split(",")
+      .map((segment) => segment.replace(/\s+/g, " ").trim())
+      .filter(Boolean)
+      .filter((segment) => !COUNTRY_LINE_REGEX.test(segment))
+      .filter((segment) => !ADDRESS_EXCLUDE_REGEX.test(segment))
+      .filter((segment) => !PHONE_IN_TEXT_REGEX.test(segment))
+  );
+  if (safeSegments.length === 0) return null;
+  if (!safeSegments.some((segment) => isStrongAddressLine(segment))) return null;
+  return safeSegments.join(", ");
 }
 
-function buildAddressFromRawText(rawText: string | undefined, notes: string[]): string | null {
-  if (!rawText) return null;
-  const lines = rawText
+function normalizeTextLines(value: string): string[] {
+  return value
     .split(/\r?\n/)
     .map((line) => line.replace(/\s+/g, " ").trim())
     .filter(Boolean);
+}
+
+function collectAddressSourceLines(
+  rawText: string | undefined,
+  rawLines: string[] | undefined,
+  preferredAddressLines: string[] | undefined
+): string[] {
+  const lines: string[] = [];
+  if (preferredAddressLines && preferredAddressLines.length > 0) {
+    lines.push(...preferredAddressLines.map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean));
+  }
+  if (rawLines && rawLines.length > 0) {
+    lines.push(...rawLines.map((line) => line.replace(/\s+/g, " ").trim()).filter(Boolean));
+  } else if (rawText) {
+    lines.push(...normalizeTextLines(rawText));
+  }
+  return uniqueStrings(lines);
+}
+
+function buildAddressFromRawText(
+  rawText: string | undefined,
+  notes: string[],
+  rawLines?: string[],
+  preferredAddressLines?: string[]
+): string | null {
+  const lines = collectAddressSourceLines(rawText, rawLines, preferredAddressLines);
+  if (lines.length === 0) return null;
 
   const addressLines: string[] = [];
   for (const line of lines) {
@@ -641,7 +697,9 @@ export function repairJsonString(input: string): string | null {
 
 export function validateAndNormalizeBusinessCardExtraction(
   input: unknown,
-  rawText?: string
+  rawText?: string,
+  rawLines?: string[],
+  preferredAddressLines?: string[]
 ): BusinessCardExtraction {
   const parsed = BusinessCardExtractionSchema.safeParse(input);
   if (!parsed.success) {
@@ -665,7 +723,7 @@ export function validateAndNormalizeBusinessCardExtraction(
 
   const assembledAddress = assembleAddressFromParts(addressParts);
   const sanitizedLlmAddress = sanitizeAddress(normalizeNullable(parsed.data.address));
-  const fallbackAddress = buildAddressFromRawText(rawText, notes);
+  const fallbackAddress = buildAddressFromRawText(rawText, notes, rawLines, preferredAddressLines);
   const address = assembledAddress ?? sanitizedLlmAddress ?? fallbackAddress;
 
   addressParts = enrichAddressPartsFromText(addressParts, address);

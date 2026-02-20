@@ -286,7 +286,50 @@ CRITICAL:
 3. Parse Turkish characters carefully: ş, ç, ğ, ı, ö, ü, İ, Ş, Ç, Ğ, Ö, Ü.
 4. OCR text may have minor errors — fix OBVIOUS typos only (e.g. "l" for "I", "0" for "O" in names). Do NOT guess.`;
 
-export function buildBusinessCardUserPrompt(rawText: string): string {
+export interface BusinessCardPromptCandidateHints {
+  phones: string[];
+  emails: string[];
+  websites: string[];
+  addressLines: string[];
+}
+
+export interface BusinessCardPromptContext {
+  ocrLines?: string[];
+  candidateHints?: BusinessCardPromptCandidateHints;
+}
+
+function renderContextSection(context?: BusinessCardPromptContext): string {
+  if (!context) return "";
+  const sections: string[] = [];
+  const lines = context.ocrLines ?? [];
+  const hints = context.candidateHints;
+
+  if (lines.length > 0) {
+    const lineText = lines.map((line, idx) => `${idx + 1}. ${line}`).join("\n");
+    sections.push(`OCR SATIRLARI (SIRALI):\n${lineText}`);
+  }
+
+  if (hints) {
+    const phones = hints.phones.length > 0 ? hints.phones.join(", ") : "[]";
+    const emails = hints.emails.length > 0 ? hints.emails.join(", ") : "[]";
+    const websites = hints.websites.length > 0 ? hints.websites.join(", ") : "[]";
+    const addressLines = hints.addressLines.length > 0 ? hints.addressLines.join(" | ") : "[]";
+
+    sections.push(
+      `HEURISTIC ADAYLAR (sadece referans, uydurma yok):\n` +
+      `- phones: ${phones}\n` +
+      `- emails: ${emails}\n` +
+      `- websites: ${websites}\n` +
+      `- addressLines: ${addressLines}`
+    );
+  }
+
+  if (sections.length === 0) return "";
+  return `\n\nEK BAĞLAM:\n${sections.join("\n\n")}`;
+}
+
+export function buildBusinessCardUserPrompt(rawText: string, context?: BusinessCardPromptContext): string {
+  const contextSection = renderContextSection(context);
   return `Türkiye kartviziti OCR metninden alanları çıkar. Çıktı SADECE aşağıdaki şemaya uyan TEK bir JSON object olacak. JSON dışında hiçbir şey yazma.
 
 ŞEMA:
@@ -457,6 +500,7 @@ SON KONTROL (JSON döndürmeden önce):
 ✓ company: Eşitlikte company > name öncelikli. name null olabilir.
 ✓ OCR metninde OLMAYAN bilgiyi UYDURMA. Emin değilsen null/[] bırak.
 ✓ JSON dışında HİÇBİR ŞEY yazma.
+${contextSection}
 
 OCR TEXT:
 <<<

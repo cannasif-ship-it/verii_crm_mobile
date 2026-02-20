@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import { runOCR } from "../services/ocrService";
 import { extractBusinessCardViaLLM } from "../services/businessCardLlmService";
+import { buildBusinessCardCandidateHints } from "../services/businessCardHeuristics";
 import {
   repairJsonString,
   toBusinessCardOcrResult,
@@ -50,24 +51,34 @@ export function useBusinessCardScan(): {
 
   const processImage = useCallback(
     async (imageUri: string, onResult: (data: BusinessCardOcrResult) => void): Promise<void> => {
-      const text = await runOCR(imageUri);
-      if (!text || !text.trim()) {
+      const ocr = await runOCR(imageUri);
+      const rawText = (ocr.rawText || ocr.lines.join("\n")).trim();
+      if (!rawText) {
         setError("Kartvizitten metin alınamadı. Görüntüyü net çekip tekrar deneyin.");
         return;
       }
 
-      const rawText = text.trim();
+      const candidateHints = buildBusinessCardCandidateHints(rawText, ocr.lines);
       let extractedByLlm = false;
 
       try {
-        const llmRawOutput = await extractBusinessCardViaLLM(rawText);
+        const llmRawOutput = await extractBusinessCardViaLLM({
+          rawText,
+          ocrLines: ocr.lines,
+          candidateHints,
+        });
         const repaired = repairJsonString(llmRawOutput);
         if (!repaired) {
           throw new Error("LLM JSON repair failed.");
         }
 
         const parsedJson = JSON.parse(repaired) as unknown;
-        const normalized = validateAndNormalizeBusinessCardExtraction(parsedJson, rawText);
+        const normalized = validateAndNormalizeBusinessCardExtraction(
+          parsedJson,
+          rawText,
+          ocr.lines,
+          candidateHints.addressLines
+        );
         onResult({
           ...toBusinessCardOcrResult(normalized),
           imageUri,
@@ -77,7 +88,9 @@ export function useBusinessCardScan(): {
         const parsed = parseBusinessCardText(rawText);
         const normalizedFallback = validateAndNormalizeBusinessCardExtraction(
           fallbackToStructuredInput(parsed),
-          rawText
+          rawText,
+          ocr.lines,
+          candidateHints.addressLines
         );
         onResult({
           ...toBusinessCardOcrResult(normalizedFallback),
