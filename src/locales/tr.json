@@ -318,7 +318,22 @@
     "activities": "Aktiviteler",
     "activitiesDesc": "Aktivite listesi ve yönetimi",
     "dailyTasks": "Günlük İşler",
-    "dailyTasksDesc": "Günlük görev takibi ve yönetimi"
+    "dailyTasksDesc": "Günlük görev takibi ve yönetimi",
+    "rota": "Rota",
+    "rotaDesc": "Çevrenizdeki yerler ve kategorilere göre harita"
+  },
+  "rota": {
+    "title": "Rota",
+    "requestingLocation": "Konum alınıyor...",
+    "permissionDenied": "Konum izni verilmedi",
+    "allowLocation": "Konuma İzin Ver",
+    "categoryAll": "Tümü",
+    "categoryIndustrial": "Fabrikalar",
+    "categoryShop": "Dükkanlar",
+    "categoryOffice": "Ofisler",
+    "categoryAmenity": "Kafe & Restoran",
+    "customerMainAddress": "Müşteri Ana Adresi",
+    "customerShippingAddress": "Sevk Adresi"
   },
   "dailyTasks": {
     "title": "Günlük İşler",

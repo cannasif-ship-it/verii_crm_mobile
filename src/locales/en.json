@@ -329,7 +329,22 @@
     "activities": "Activities",
     "activitiesDesc": "Activity list and management",
     "dailyTasks": "Daily Tasks",
-    "dailyTasksDesc": "Daily task tracking and management"
+    "dailyTasksDesc": "Daily task tracking and management",
+    "rota": "Route",
+    "rotaDesc": "Nearby places and map by category"
+  },
+  "rota": {
+    "title": "Route",
+    "requestingLocation": "Getting location...",
+    "permissionDenied": "Location permission denied",
+    "allowLocation": "Allow Location",
+    "categoryAll": "All",
+    "categoryIndustrial": "Factories",
+    "categoryShop": "Shops",
+    "categoryOffice": "Offices",
+    "categoryAmenity": "Cafe & Restaurant",
+    "customerMainAddress": "Customer Main Address",
+    "customerShippingAddress": "Shipping Address"
   },
   "dailyTasks": {
     "title": "Daily Tasks",
