@@ -32,6 +32,7 @@ import {
   useCities,
   useDistricts,
   useUpdateCustomer,
+  useDeleteCustomer,
   useCustomerTypes,
   useBusinessCardScan
 } from "../hooks";
@@ -50,7 +51,8 @@ import {
   Location01Icon,
   Invoice01Icon,
   NoteIcon,
-  Briefcase01Icon
+  Briefcase01Icon,
+  ArrowRight01Icon
 } from "hugeicons-react-native";
 
 export function CustomerFormScreen(): React.ReactElement {
@@ -103,6 +105,8 @@ export function CustomerFormScreen(): React.ReactElement {
     inputBg: isDark ? "rgba(0,0,0,0.3)" : "#F8FAFC",
     shadow: isDark ? "#000000" : "#64748b",
   };
+
+  const [activeTab, setActiveTab] = useState<"general" | "details">("general");
 
   const [shippingAddressModalOpen, setShippingAddressModalOpen] = useState(false);
   const [scannedImageUri, setScannedImageUri] = useState<string | null>(null);
@@ -486,240 +490,311 @@ export function CustomerFormScreen(): React.ReactElement {
         }}>
           <ScreenHeader title={isEditMode ? t("customer.edit") : t("customer.create")} showBackButton />
         </View>
-        
+
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === "ios" ? "padding" : "height"}>
           <ScrollView
             style={{ flex: 1, backgroundColor: 'transparent' }}
-            contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
+            contentContainerStyle={[styles.contentContainer, { flexGrow: 1, paddingBottom: insets.bottom + 65}]}            
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {(!isEditMode && formConfig.showBusinessCardScan) && (
-              <View style={[styles.scannerContainer, { borderColor: THEME.primary, backgroundColor: `${THEME.primary}08` }]}>
-                <View style={styles.scannerContent}>
-                  
-                  <View style={styles.scannerLeft}>
-                    <Camera01Icon size={20} color={THEME.primary} variant="stroke" />
-                    <View>
-                      <Text style={[styles.scannerTitle, { color: THEME.text }]}>Kartvizit Tara</Text>
-                      <Text style={[styles.scannerSubtitle, { color: THEME.textMute }]}>Otomatik doldur</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.scannerButtonsRow}>
-                    <TouchableOpacity style={[styles.scannerIconButton, { borderColor: THEME.primary, backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#FFF' }]} onPress={handleScanBusinessCard} disabled={isScanning}>
-                      {isScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Camera01Icon size={16} color={THEME.primary} />}
-                    </TouchableOpacity>
-                    <TouchableOpacity style={[styles.scannerIconButton, { borderColor: THEME.primary, backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#FFF' }]} onPress={handlePickBusinessCardFromGallery} disabled={isScanning}>
-                      {isScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Image01Icon size={16} color={THEME.primary} />}
-                    </TouchableOpacity>
-                  </View>
-
-                </View>
-
-                {scannedImageUri ? (
-                  <View style={[styles.previewContainer, { borderColor: THEME.border, backgroundColor: isDark ? "rgba(15,23,42,0.6)" : "#FFFFFF" }]}>
-                    <Image source={{ uri: scannedImageUri }} style={styles.previewImage} resizeMode="cover" />
-                    <View style={styles.previewTextContainer}>
-                      <Text style={[styles.previewTitle, { color: THEME.text }]}>Görsel Eklendi</Text>
-                    </View>
-                    <TouchableOpacity onPress={() => setScannedImageUri(null)} style={[styles.previewRemoveBtn, { backgroundColor: THEME.primary + '15' }]}>
-                      <Text style={[styles.previewRemoveText, { color: THEME.primary }]}>SİL</Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : null}
-              </View>
-            )}
-
-            <FormSection title="Genel Bilgiler" icon={<UserCircleIcon size={16} color={THEME.primary} variant="stroke" />}>
-              <Controller
-                control={control}
-                name="name"
-                render={({ field: { onChange, value } }) => (
-                  <FormField label={t("customer.name")} value={value} onChangeText={onChange} error={errors.name?.message} required maxLength={250} />
-                )}
-              />
-
-              {(formConfig.showCustomerCode || formConfig.showCustomerType) && (
-                 <View style={styles.row}>
-                    {formConfig.showCustomerCode && (
-                      <View style={styles.flex1}>
-                        <Controller
-                          control={control}
-                          name="customerCode"
-                          render={({ field: { value } }) => (
-                            <View style={{ opacity: 0.6 }}>
-                              <FormField label={t("customer.customerCode")} value={value || ""} onChangeText={() => {}} maxLength={100} editable={false} />
-                            </View>
-                          )}
-                        />
-                      </View>
-                    )}
-                    {formConfig.showCustomerType && (
-                      <View style={styles.flex1}>
-                        <Controller
-                          control={control}
-                          name="customerTypeId"
-                          render={({ field: { onChange, value } }) => (
-                              <PremiumPicker label={t("customer.customerType")} items={customerTypeOptions} value={value} onValueChange={onChange} placeholder={t("lookup.selectCustomerType")} error={errors.customerTypeId?.message} />
-                          )}
-                        />
-                      </View>
-                    )}
-                 </View>
-              )}
-            </FormSection>
-
-            {(formConfig.showPhone || formConfig.showPhone2 || formConfig.showEmail || formConfig.showWebsite) && (
-              <FormSection title="İletişim Bilgileri" icon={<ContactBookIcon size={16} color={THEME.primary} variant="stroke" />}>
-                {(formConfig.showPhone || formConfig.showPhone2) && (
-                    <View style={styles.row}>
-                        {formConfig.showPhone && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="phone" render={({ field: { onChange, value } }) => <FormField label={t("customer.phone")} value={value || ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={100} />} />
-                        </View>
-                        )}
-                        {formConfig.showPhone2 && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="phone2" render={({ field: { onChange, value } }) => <FormField label={t("customer.phone2")} value={value || ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={100} />} />
-                        </View>
-                        )}
-                    </View>
-                )}
-
-                {(formConfig.showEmail || formConfig.showWebsite) && (
-                    <View style={styles.row}>
-                        {formConfig.showEmail && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="email" render={({ field: { onChange, value } }) => <FormField label={t("customer.email")} value={value || ""} onChangeText={onChange} error={errors.email?.message} keyboardType="email-address" autoCapitalize="none" maxLength={100} />} />
-                        </View>
-                        )}
-                        {formConfig.showWebsite && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="website" render={({ field: { onChange, value } }) => <FormField label={t("customer.website")} value={value || ""} onChangeText={onChange} autoCapitalize="none" maxLength={100} />} />
-                        </View>
-                        )}
-                    </View>
-                )}
-              </FormSection>
-            )}
-
-            {(formConfig.showSalesRep || formConfig.showGroupCode || formConfig.showCreditLimit || formConfig.showBranchCode || formConfig.showBusinessUnit) && (
-              <FormSection title="Ticari Detaylar" icon={<Briefcase01Icon size={16} color={THEME.primary} variant="stroke" />}>
-                
-                {(formConfig.showSalesRep || formConfig.showGroupCode) && (
-                    <View style={styles.row}>
-                        {formConfig.showSalesRep && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="salesRepCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.salesRepCode")} value={value || ""} onChangeText={onChange} maxLength={50} />} />
-                        </View>
-                        )}
-                        {formConfig.showGroupCode && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="groupCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.groupCode")} value={value || ""} onChangeText={onChange} maxLength={50} />} />
-                        </View>
-                        )}
-                    </View>
-                )}
-
-                {(formConfig.showBranchCode || formConfig.showBusinessUnit) && (
-                    <View style={styles.row}>
-                        {formConfig.showBranchCode && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="branchCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.branchCode")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : 0)} keyboardType="numeric" />} />
-                        </View>
-                        )}
-                        {formConfig.showBusinessUnit && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="businessUnitCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.businessUnitCode")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : 0)} keyboardType="numeric" />} />
-                        </View>
-                        )}
-                    </View>
-                )}
-
-                {formConfig.showCreditLimit && (
-                  <Controller control={control} name="creditLimit" render={({ field: { onChange, value } }) => <FormField label={t("customer.creditLimit")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : undefined)} keyboardType="numeric" />} />
-                )}
-              </FormSection>
-            )}
-
-            {(formConfig.showAddress || formConfig.showLocation || formConfig.showShippingAddress) && (
-              <FormSection title="Adres Bilgileri" icon={<Location01Icon size={16} color={THEME.primary} variant="stroke" />}>
-                {formConfig.showLocation && (
-                  <View style={styles.locationSection}>
-                    <Text style={[styles.subSectionTitle, { color: THEME.textMute }]}>{t("lookup.location")}</Text>
-                    <LocationPicker countryId={watchCountryId} cityId={watchCityId} districtId={watch("districtId")} onCountryChange={handleCountryChange} onCityChange={handleCityChange} onDistrictChange={handleDistrictChange} />
-                  </View>
-                )}
-
-                {formConfig.showAddress && (
-                  <Controller control={control} name="address" render={({ field: { onChange, value } }) => <FormField label={t("customer.address")} value={value || ""} onChangeText={onChange} multiline numberOfLines={2} maxLength={500} />} />
-                )}
-
-                {formConfig.showShippingAddress && (
-                  <View style={styles.fieldContainer}>
-                    <Text style={[styles.label, { color: THEME.textMute }]}>{t("customer.defaultShippingAddress")}</Text>
-                    <TouchableOpacity style={[styles.pickerField, { backgroundColor: THEME.inputBg, borderColor: THEME.border }]} onPress={() => setShippingAddressModalOpen(true)} disabled={!isEditMode || !customerId}>
-                      <Text style={[styles.pickerFieldText, { color: selectedShippingAddress ? THEME.text : THEME.textMute }]}>
-                        {selectedShippingAddress?.address || t("customer.defaultShippingAddressPlaceholder")}
-                      </Text>
-                      <ArrowDown01Icon size={14} color={THEME.textMute} />
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </FormSection>
-            )}
-
-            {(formConfig.showTaxNumber || formConfig.showTaxOffice || formConfig.showTCKN) && (
-              <FormSection title="Yasal Bilgiler" icon={<Invoice01Icon size={16} color={THEME.primary} variant="stroke" />}>
-                {(formConfig.showTaxOffice || formConfig.showTaxNumber) && (
-                    <View style={styles.row}>
-                        {formConfig.showTaxOffice && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="taxOffice" render={({ field: { onChange, value } }) => <FormField label={t("customer.taxOffice")} value={value || ""} onChangeText={onChange} maxLength={100} />} />
-                        </View>
-                        )}
-                        {formConfig.showTaxNumber && (
-                        <View style={styles.flex1}>
-                            <Controller control={control} name="taxNumber" render={({ field: { onChange, value } }) => <FormField label={t("customer.taxNumber")} value={value || ""} onChangeText={onChange} keyboardType="numeric" maxLength={15} />} />
-                        </View>
-                        )}
-                    </View>
-                )}
-
-                {formConfig.showTCKN && (
-                  <Controller control={control} name="tcknNumber" render={({ field: { onChange, value } }) => <FormField label={t("customer.tcknNumber")} value={value || ""} onChangeText={onChange} keyboardType="numeric" maxLength={11} />} />
-                )}
-              </FormSection>
-            )}
-
-            {formConfig.showNotes && (
-              <FormSection title="Notlar" icon={<NoteIcon size={16} color={THEME.primary} variant="stroke" />}>
-                <Controller control={control} name="notes" render={({ field: { onChange, value } }) => <FormField label={t("customer.notes")} value={value || ""} onChangeText={onChange} multiline numberOfLines={2} maxLength={250} />} />
-              </FormSection>
-            )}
-
-            <TouchableOpacity 
-              activeOpacity={0.8}
-              onPress={handleSubmit(onSubmit)} 
-              disabled={isSubmitting}
-              style={[styles.submitButtonContainer, { shadowColor: THEME.primary }]}
-            >
-              <LinearGradient
-                colors={['#f472b6', '#db2777']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={styles.submitButtonGradient}
+            <View style={[
+              styles.tabContainer, 
+              { 
+                backgroundColor: isDark ? 'rgba(15, 23, 42, 0.6)' : '#FFFFFF', 
+                borderColor: isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)' 
+              }
+            ]}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.tabButton, 
+                  activeTab === "general" && [
+                    styles.activeTabPremium,
+                    { 
+                      borderColor: THEME.primary, 
+                      backgroundColor: isDark ? 'rgba(219, 39, 119, 0.15)' : 'rgba(219, 39, 119, 0.05)' 
+                    }
+                  ]
+                ]}
+                onPress={() => setActiveTab("general")}
               >
-                {isSubmitting ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={styles.submitButtonText}>
-                    {isEditMode ? t("common.update") : t("common.save")}
-                  </Text>
+                <Text style={[styles.tabText, activeTab === "general" ? { color: THEME.primary } : { color: THEME.textMute }]}>
+                  Genel Bilgiler
+                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.tabButton, 
+                  activeTab === "details" && [
+                    styles.activeTabPremium,
+                    { 
+                      borderColor: THEME.primary, 
+                      backgroundColor: isDark ? 'rgba(219, 39, 119, 0.15)' : 'rgba(219, 39, 119, 0.05)'
+                    }
+                  ]
+                ]}
+                onPress={() => setActiveTab("details")}
+              >
+                <Text style={[styles.tabText, activeTab === "details" ? { color: THEME.primary } : { color: THEME.textMute }]}>
+                  Detaylar & Adres
+                </Text>
+              </TouchableOpacity>
+            </View>
+        
+            <View style={{ display: activeTab === "general" ? "flex" : "none", gap: 10 }}>
+              {(!isEditMode && formConfig.showBusinessCardScan) && (
+                <View style={[styles.scannerContainer, { borderColor: THEME.primary, backgroundColor: `${THEME.primary}08` }]}>
+                  <View style={styles.scannerContent}>
+                    
+                    <View style={styles.scannerLeft}>
+                      <Camera01Icon size={20} color={THEME.primary} variant="stroke" />
+                      <View>
+                        <Text style={[styles.scannerTitle, { color: THEME.text }]}>Kartvizit Tara</Text>
+                        <Text style={[styles.scannerSubtitle, { color: THEME.textMute }]}>Otomatik doldur</Text>
+                      </View>
+                    </View>
+
+                    <View style={styles.scannerButtonsRow}>
+                      <TouchableOpacity style={[styles.scannerIconButton, { borderColor: THEME.primary, backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#FFF' }]} onPress={handleScanBusinessCard} disabled={isScanning}>
+                        {isScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Camera01Icon size={16} color={THEME.primary} />}
+                      </TouchableOpacity>
+                      <TouchableOpacity style={[styles.scannerIconButton, { borderColor: THEME.primary, backgroundColor: isDark ? 'rgba(0,0,0,0.3)' : '#FFF' }]} onPress={handlePickBusinessCardFromGallery} disabled={isScanning}>
+                        {isScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Image01Icon size={16} color={THEME.primary} />}
+                      </TouchableOpacity>
+                    </View>
+
+                  </View>
+
+                  {scannedImageUri ? (
+                    <View style={[styles.previewContainer, { borderColor: THEME.border, backgroundColor: isDark ? "rgba(15,23,42,0.6)" : "#FFFFFF" }]}>
+                      <Image source={{ uri: scannedImageUri }} style={styles.previewImage} resizeMode="cover" />
+                      <View style={styles.previewTextContainer}>
+                        <Text style={[styles.previewTitle, { color: THEME.text }]}>Görsel Eklendi</Text>
+                      </View>
+                      <TouchableOpacity onPress={() => setScannedImageUri(null)} style={[styles.previewRemoveBtn, { backgroundColor: THEME.primary + '15' }]}>
+                        <Text style={[styles.previewRemoveText, { color: THEME.primary }]}>SİL</Text>
+                      </TouchableOpacity>
+                    </View>
+                  ) : null}
+                </View>
+              )}
+
+              <FormSection title="Genel Bilgiler" icon={<UserCircleIcon size={16} color={THEME.primary} variant="stroke" />}>
+                <Controller
+                  control={control}
+                  name="name"
+                  render={({ field: { onChange, value } }) => (
+                    <FormField label={t("customer.name")} value={value} onChangeText={onChange} error={errors.name?.message} required maxLength={250} />
+                  )}
+                />
+
+                {(formConfig.showCustomerCode || formConfig.showCustomerType) && (
+                  <View style={styles.row}>
+                      {formConfig.showCustomerCode && (
+                        <View style={styles.flex1}>
+                          <Controller
+                            control={control}
+                            name="customerCode"
+                            render={({ field: { value } }) => (
+                              <View style={{ opacity: 0.6 }}>
+                                <FormField label={t("customer.customerCode")} value={value || ""} onChangeText={() => {}} maxLength={100} editable={false} />
+                              </View>
+                            )}
+                          />
+                        </View>
+                      )}
+                      {formConfig.showCustomerType && (
+                        <View style={styles.flex1}>
+                          <Controller
+                            control={control}
+                            name="customerTypeId"
+                            render={({ field: { onChange, value } }) => (
+                                <PremiumPicker label={t("customer.customerType")} items={customerTypeOptions} value={value} onValueChange={onChange} placeholder={t("lookup.selectCustomerType")} error={errors.customerTypeId?.message} />
+                            )}
+                          />
+                        </View>
+                      )}
+                  </View>
                 )}
-              </LinearGradient>
-            </TouchableOpacity>
+              </FormSection>
+
+              {(formConfig.showPhone || formConfig.showPhone2 || formConfig.showEmail || formConfig.showWebsite) && (
+                <FormSection title="İletişim Bilgileri" icon={<ContactBookIcon size={16} color={THEME.primary} variant="stroke" />}>
+                  {(formConfig.showPhone || formConfig.showPhone2) && (
+                      <View style={styles.row}>
+                          {formConfig.showPhone && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="phone" render={({ field: { onChange, value } }) => <FormField label={t("customer.phone")} value={value || ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={100} />} />
+                          </View>
+                          )}
+                          {formConfig.showPhone2 && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="phone2" render={({ field: { onChange, value } }) => <FormField label={t("customer.phone2")} value={value || ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={100} />} />
+                          </View>
+                          )}
+                      </View>
+                  )}
+
+                  {(formConfig.showEmail || formConfig.showWebsite) && (
+                      <View style={styles.row}>
+                          {formConfig.showEmail && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="email" render={({ field: { onChange, value } }) => <FormField label={t("customer.email")} value={value || ""} onChangeText={onChange} error={errors.email?.message} keyboardType="email-address" autoCapitalize="none" maxLength={100} />} />
+                          </View>
+                          )}
+                          {formConfig.showWebsite && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="website" render={({ field: { onChange, value } }) => <FormField label={t("customer.website")} value={value || ""} onChangeText={onChange} autoCapitalize="none" maxLength={100} />} />
+                          </View>
+                          )}
+                      </View>
+                  )}
+                </FormSection>
+              )}
+            </View>
+
+            <View style={{ display: activeTab === "details" ? "flex" : "none", gap: 10 }}>
+              {(formConfig.showSalesRep || formConfig.showGroupCode || formConfig.showCreditLimit || formConfig.showBranchCode || formConfig.showBusinessUnit) && (
+                <FormSection title="Ticari Detaylar" icon={<Briefcase01Icon size={16} color={THEME.primary} variant="stroke" />}>
+                  
+                  {(formConfig.showSalesRep || formConfig.showGroupCode) && (
+                      <View style={styles.row}>
+                          {formConfig.showSalesRep && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="salesRepCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.salesRepCode")} value={value || ""} onChangeText={onChange} maxLength={50} />} />
+                          </View>
+                          )}
+                          {formConfig.showGroupCode && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="groupCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.groupCode")} value={value || ""} onChangeText={onChange} maxLength={50} />} />
+                          </View>
+                          )}
+                      </View>
+                  )}
+
+                  {(formConfig.showBranchCode || formConfig.showBusinessUnit) && (
+                      <View style={styles.row}>
+                          {formConfig.showBranchCode && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="branchCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.branchCode")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : 0)} keyboardType="numeric" />} />
+                          </View>
+                          )}
+                          {formConfig.showBusinessUnit && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="businessUnitCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.businessUnitCode")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : 0)} keyboardType="numeric" />} />
+                          </View>
+                          )}
+                      </View>
+                  )}
+
+                  {formConfig.showCreditLimit && (
+                    <Controller control={control} name="creditLimit" render={({ field: { onChange, value } }) => <FormField label={t("customer.creditLimit")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : undefined)} keyboardType="numeric" />} />
+                  )}
+                </FormSection>
+              )}
+
+              {(formConfig.showAddress || formConfig.showLocation || formConfig.showShippingAddress) && (
+                <FormSection title="Adres Bilgileri" icon={<Location01Icon size={16} color={THEME.primary} variant="stroke" />}>
+                  {formConfig.showLocation && (
+                    <View style={styles.locationSection}>
+                      <Text style={[styles.subSectionTitle, { color: THEME.textMute }]}>{t("lookup.location")}</Text>
+                      <LocationPicker countryId={watchCountryId} cityId={watchCityId} districtId={watch("districtId")} onCountryChange={handleCountryChange} onCityChange={handleCityChange} onDistrictChange={handleDistrictChange} />
+                    </View>
+                  )}
+
+                  {formConfig.showAddress && (
+                    <Controller control={control} name="address" render={({ field: { onChange, value } }) => <FormField label={t("customer.address")} value={value || ""} onChangeText={onChange} multiline numberOfLines={2} maxLength={500} />} />
+                  )}
+
+                  {formConfig.showShippingAddress && (
+                    <View style={styles.fieldContainer}>
+                      <Text style={[styles.label, { color: THEME.textMute }]}>{t("customer.defaultShippingAddress")}</Text>
+                      <TouchableOpacity style={[styles.pickerField, { backgroundColor: THEME.inputBg, borderColor: THEME.border }]} onPress={() => setShippingAddressModalOpen(true)} disabled={!isEditMode || !customerId}>
+                        <Text style={[styles.pickerFieldText, { color: selectedShippingAddress ? THEME.text : THEME.textMute }]}>
+                          {selectedShippingAddress?.address || t("customer.defaultShippingAddressPlaceholder")}
+                        </Text>
+                        <ArrowDown01Icon size={14} color={THEME.textMute} />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </FormSection>
+              )}
+
+              {(formConfig.showTaxNumber || formConfig.showTaxOffice || formConfig.showTCKN) && (
+                <FormSection title="Yasal Bilgiler" icon={<Invoice01Icon size={16} color={THEME.primary} variant="stroke" />}>
+                  {(formConfig.showTaxOffice || formConfig.showTaxNumber) && (
+                      <View style={styles.row}>
+                          {formConfig.showTaxOffice && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="taxOffice" render={({ field: { onChange, value } }) => <FormField label={t("customer.taxOffice")} value={value || ""} onChangeText={onChange} maxLength={100} />} />
+                          </View>
+                          )}
+                          {formConfig.showTaxNumber && (
+                          <View style={styles.flex1}>
+                              <Controller control={control} name="taxNumber" render={({ field: { onChange, value } }) => <FormField label={t("customer.taxNumber")} value={value || ""} onChangeText={onChange} keyboardType="numeric" maxLength={15} />} />
+                          </View>
+                          )}
+                      </View>
+                  )}
+
+                  {formConfig.showTCKN && (
+                    <Controller control={control} name="tcknNumber" render={({ field: { onChange, value } }) => <FormField label={t("customer.tcknNumber")} value={value || ""} onChangeText={onChange} keyboardType="numeric" maxLength={11} />} />
+                  )}
+                </FormSection>
+              )}
+
+              {formConfig.showNotes && (
+                <FormSection title="Notlar" icon={<NoteIcon size={16} color={THEME.primary} variant="stroke" />}>
+                  <Controller control={control} name="notes" render={({ field: { onChange, value } }) => <FormField label={t("customer.notes")} value={value || ""} onChangeText={onChange} multiline numberOfLines={2} maxLength={250} />} />
+                </FormSection>
+              )}
+            </View>
+
+        
+            {activeTab === "general" ? (
+              <View style={{ alignItems: 'flex-end', marginTop: 10, marginBottom: 20, paddingRight: 4 }}>
+                <TouchableOpacity 
+                  activeOpacity={0.6}
+                  onPress={() => setActiveTab("details")} 
+                  style={[
+                    styles.sleekNextButton, 
+                    { 
+                      borderColor: THEME.primary, 
+                      backgroundColor: isDark ? 'rgba(219, 39, 119, 0.15)' : '#FFF0F5', 
+                      shadowColor: THEME.primary 
+                    }
+                  ]}
+                >
+                  <Text style={[styles.sleekNextText, { color: THEME.primary }]}>Detaylara İlerle</Text>
+                  <ArrowRight01Icon size={18} color={THEME.primary} variant="stroke" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity 
+                activeOpacity={0.8}
+                onPress={handleSubmit(onSubmit)} 
+                disabled={isSubmitting}
+                style={[styles.submitButtonContainer, { shadowColor: THEME.primary, marginTop: 16 }]}
+              >
+                <LinearGradient
+                  colors={['#f472b6', '#db2777']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.submitButtonGradient}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>
+                      {isEditMode ? t("common.update") : t("common.save")}
+                    </Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
 
           </ScrollView>
         </KeyboardAvoidingView>
@@ -766,9 +841,44 @@ export function CustomerFormScreen(): React.ReactElement {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1 },
-  contentContainer: { padding: 10, gap: 10 }, 
+  contentContainer: { padding: 10, gap: 5 }, 
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   
+  tabContainer: {
+    flexDirection: 'row',
+    marginHorizontal: 4,
+    marginTop: 0,
+    marginBottom: 16,
+    borderRadius: 32,
+    padding: 4, 
+    borderWidth: 1.5, 
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    elevation: 1,
+  },
+  tabButton: {
+    flex: 1,
+    paddingVertical: 10, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 28,
+    borderWidth: 1.5, 
+    borderColor: 'transparent', 
+  },
+  activeTabPremium: {
+    shadowColor: '#db2777',
+    shadowOffset: { width: 0, height: 0 }, 
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
   card: {
     borderRadius: 12, 
     padding: 12, 
@@ -874,7 +984,7 @@ const styles = StyleSheet.create({
     borderWidth: 1, 
     borderRadius: 8, 
     paddingHorizontal: 10, 
-    height: 40 
+    minHeight: 48 
   },
   pickerFieldText: { fontSize: 13, flex: 1 },
   locationSection: { marginTop: 0 },
@@ -902,6 +1012,35 @@ const styles = StyleSheet.create({
     fontWeight: "700", 
     letterSpacing: 0.8,
     textTransform: 'uppercase'
+  },
+  sleekNextButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10, 
+    paddingHorizontal: 22, 
+    borderRadius: 24, 
+    borderWidth: 1.5, 
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 3, 
+  },
+  sleekNextText: {
+    fontSize: 14, 
+    fontWeight: '700',
+    letterSpacing: 0.6, 
+  },
+  sleekIconWrapper: {
+    width: 30,
+    height: 30,
+    borderRadius: 15, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
+    elevation: 3,
   },
 
   modalOverlay: { flex: 1, justifyContent: "flex-end" },

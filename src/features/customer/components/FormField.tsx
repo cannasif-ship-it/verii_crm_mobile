@@ -70,9 +70,11 @@ export function FormField({
             borderColor: getBorderColor(),
             color: THEME.text,
           },
-          multiline 
-            ? { height: numberOfLines * 24 + 20, textAlignVertical: "top", paddingTop: 10 }
-            : { height: 34 },
+          multiline && { 
+              minHeight: 80, 
+              textAlignVertical: "top", 
+              paddingTop: 10 
+            },
           !editable && styles.inputDisabled,
         ]}
         value={value}
@@ -102,9 +104,11 @@ const styles = StyleSheet.create({
   input: {
     borderWidth: 1,
     borderRadius: 6,
-    paddingHorizontal: 10,
-    fontSize: 13,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 12,
     fontWeight: "500",
+    includeFontPadding: false,
   },
   inputDisabled: { opacity: 0.6, backgroundColor: "rgba(0,0,0,0.02)" },
   error: { fontSize: 10, marginTop: 2, fontWeight: "500" },
