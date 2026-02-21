@@ -41,8 +41,9 @@ function fallbackToStructuredInput(parsed: BusinessCardOcrResult): {
 }
 
 export function useBusinessCardScan(): {
-  scanBusinessCard: (onResult: (data: BusinessCardOcrResult) => void) => Promise<void>;
-  pickBusinessCardFromGallery: (onResult: (data: BusinessCardOcrResult) => void) => Promise<void>;
+  scanBusinessCard: () => Promise<BusinessCardOcrResult | null>;
+  pickBusinessCardFromGallery: () => Promise<BusinessCardOcrResult | null>;
+  retryBusinessCardExtraction: (imageUri: string) => Promise<BusinessCardOcrResult | null>;
   isScanning: boolean;
   error: string | null;
 } {
@@ -50,16 +51,15 @@ export function useBusinessCardScan(): {
   const [error, setError] = useState<string | null>(null);
 
   const processImage = useCallback(
-    async (imageUri: string, onResult: (data: BusinessCardOcrResult) => void): Promise<void> => {
+    async (imageUri: string): Promise<BusinessCardOcrResult | null> => {
       const ocr = await runOCR(imageUri);
       const rawText = (ocr.rawText || ocr.lines.join("\n")).trim();
       if (!rawText) {
         setError("Kartvizitten metin alınamadı. Görüntüyü net çekip tekrar deneyin.");
-        return;
+        return null;
       }
 
       const candidateHints = buildBusinessCardCandidateHints(rawText, ocr.lines);
-      let extractedByLlm = false;
 
       try {
         const llmRawOutput = await extractBusinessCardViaLLM({
@@ -79,12 +79,14 @@ export function useBusinessCardScan(): {
           ocr.lines,
           candidateHints.addressLines
         );
-        onResult({
+        return {
           ...toBusinessCardOcrResult(normalized),
           imageUri,
-        });
-        extractedByLlm = true;
+        };
       } catch {
+        if (__DEV__) {
+          console.log("[BusinessCardScan] LLM extraction failed, regex fallback used.");
+        }
         const parsed = parseBusinessCardText(rawText);
         const normalizedFallback = validateAndNormalizeBusinessCardExtraction(
           fallbackToStructuredInput(parsed),
@@ -92,98 +94,108 @@ export function useBusinessCardScan(): {
           ocr.lines,
           candidateHints.addressLines
         );
-        onResult({
+        return {
           ...toBusinessCardOcrResult(normalizedFallback),
           imageUri,
-        });
-      }
-
-      if (!extractedByLlm && __DEV__) {
-        console.log("[BusinessCardScan] LLM extraction failed, regex fallback used.");
+        };
       }
     },
     []
   );
 
+  const pickImageFromSource = useCallback(async (source: "camera" | "gallery"): Promise<string | null> => {
+    if (source === "camera") {
+      let status = await ImagePicker.getCameraPermissionsAsync();
+      if (!status.granted) {
+        status = await ImagePicker.requestCameraPermissionsAsync();
+      }
+      if (!status.granted) {
+        setError("Kamera erişim izni verilmedi.");
+        return null;
+      }
+
+      const result = await ImagePicker.launchCameraAsync({
+        mediaTypes: ["images"],
+        allowsEditing: true,
+        aspect: [17, 10],
+        quality: 0.85,
+      });
+
+      if (result.canceled || !result.assets?.[0]?.uri) {
+        return null;
+      }
+
+      return result.assets[0].uri;
+    }
+
+    let status = await ImagePicker.getMediaLibraryPermissionsAsync();
+    if (!status.granted) {
+      status = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    }
+    if (!status.granted) {
+      setError("Galeri erişim izni verilmedi.");
+      return null;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [17, 10],
+      quality: 0.85,
+    });
+
+    if (result.canceled || !result.assets?.[0]?.uri) {
+      return null;
+    }
+
+    return result.assets[0].uri;
+  }, []);
+
   const scanBusinessCard = useCallback(
-    async (onResult: (data: BusinessCardOcrResult) => void): Promise<void> => {
+    async (): Promise<BusinessCardOcrResult | null> => {
       setError(null);
       setIsScanning(true);
       try {
-        let status = await ImagePicker.getCameraPermissionsAsync();
-        if (!status.granted) {
-          status = await ImagePicker.requestCameraPermissionsAsync();
-        }
-        if (!status.granted) {
-          setError("Kamera erişim izni verilmedi.");
-          setIsScanning(false);
-          return;
-        }
-
-        const result = await ImagePicker.launchCameraAsync({
-          mediaTypes: ["images"],
-          allowsEditing: false,
-          quality: 0.85,
-        });
-
-        if (result.canceled || !result.assets?.[0]) {
-          setIsScanning(false);
-          return;
-        }
-
-        const imageUri = result.assets[0].uri;
-        if (!imageUri) {
-          setError("Görüntü alınamadı.");
-          setIsScanning(false);
-          return;
-        }
-
-        await processImage(imageUri, onResult);
+        const imageUri = await pickImageFromSource("camera");
+        if (!imageUri) return null;
+        return await processImage(imageUri);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Kartvizit tarama başarısız.");
+        return null;
       } finally {
         setIsScanning(false);
       }
     },
-    [processImage]
+    [pickImageFromSource, processImage]
   );
 
   const pickBusinessCardFromGallery = useCallback(
-    async (onResult: (data: BusinessCardOcrResult) => void): Promise<void> => {
+    async (): Promise<BusinessCardOcrResult | null> => {
       setError(null);
       setIsScanning(true);
       try {
-        let status = await ImagePicker.getMediaLibraryPermissionsAsync();
-        if (!status.granted) {
-          status = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        }
-        if (!status.granted) {
-          setError("Galeri erişim izni verilmedi.");
-          setIsScanning(false);
-          return;
-        }
-
-        const result = await ImagePicker.launchImageLibraryAsync({
-          mediaTypes: ["images"],
-          allowsEditing: false,
-          quality: 0.85,
-        });
-
-        if (result.canceled || !result.assets?.[0]) {
-          setIsScanning(false);
-          return;
-        }
-
-        const imageUri = result.assets[0].uri;
-        if (!imageUri) {
-          setError("Görüntü alınamadı.");
-          setIsScanning(false);
-          return;
-        }
-
-        await processImage(imageUri, onResult);
+        const imageUri = await pickImageFromSource("gallery");
+        if (!imageUri) return null;
+        return await processImage(imageUri);
       } catch (e) {
         setError(e instanceof Error ? e.message : "Kartvizit seçimi başarısız.");
+        return null;
+      } finally {
+        setIsScanning(false);
+      }
+    },
+    [pickImageFromSource, processImage]
+  );
+
+  const retryBusinessCardExtraction = useCallback(
+    async (imageUri: string): Promise<BusinessCardOcrResult | null> => {
+      setError(null);
+      setIsScanning(true);
+      try {
+        return await processImage(imageUri);
+      } catch (e) {
+        setError(e instanceof Error ? e.message : "Kartvizit tekrar işleme başarısız.");
+        return null;
       } finally {
         setIsScanning(false);
       }
@@ -191,5 +203,5 @@ export function useBusinessCardScan(): {
     [processImage]
   );
 
-  return { scanBusinessCard, pickBusinessCardFromGallery, isScanning, error };
+  return { scanBusinessCard, pickBusinessCardFromGallery, retryBusinessCardExtraction, isScanning, error };
 }
