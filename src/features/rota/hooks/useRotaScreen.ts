@@ -11,6 +11,16 @@ const CUSTOMER_QUERY_KEY = ["rota", "nearbyCustomers"] as const;
 const DEFAULT_DELTA = 0.012;
 const DEFAULT_RADIUS_KM = 15;
 
+function toNumber(value: unknown): number {
+  if (typeof value === "number") return value;
+  if (typeof value === "string") return Number(value);
+  return Number.NaN;
+}
+
+function isValidCoordinate(lat: number, lng: number): boolean {
+  return Number.isFinite(lat) && Number.isFinite(lng) && lat >= -90 && lat <= 90 && lng >= -180 && lng <= 180;
+}
+
 export function useRotaScreen() {
   const [locationPermission, setLocationPermission] = useState<"pending" | "granted" | "denied">("pending");
   const [currentRegion, setCurrentRegion] = useState<Region | null>(null);
@@ -83,9 +93,37 @@ export function useRotaScreen() {
   });
 
   const filteredPlaces = useMemo((): NearbyPlace[] => {
-    if (selectedCategory === "all" || !selectedCategory) return places;
-    return places.filter((p) => p.categoryId === selectedCategory);
+    const normalizedPlaces = places
+      .map((place) => {
+        const lat = toNumber(place.lat);
+        const lng = toNumber(place.lng);
+        if (!isValidCoordinate(lat, lng)) return null;
+        return {
+          ...place,
+          lat,
+          lng,
+        };
+      })
+      .filter((place): place is NearbyPlace => place !== null);
+
+    if (selectedCategory === "all" || !selectedCategory) return normalizedPlaces;
+    return normalizedPlaces.filter((p) => p.categoryId === selectedCategory);
   }, [places, selectedCategory]);
+
+  const safeCustomerLocations = useMemo((): CustomerLocationDto[] => {
+    return customerLocations
+      .map((location) => {
+        const latitude = toNumber(location.latitude);
+        const longitude = toNumber(location.longitude);
+        if (!isValidCoordinate(latitude, longitude)) return null;
+        return {
+          ...location,
+          latitude,
+          longitude,
+        };
+      })
+      .filter((location): location is CustomerLocationDto => location !== null);
+  }, [customerLocations]);
 
   const onRegionChangeComplete = useCallback((region: Region) => {
     setCurrentRegion(region);
@@ -107,7 +145,7 @@ export function useRotaScreen() {
     selectedCategory,
     setSelectedCategory,
     places: filteredPlaces,
-    customerLocations,
+    customerLocations: safeCustomerLocations,
     isLoadingPlaces,
     isFetchingPlaces,
     isLoadingCustomers,
