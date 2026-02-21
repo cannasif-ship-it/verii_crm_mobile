@@ -41,6 +41,7 @@ import { useCustomerShippingAddresses } from "../../shipping-address/hooks/useSh
 import { FormField, LocationPicker, PremiumPicker } from "../components";
 import { createCustomerSchema, type CustomerFormData } from "../schemas";
 import type { CountryDto, CityDto, DistrictDto } from "../types";
+import type { BusinessCardOcrResult } from "../types/businessCard";
 import { 
   Camera01Icon, 
   Image01Icon, 
@@ -115,6 +116,8 @@ export function CustomerFormScreen(): React.ReactElement {
   const [ocrCountryName, setOcrCountryName] = useState<string | null>(null);
   const [ocrCityName, setOcrCityName] = useState<string | null>(null);
   const [ocrDistrictName, setOcrDistrictName] = useState<string | null>(null);
+  const [pendingBusinessCardResult, setPendingBusinessCardResult] = useState<BusinessCardOcrResult | null>(null);
+  const [isBusinessCardReviewOpen, setIsBusinessCardReviewOpen] = useState(false);
 
   const { data: existingCustomer, isLoading: customerLoading } = useCustomer(customerId);
   const { data: customerTypes } = useCustomerTypes();
@@ -122,7 +125,7 @@ export function CustomerFormScreen(): React.ReactElement {
   const createCustomer = useCreateCustomer();
   const createCustomerFromMobile = useCreateCustomerFromMobile();
   const updateCustomer = useUpdateCustomer();
-  const { scanBusinessCard, pickBusinessCardFromGallery, isScanning, error: scanError } = useBusinessCardScan();
+  const { scanBusinessCard, pickBusinessCardFromGallery, retryBusinessCardExtraction, isScanning, error: scanError } = useBusinessCardScan();
 
   const schema = useMemo(() => createCustomerSchema(), []);
 
@@ -385,21 +388,7 @@ export function CustomerFormScreen(): React.ReactElement {
     }
   }, [ocrDistrictName, watchCityId, watchDistrictId, districts, findLookupByName, handleDistrictChange]);
 
-  const applyBusinessCardResult = useCallback((data: {
-    customerName?: string;
-    contactNameAndSurname?: string;
-    title?: string;
-    countryName?: string;
-    cityName?: string;
-    districtName?: string;
-    email?: string;
-    phone1?: string;
-    phone2?: string;
-    address?: string;
-    website?: string;
-    notes?: string;
-    imageUri?: string;
-  }) => {
+  const applyBusinessCardResult = useCallback((data: BusinessCardOcrResult) => {
     if (data.customerName) setValue("name", data.customerName);
     if (data.contactNameAndSurname) setScannedContactName(data.contactNameAndSurname);
     if (data.title) setScannedTitle(data.title);
@@ -415,13 +404,45 @@ export function CustomerFormScreen(): React.ReactElement {
     if (data.imageUri) setScannedImageUri(data.imageUri);
   }, [setValue]);
 
-  const handleScanBusinessCard = useCallback(() => {
-    scanBusinessCard(applyBusinessCardResult);
-  }, [scanBusinessCard, applyBusinessCardResult]);
+  const openBusinessCardReview = useCallback((result: BusinessCardOcrResult | null) => {
+    if (!result) return;
+    setPendingBusinessCardResult(result);
+    setIsBusinessCardReviewOpen(true);
+  }, []);
 
-  const handlePickBusinessCardFromGallery = useCallback(() => {
-    pickBusinessCardFromGallery(applyBusinessCardResult);
-  }, [pickBusinessCardFromGallery, applyBusinessCardResult]);
+  const handleScanBusinessCard = useCallback(async () => {
+    const result = await scanBusinessCard();
+    openBusinessCardReview(result);
+  }, [scanBusinessCard, openBusinessCardReview]);
+
+  const handlePickBusinessCardFromGallery = useCallback(async () => {
+    const result = await pickBusinessCardFromGallery();
+    openBusinessCardReview(result);
+  }, [pickBusinessCardFromGallery, openBusinessCardReview]);
+
+  const handleCancelBusinessCardReview = useCallback(() => {
+    setIsBusinessCardReviewOpen(false);
+    setPendingBusinessCardResult(null);
+  }, []);
+
+  const handleConfirmBusinessCardReview = useCallback(() => {
+    if (pendingBusinessCardResult) {
+      applyBusinessCardResult(pendingBusinessCardResult);
+    }
+    setIsBusinessCardReviewOpen(false);
+    setPendingBusinessCardResult(null);
+  }, [pendingBusinessCardResult, applyBusinessCardResult]);
+
+  const handleRetryBusinessCardReview = useCallback(async () => {
+    if (!pendingBusinessCardResult?.imageUri) {
+      Alert.alert("Kartvizit Tarama", "Tekrar deneme için kartvizit görseli bulunamadı.");
+      return;
+    }
+    const retriedResult = await retryBusinessCardExtraction(pendingBusinessCardResult.imageUri);
+    if (retriedResult) {
+      setPendingBusinessCardResult(retriedResult);
+    }
+  }, [pendingBusinessCardResult, retryBusinessCardExtraction]);
 
   const FormSection = ({ title, icon, children }: { title: string, icon?: React.ReactNode, children: React.ReactNode }) => {
     const hasChildren = React.Children.count(children) > 0;
@@ -838,6 +859,62 @@ export function CustomerFormScreen(): React.ReactElement {
           </View>
         </View>
       </Modal>
+
+      <Modal
+        visible={isBusinessCardReviewOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCancelBusinessCardReview}
+      >
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={styles.modalBackdrop} onPress={handleCancelBusinessCardReview} />
+          <View style={[styles.ocrReviewContent, { backgroundColor: THEME.cardBg, borderColor: THEME.border }]}>
+            <Text style={[styles.ocrReviewTitle, { color: THEME.text }]}>Kartvizit Önizleme</Text>
+            <Text style={[styles.ocrReviewSubtitle, { color: THEME.textMute }]}>
+              Alanları kontrol edin. Onaylarsanız form otomatik doldurulacak.
+            </Text>
+
+            {pendingBusinessCardResult?.imageUri ? (
+              <Image source={{ uri: pendingBusinessCardResult.imageUri }} style={styles.ocrPreviewImage} resizeMode="cover" />
+            ) : null}
+
+            <View style={styles.ocrFieldsWrap}>
+              <Text style={[styles.ocrFieldLine, { color: THEME.text }]}>Firma: {pendingBusinessCardResult?.customerName || "-"}</Text>
+              <Text style={[styles.ocrFieldLine, { color: THEME.text }]}>İsim: {pendingBusinessCardResult?.contactNameAndSurname || "-"}</Text>
+              <Text style={[styles.ocrFieldLine, { color: THEME.text }]}>Ünvan: {pendingBusinessCardResult?.title || "-"}</Text>
+              <Text style={[styles.ocrFieldLine, { color: THEME.text }]}>Telefon 1: {pendingBusinessCardResult?.phone1 || "-"}</Text>
+              <Text style={[styles.ocrFieldLine, { color: THEME.text }]}>Telefon 2: {pendingBusinessCardResult?.phone2 || "-"}</Text>
+              <Text style={[styles.ocrFieldLine, { color: THEME.text }]}>E-posta: {pendingBusinessCardResult?.email || "-"}</Text>
+              <Text style={[styles.ocrFieldLine, { color: THEME.text }]}>Web: {pendingBusinessCardResult?.website || "-"}</Text>
+              <Text style={[styles.ocrFieldLine, { color: THEME.text }]}>Adres: {pendingBusinessCardResult?.address || "-"}</Text>
+            </View>
+
+            <View style={styles.ocrActionRow}>
+              <TouchableOpacity
+                style={[styles.ocrActionBtn, { borderColor: THEME.border, backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "#f8fafc" }]}
+                onPress={handleCancelBusinessCardReview}
+                disabled={isScanning}
+              >
+                <Text style={[styles.ocrActionText, { color: THEME.text }]}>İptal</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ocrActionBtn, { borderColor: THEME.primary, backgroundColor: `${THEME.primary}14` }]}
+                onPress={handleRetryBusinessCardReview}
+                disabled={isScanning}
+              >
+                {isScanning ? <ActivityIndicator size="small" color={THEME.primary} /> : <Text style={[styles.ocrActionText, { color: THEME.primary }]}>Tekrar Dene</Text>}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.ocrActionBtn, { borderColor: THEME.primary, backgroundColor: THEME.primary }]}
+                onPress={handleConfirmBusinessCardReview}
+                disabled={isScanning}
+              >
+                <Text style={[styles.ocrActionText, { color: "#ffffff" }]}>Onayla</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -1056,4 +1133,51 @@ const styles = StyleSheet.create({
   list: { flexGrow: 0 },
   pickerItem: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 12, paddingHorizontal: 16, borderBottomWidth: 1 },
   pickerItemText: { fontSize: 13, fontWeight: "500", flex: 1 },
+  ocrReviewContent: {
+    marginHorizontal: 16,
+    marginBottom: 20,
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 14,
+  },
+  ocrReviewTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  ocrReviewSubtitle: {
+    marginTop: 4,
+    fontSize: 12,
+  },
+  ocrPreviewImage: {
+    marginTop: 10,
+    width: "100%",
+    height: 110,
+    borderRadius: 10,
+  },
+  ocrFieldsWrap: {
+    marginTop: 10,
+    gap: 4,
+  },
+  ocrFieldLine: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  ocrActionRow: {
+    marginTop: 14,
+    flexDirection: "row",
+    gap: 8,
+  },
+  ocrActionBtn: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  ocrActionText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
 });
