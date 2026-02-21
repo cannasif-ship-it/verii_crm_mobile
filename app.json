@@ -5,8 +5,7 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
-    "newArchEnabled": false,
+    "userInterfaceStyle": "light",  
     "scheme": "v3rii-octopus",
     "splash": {
       "image": "./assets/splash-icon.png",
@@ -32,6 +31,12 @@
     },
     "plugins": [
       "@react-native-community/datetimepicker",
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "Yakındaki müşterileri ve mekanları haritada göstermek için konumunuza erişim gerekiyor."
+        }
+      ],
       [
         "./plugins/withAndroidNetworkSecurityConfig",
         {

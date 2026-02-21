@@ -333,7 +333,8 @@
     "categoryOffice": "Ofisler",
     "categoryAmenity": "Kafe & Restoran",
     "customerMainAddress": "Müşteri Ana Adresi",
-    "customerShippingAddress": "Sevk Adresi"
+    "customerShippingAddress": "Sevk Adresi",
+    "loadingMap": "Harita yükleniyor..."
   },
   "dailyTasks": {
     "title": "Günlük İşler",

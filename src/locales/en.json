@@ -344,7 +344,8 @@
     "categoryOffice": "Offices",
     "categoryAmenity": "Cafe & Restaurant",
     "customerMainAddress": "Customer Main Address",
-    "customerShippingAddress": "Shipping Address"
+    "customerShippingAddress": "Shipping Address",
+    "loadingMap": "Loading map..."
   },
   "dailyTasks": {
     "title": "Daily Tasks",

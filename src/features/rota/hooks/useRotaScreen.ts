@@ -33,10 +33,36 @@ export function useRotaScreen() {
       const { status } = await Location.requestForegroundPermissionsAsync();
       setLocationPermission(status === "granted" ? "granted" : "denied");
       if (status !== "granted") return null;
+
+      const isEnabled = await Location.hasServicesEnabledAsync();
+      if (!isEnabled) {
+        setLocationError("Konum servisleri kapalı. Lütfen cihaz ayarlarından konumu açın.");
+        return null;
+      }
+
+      const lastKnown = await Location.getLastKnownPositionAsync();
+      if (lastKnown) {
+        const { latitude, longitude } = lastKnown.coords;
+        if (isValidCoordinate(latitude, longitude)) {
+          setCurrentRegion({
+            latitude,
+            longitude,
+            latitudeDelta: DEFAULT_DELTA,
+            longitudeDelta: DEFAULT_DELTA,
+          });
+        }
+      }
+
       const loc = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
+        timeInterval: 10000,
+        mayShowUserSettingsDialog: true,
       });
       const { latitude, longitude } = loc.coords;
+      if (!isValidCoordinate(latitude, longitude)) {
+        setLocationError("Geçersiz konum koordinatları alındı.");
+        return null;
+      }
       setCurrentRegion({
         latitude,
         longitude,

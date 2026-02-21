@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text as RNText, Platform } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { useTranslation } from "react-i18next";
@@ -31,10 +31,15 @@ export function RotaScreen(): React.ReactElement {
   const mapRef = useRef<MapView>(null);
   const { themeMode, colors } = useUIStore();
   const isDark = themeMode === "dark";
+  const [mapReady, setMapReady] = useState(false);
 
   useEffect(() => {
     requestLocation();
   }, [requestLocation]);
+
+  const onMapReady = useCallback(() => {
+    setMapReady(true);
+  }, []);
 
   const showMap = locationPermission === "granted" && currentRegion !== null;
   const mapType = isDark && Platform.OS === "ios" ? "mutedStandard" : "standard";
@@ -89,9 +94,13 @@ export function RotaScreen(): React.ReactElement {
               style={StyleSheet.absoluteFill}
               initialRegion={currentRegion}
               onRegionChangeComplete={onRegionChangeComplete}
+              onMapReady={onMapReady}
               showsUserLocation
               showsMyLocationButton
               mapType={mapType}
+              loadingEnabled
+              loadingIndicatorColor="#ec4899"
+              loadingBackgroundColor={isDark ? "#1a1a2e" : "#f3f4f6"}
             >
               {places.map((place) => (
                 <PlaceMarker key={place.id} place={place} />
@@ -100,9 +109,12 @@ export function RotaScreen(): React.ReactElement {
                 <CustomerMarker key={`customer_${customerLocation.source}_${customerLocation.id}`} location={customerLocation} t={t} />
               ))}
             </MapView>
-            {isLoadingMapData && (
+            {(!mapReady || isLoadingMapData) && (
               <View style={[styles.loaderOverlay, { paddingTop: insets.top + 120 }]}>
                 <ActivityIndicator size="small" color="#ec4899" />
+                {!mapReady && (
+                  <RNText style={[styles.message, { color: colors.text, fontSize: 13 }]}>{t("rota.loadingMap")}</RNText>
+                )}
               </View>
             )}
           </View>
