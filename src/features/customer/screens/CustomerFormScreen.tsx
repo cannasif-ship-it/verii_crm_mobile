@@ -26,6 +26,7 @@ import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
 import {
   useCustomer,
+  useCreateCustomer,
   useCreateCustomerFromMobile,
   useCountries,
   useCities,
@@ -120,6 +121,7 @@ export function CustomerFormScreen(): React.ReactElement {
   const { data: existingCustomer, isLoading: customerLoading } = useCustomer(customerId);
   const { data: customerTypes } = useCustomerTypes();
   const { data: customerShippingAddresses = [] } = useCustomerShippingAddresses(customerId);
+  const createCustomer = useCreateCustomer();
   const createCustomerFromMobile = useCreateCustomerFromMobile();
   const updateCustomer = useUpdateCustomer();
   const { scanBusinessCard, pickBusinessCardFromGallery, retryBusinessCardExtraction, isScanning, error: scanError } = useBusinessCardScan();
@@ -303,35 +305,63 @@ export function CustomerFormScreen(): React.ReactElement {
         await updateCustomer.mutateAsync({ id: customerId, data: updatePayload });
         Alert.alert("", t("customer.updateSuccess"));
       } else {
-        const contactNameParts = splitContactName(scannedContactName);
-        const mobileCreateResult = await createCustomerFromMobile.mutateAsync({
-          name: base.name,
-          contactName: scannedContactName || undefined,
-          contactFirstName: contactNameParts.firstName,
-          contactMiddleName: contactNameParts.middleName,
-          contactLastName: contactNameParts.lastName,
-          title: scannedTitle || undefined,
-          email: base.email,
-          phone: base.phone,
-          phone2: base.phone2,
-          address: base.address,
-          website: base.website,
-          notes: base.notes,
-          countryId: base.countryId,
-          cityId: base.cityId,
-          districtId: base.districtId,
-          customerTypeId: base.customerTypeId,
-          salesRepCode: base.salesRepCode,
-          groupCode: base.groupCode,
-          creditLimit: base.creditLimit,
-          branchCode: base.branchCode,
-          businessUnitCode: base.businessUnitCode,
-          imageUri: scannedImageUri || undefined,
-          imageDescription: scannedImageUri ? "Kartvizit görseli" : undefined,
-        });
+        const shouldUseMobileOcrFlow = Boolean(scannedImageUri || scannedContactName || scannedTitle);
 
-        if (mobileCreateResult.imageUploaded === false && mobileCreateResult.imageUploadError) {
-          Alert.alert("Uyarı", mobileCreateResult.imageUploadError);
+        if (shouldUseMobileOcrFlow) {
+          const contactNameParts = splitContactName(scannedContactName);
+          const mobileCreateResult = await createCustomerFromMobile.mutateAsync({
+            name: base.name,
+            contactName: scannedContactName || undefined,
+            contactFirstName: contactNameParts.firstName,
+            contactMiddleName: contactNameParts.middleName,
+            contactLastName: contactNameParts.lastName,
+            title: scannedTitle || undefined,
+            email: base.email,
+            phone: base.phone,
+            phone2: base.phone2,
+            address: base.address,
+            website: base.website,
+            notes: base.notes,
+            countryId: base.countryId,
+            cityId: base.cityId,
+            districtId: base.districtId,
+            customerTypeId: base.customerTypeId,
+            salesRepCode: base.salesRepCode,
+            groupCode: base.groupCode,
+            creditLimit: base.creditLimit,
+            branchCode: base.branchCode,
+            businessUnitCode: base.businessUnitCode,
+            imageUri: scannedImageUri || undefined,
+            imageDescription: scannedImageUri ? "Kartvizit görseli" : undefined,
+          });
+
+          if (mobileCreateResult.imageUploaded === false && mobileCreateResult.imageUploadError) {
+            Alert.alert("Uyarı", mobileCreateResult.imageUploadError);
+          }
+        } else {
+          await createCustomer.mutateAsync({
+            name: base.name,
+            customerCode: base.customerCode,
+            taxNumber: base.taxNumber,
+            taxOffice: base.taxOffice,
+            tcknNumber: base.tcknNumber,
+            address: base.address,
+            phone: base.phone,
+            phone2: base.phone2,
+            email: base.email,
+            website: base.website,
+            notes: base.notes,
+            countryId: base.countryId,
+            cityId: base.cityId,
+            districtId: base.districtId,
+            customerTypeId: base.customerTypeId,
+            salesRepCode: base.salesRepCode,
+            groupCode: base.groupCode,
+            creditLimit: base.creditLimit,
+            defaultShippingAddressId: base.defaultShippingAddressId,
+            branchCode: base.branchCode,
+            businessUnitCode: base.businessUnitCode,
+          });
         }
 
         Alert.alert("", t("customer.createSuccess"));
@@ -344,6 +374,7 @@ export function CustomerFormScreen(): React.ReactElement {
     isEditMode,
     customerId,
     existingCustomer?.completionDate,
+    createCustomer,
     createCustomerFromMobile,
     updateCustomer,
     router,

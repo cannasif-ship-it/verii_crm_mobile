@@ -140,7 +140,11 @@ export const customerApi = {
 
     const response = await apiClient.post<ApiResponse<CreateCustomerFromMobileResultDto>>(
       "/api/Customer/mobile/create-from-ocr",
-      formData
+      formData,
+      {
+        // OCR flow can include geocoding and image upload; keep timeout above the global default.
+        timeout: 60000,
+      }
     );
 
     if (!response.data.success) {
