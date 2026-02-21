@@ -76,6 +76,9 @@ export interface CreateCustomerDto {
 export interface CreateCustomerFromMobileDto {
   name: string;
   contactName?: string;
+  contactFirstName?: string;
+  contactMiddleName?: string;
+  contactLastName?: string;
   title?: string;
   email?: string;
   phone?: string;
@@ -92,6 +95,8 @@ export interface CreateCustomerFromMobileDto {
   creditLimit?: number;
   branchCode?: number;
   businessUnitCode?: number;
+  imageUri?: string;
+  imageDescription?: string;
 }
 
 export interface CreateCustomerFromMobileResultDto {
@@ -101,6 +106,8 @@ export interface CreateCustomerFromMobileResultDto {
   contactCreated: boolean;
   titleId?: number;
   titleCreated: boolean;
+  imageUploaded?: boolean;
+  imageUploadError?: string;
 }
 
 export interface UpdateCustomerDto {

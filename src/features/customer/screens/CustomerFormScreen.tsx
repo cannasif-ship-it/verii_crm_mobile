@@ -26,7 +26,6 @@ import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
 import {
   useCustomer,
-  useCreateCustomer,
   useCreateCustomerFromMobile,
   useCountries,
   useCities,
@@ -36,7 +35,6 @@ import {
   useCustomerTypes,
   useBusinessCardScan
 } from "../hooks";
-import { customerApi } from "../api/customerApi";
 import { useCustomerShippingAddresses } from "../../shipping-address/hooks/useShippingAddresses";
 import { FormField, LocationPicker, PremiumPicker } from "../components";
 import { createCustomerSchema, type CustomerFormData } from "../schemas";
@@ -122,7 +120,6 @@ export function CustomerFormScreen(): React.ReactElement {
   const { data: existingCustomer, isLoading: customerLoading } = useCustomer(customerId);
   const { data: customerTypes } = useCustomerTypes();
   const { data: customerShippingAddresses = [] } = useCustomerShippingAddresses(customerId);
-  const createCustomer = useCreateCustomer();
   const createCustomerFromMobile = useCreateCustomerFromMobile();
   const updateCustomer = useUpdateCustomer();
   const { scanBusinessCard, pickBusinessCardFromGallery, retryBusinessCardExtraction, isScanning, error: scanError } = useBusinessCardScan();
@@ -262,6 +259,22 @@ export function CustomerFormScreen(): React.ReactElement {
 
   const onSubmit = useCallback(async (data: CustomerFormData) => {
     try {
+      const splitContactName = (fullName: string | null): { firstName?: string; middleName?: string; lastName?: string } => {
+        if (!fullName || !fullName.trim()) return {};
+        const tokens = fullName
+          .trim()
+          .split(/\s+/)
+          .filter(Boolean);
+        if (tokens.length === 0) return {};
+        if (tokens.length === 1) {
+          return { firstName: tokens[0], lastName: tokens[0] };
+        }
+        const firstName = tokens[0];
+        const lastName = tokens[tokens.length - 1];
+        const middleName = tokens.length > 2 ? tokens.slice(1, -1).join(" ") : undefined;
+        return { firstName, middleName, lastName };
+      };
+
       const base = {
         name: data.name,
         customerCode: data.customerCode || undefined,
@@ -290,44 +303,35 @@ export function CustomerFormScreen(): React.ReactElement {
         await updateCustomer.mutateAsync({ id: customerId, data: updatePayload });
         Alert.alert("", t("customer.updateSuccess"));
       } else {
-        const hasOcrPayload = Boolean(scannedContactName || scannedTitle || scannedImageUri);
-        const createdCustomerId = hasOcrPayload
-          ? (await createCustomerFromMobile.mutateAsync({
-              name: base.name,
-              contactName: scannedContactName || undefined,
-              title: scannedTitle || undefined,
-              email: base.email,
-              phone: base.phone,
-              phone2: base.phone2,
-              address: base.address,
-              website: base.website,
-              notes: base.notes,
-              countryId: base.countryId,
-              cityId: base.cityId,
-              districtId: base.districtId,
-              customerTypeId: base.customerTypeId,
-              salesRepCode: base.salesRepCode,
-              groupCode: base.groupCode,
-              creditLimit: base.creditLimit,
-              branchCode: base.branchCode,
-              businessUnitCode: base.businessUnitCode,
-            })).customerId
-          : (await createCustomer.mutateAsync(base)).id;
+        const contactNameParts = splitContactName(scannedContactName);
+        const mobileCreateResult = await createCustomerFromMobile.mutateAsync({
+          name: base.name,
+          contactName: scannedContactName || undefined,
+          contactFirstName: contactNameParts.firstName,
+          contactMiddleName: contactNameParts.middleName,
+          contactLastName: contactNameParts.lastName,
+          title: scannedTitle || undefined,
+          email: base.email,
+          phone: base.phone,
+          phone2: base.phone2,
+          address: base.address,
+          website: base.website,
+          notes: base.notes,
+          countryId: base.countryId,
+          cityId: base.cityId,
+          districtId: base.districtId,
+          customerTypeId: base.customerTypeId,
+          salesRepCode: base.salesRepCode,
+          groupCode: base.groupCode,
+          creditLimit: base.creditLimit,
+          branchCode: base.branchCode,
+          businessUnitCode: base.businessUnitCode,
+          imageUri: scannedImageUri || undefined,
+          imageDescription: scannedImageUri ? "Kartvizit görseli" : undefined,
+        });
 
-        if (scannedImageUri) {
-          try {
-            await customerApi.uploadCustomerImage(
-              createdCustomerId,
-              scannedImageUri,
-              "Kartvizit görseli"
-            );
-          } catch (uploadError) {
-            const uploadErrorMessage =
-              uploadError instanceof Error && uploadError.message.trim().length > 0
-                ? uploadError.message
-                : "Müşteri kaydedildi fakat kartvizit görseli yüklenemedi.";
-            Alert.alert("Uyarı", uploadErrorMessage);
-          }
+        if (mobileCreateResult.imageUploaded === false && mobileCreateResult.imageUploadError) {
+          Alert.alert("Uyarı", mobileCreateResult.imageUploadError);
         }
 
         Alert.alert("", t("customer.createSuccess"));
@@ -340,7 +344,6 @@ export function CustomerFormScreen(): React.ReactElement {
     isEditMode,
     customerId,
     existingCustomer?.completionDate,
-    createCustomer,
     createCustomerFromMobile,
     updateCustomer,
     router,

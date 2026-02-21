@@ -33,6 +33,11 @@ apiClient.interceptors.request.use(
       config.headers.BranchCode = normalizedBranchCode;
     }
 
+    // Let axios/native layer set the correct multipart boundary for FormData requests.
+    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
+      delete config.headers["Content-Type"];
+    }
+
     if (__DEV__) {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,

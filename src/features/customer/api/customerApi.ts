@@ -83,9 +83,64 @@ export const customerApi = {
   },
 
   createFromMobile: async (data: CreateCustomerFromMobileDto): Promise<CreateCustomerFromMobileResultDto> => {
+    const formData = new FormData();
+
+    const appendIfPresent = (key: string, value: string | number | undefined | null) => {
+      if (value === undefined || value === null) return;
+      const normalized = typeof value === "string" ? value.trim() : String(value);
+      if (!normalized) return;
+      formData.append(key, normalized);
+    };
+
+    appendIfPresent("name", data.name);
+    appendIfPresent("contactName", data.contactName);
+    appendIfPresent("contactFirstName", data.contactFirstName);
+    appendIfPresent("contactMiddleName", data.contactMiddleName);
+    appendIfPresent("contactLastName", data.contactLastName);
+    appendIfPresent("title", data.title);
+    appendIfPresent("email", data.email);
+    appendIfPresent("phone", data.phone);
+    appendIfPresent("phone2", data.phone2);
+    appendIfPresent("address", data.address);
+    appendIfPresent("website", data.website);
+    appendIfPresent("notes", data.notes);
+    appendIfPresent("countryId", data.countryId);
+    appendIfPresent("cityId", data.cityId);
+    appendIfPresent("districtId", data.districtId);
+    appendIfPresent("customerTypeId", data.customerTypeId);
+    appendIfPresent("salesRepCode", data.salesRepCode);
+    appendIfPresent("groupCode", data.groupCode);
+    appendIfPresent("creditLimit", data.creditLimit);
+    appendIfPresent("branchCode", data.branchCode);
+    appendIfPresent("businessUnitCode", data.businessUnitCode);
+    appendIfPresent("imageDescription", data.imageDescription);
+
+    if (data.imageUri) {
+      const fileName = data.imageUri.split("/").pop() || `customer_${Date.now()}.jpg`;
+      const extension = fileName.includes(".") ? fileName.split(".").pop()?.toLowerCase() : "jpg";
+      const mimeType =
+        extension === "png"
+          ? "image/png"
+          : extension === "webp"
+            ? "image/webp"
+            : extension === "gif"
+              ? "image/gif"
+              : extension === "heic"
+                ? "image/heic"
+                : extension === "heif"
+                  ? "image/heif"
+                  : "image/jpeg";
+
+      formData.append("imageFile", {
+        uri: data.imageUri,
+        type: mimeType,
+        name: fileName,
+      } as unknown as Blob);
+    }
+
     const response = await apiClient.post<ApiResponse<CreateCustomerFromMobileResultDto>>(
       "/api/Customer/mobile/create-from-ocr",
-      data
+      formData
     );
 
     if (!response.data.success) {
