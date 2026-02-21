@@ -116,8 +116,8 @@ export function useBusinessCardScan(): {
 
       const result = await ImagePicker.launchCameraAsync({
         mediaTypes: ["images"],
-        allowsEditing: true,
-        aspect: [17, 10],
+        // Cropping produced invalid JPEG payloads on some devices (tiny ~600B files).
+        allowsEditing: false,
         quality: 0.85,
       });
 
@@ -139,8 +139,8 @@ export function useBusinessCardScan(): {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
-      allowsEditing: true,
-      aspect: [17, 10],
+      // Keep original file to avoid broken image payloads from editor output.
+      allowsEditing: false,
       quality: 0.85,
     });
 
