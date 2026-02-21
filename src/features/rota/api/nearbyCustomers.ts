@@ -1,4 +1,5 @@
 import { apiClient } from "../../../lib/axios";
+import type { AxiosError } from "axios";
 import type { ApiResponse } from "../../auth/types";
 import type { CustomerLocationDto } from "../types";
 
@@ -34,7 +35,7 @@ export async function fetchNearbyCustomers(params: NearbyCustomersParams): Promi
   try {
     return await requestNearbyCustomers("/api/Customer/nearby", params);
   } catch (error) {
-    const status = (error as { status?: number }).status;
+    const status = (error as AxiosError | undefined)?.response?.status;
     if (status === 404) {
       return requestNearbyCustomers("/api/Rota/customers", params);
     }
