@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from "react";
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text as RNText } from "react-native";
+import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Text as RNText, Platform } from "react-native";
 import MapView, { Marker } from "react-native-maps";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -37,6 +37,7 @@ export function RotaScreen(): React.ReactElement {
   }, [requestLocation]);
 
   const showMap = locationPermission === "granted" && currentRegion !== null;
+  const mapType = isDark && Platform.OS === "ios" ? "mutedStandard" : "standard";
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -90,7 +91,7 @@ export function RotaScreen(): React.ReactElement {
               onRegionChangeComplete={onRegionChangeComplete}
               showsUserLocation
               showsMyLocationButton
-              mapType={isDark ? "mutedStandard" : "standard"}
+              mapType={mapType}
             >
               {places.map((place) => (
                 <PlaceMarker key={place.id} place={place} />
