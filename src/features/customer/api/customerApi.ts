@@ -13,6 +13,40 @@ import type {
   PagedApiResponse,
 } from "../types";
 
+const EXTENSION_TO_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  heic: "image/heic",
+  heif: "image/heif",
+};
+
+function getSafeUploadMeta(imageUri: string): { name: string; type: string; uri: string } {
+  const cleanedUri = imageUri.split("?")[0]?.split("#")[0] ?? imageUri;
+  let decodedUri = cleanedUri;
+  try {
+    decodedUri = decodeURIComponent(cleanedUri);
+  } catch {
+    decodedUri = cleanedUri;
+  }
+  const rawTail = decodedUri.split("/").pop()?.trim() || "";
+
+  const fallbackBase = `customer_${Date.now()}`;
+  const hasDot = rawTail.includes(".");
+  const baseName = hasDot ? rawTail.substring(0, rawTail.lastIndexOf(".")) : rawTail || fallbackBase;
+  const rawExt = hasDot ? rawTail.substring(rawTail.lastIndexOf(".") + 1).toLowerCase() : "";
+  const safeExt = EXTENSION_TO_MIME[rawExt] ? rawExt : "jpg";
+  const safeName = `${baseName.replace(/[^a-zA-Z0-9_-]/g, "_")}.${safeExt}`;
+
+  return {
+    uri: imageUri,
+    name: safeName,
+    type: EXTENSION_TO_MIME[safeExt] ?? "image/jpeg",
+  };
+}
+
 const buildQueryParams = (params: PagedParams): Record<string, string | number> => {
   const queryParams: Record<string, string | number> = {};
 
@@ -116,25 +150,11 @@ export const customerApi = {
     appendIfPresent("imageDescription", data.imageDescription);
 
     if (data.imageUri) {
-      const fileName = data.imageUri.split("/").pop() || `customer_${Date.now()}.jpg`;
-      const extension = fileName.includes(".") ? fileName.split(".").pop()?.toLowerCase() : "jpg";
-      const mimeType =
-        extension === "png"
-          ? "image/png"
-          : extension === "webp"
-            ? "image/webp"
-            : extension === "gif"
-              ? "image/gif"
-              : extension === "heic"
-                ? "image/heic"
-                : extension === "heif"
-                  ? "image/heif"
-                  : "image/jpeg";
-
+      const fileMeta = getSafeUploadMeta(data.imageUri);
       formData.append("imageFile", {
-        uri: data.imageUri,
-        type: mimeType,
-        name: fileName,
+        uri: fileMeta.uri,
+        type: fileMeta.type,
+        name: fileMeta.name,
       } as unknown as Blob);
     }
 
@@ -143,7 +163,7 @@ export const customerApi = {
       formData,
       {
         // OCR flow can include geocoding and image upload; keep timeout above the global default.
-        timeout: 60000,
+        timeout: 120000,
       }
     );
 
@@ -186,26 +206,13 @@ export const customerApi = {
     imageUri: string,
     imageDescription?: string
   ): Promise<CustomerImageDto[]> => {
-    const fileName = imageUri.split("/").pop() || `customer_${Date.now()}.jpg`;
-    const extension = fileName.includes(".") ? fileName.split(".").pop()?.toLowerCase() : "jpg";
-    const mimeType =
-      extension === "png"
-        ? "image/png"
-        : extension === "webp"
-          ? "image/webp"
-          : extension === "gif"
-            ? "image/gif"
-            : extension === "heic"
-              ? "image/heic"
-              : extension === "heif"
-                ? "image/heif"
-                : "image/jpeg";
+    const fileMeta = getSafeUploadMeta(imageUri);
 
     const formData = new FormData();
     formData.append("files", {
-      uri: imageUri,
-      type: mimeType,
-      name: fileName,
+      uri: fileMeta.uri,
+      type: fileMeta.type,
+      name: fileMeta.name,
     } as unknown as Blob);
 
     if (imageDescription?.trim()) {
