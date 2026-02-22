@@ -13,19 +13,15 @@ import {
   Invoice01Icon, 
   Coins01Icon, 
   WhatsappIcon, 
-  CheckmarkCircle02Icon, 
   AlertCircleIcon,
   Calendar03Icon,
-  Note01Icon,
-  Building03Icon,
-  ComputerIcon,
   UserIcon,
-  CreditCardIcon,
   Shield02Icon,
   Contact01Icon,
-  Briefcase01Icon,
   Activity01Icon,
-  MapsCircle01Icon
+  MapsCircle01Icon,
+  AnalyticsUpIcon,
+  Note01Icon // YENİ: Notlar için ikon eklendi
 } from "hugeicons-react-native";
 
 const getInitials = (name: string) => {
@@ -76,15 +72,20 @@ interface DetailRowProps {
   isLast?: boolean;
 }
 
+// PROFESYONEL DOKUNUŞ: Veri yoksa alanı gizlemek yerine "Belirtilmemiş" yazıyoruz. CRM standartı budur.
 function DetailRow({ label, value, icon, theme, isLast }: DetailRowProps) {
-  if (!value) return null;
+  const displayValue = value ? String(value) : "Belirtilmemiş";
+  const isMuted = !value;
+
   return (
     <View style={[styles.detailRow, !isLast && { borderBottomColor: theme.divider, borderBottomWidth: 1 }]}>
       <View style={styles.detailLabelRow}>
         {icon && <View style={styles.miniIconWrapper}>{icon}</View>}
         <Text style={[styles.detailLabel, { color: theme.textMute }]}>{label}</Text>
       </View>
-      <Text style={[styles.detailValue, { color: theme.text }]}>{String(value)}</Text>
+      <Text style={[styles.detailValue, { color: isMuted ? theme.textMute : theme.text, fontStyle: isMuted ? 'italic' : 'normal' }]}>
+        {displayValue}
+      </Text>
     </View>
   );
 }
@@ -106,12 +107,13 @@ function StatusBadge({ isActive, activeText, inactiveText }: StatusBadgeProps) {
 }
 
 interface CustomerDetailContentProps {
-  customer: CustomerDto | undefined;
+  customer: any; 
   insets: { bottom: number };
   t: (key: string) => string;
+  on360Press: () => void; 
 }
 
-export function CustomerDetailContent({ customer, insets, t }: CustomerDetailContentProps): React.ReactElement {
+export function CustomerDetailContent({ customer, insets, t, on360Press }: CustomerDetailContentProps): React.ReactElement {
   const { themeMode } = useUIStore();
   const isDark = themeMode === "dark";
 
@@ -124,15 +126,16 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
     : ['rgba(255, 240, 225, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
 
   const THEME = {
-    cardBg: isDark ? "rgba(255, 255, 255, 0.06)" : "rgba(255, 255, 255, 0.95)",
-    borderColor: "rgba(219, 39, 119, 0.3)", 
-    divider: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.03)",
+    cardBg: isDark ? "rgba(255, 255, 255, 0.04)" : "rgba(255, 255, 255, 0.95)", // Dark modda kartı biraz daha şeffaf yaptık
+    borderColor: isDark ? "rgba(219, 39, 119, 0.2)" : "rgba(219, 39, 119, 0.3)", 
+    divider: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.04)",
     text: isDark ? "#FFFFFF" : "#0F172A",
     textMute: isDark ? "rgba(255, 255, 255, 0.5)" : "#64748B",
     primary: "#db2777",
   };
 
   const handleMapOpen = () => {
+    if (!customer?.address && !customer?.cityName) return;
     const address = `${customer?.address || ""} ${customer?.cityName || ""}`;
     const url = Platform.select({
       ios: `maps:0,0?q=${address}`,
@@ -150,7 +153,7 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
 
       <ScrollView 
         style={styles.content}
-        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 160 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: insets.bottom + 100 }}
         showsVerticalScrollIndicator={false}
       >
         <View style={[styles.profileCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
@@ -164,16 +167,23 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
             <View style={styles.idTagCentered}>
               <Text style={styles.codeTagTextLarge}>#{customer?.customerCode || '---'}</Text>
             </View>
+
+            <TouchableOpacity 
+              style={[
+                styles.btn360, 
+                { backgroundColor: THEME.primary + "12", borderColor: THEME.primary + "30" }
+              ]}
+              onPress={on360Press}
+              activeOpacity={0.7}
+            >
+              <AnalyticsUpIcon size={18} color={THEME.primary} variant="stroke" strokeWidth={2.5} />
+              <Text style={[styles.text360, { color: THEME.primary }]}>360 Görünüm</Text>
+            </TouchableOpacity>
+
             <View style={styles.quickActionsRow}>
-              {customer?.phone && (
-                <ActionButton color="#6366f1" icon={<Call02Icon size={22} color="#6366f1" variant="stroke" />} onPress={() => Linking.openURL(`tel:${customer?.phone}`)} />
-              )}
-              {customer?.phone && (
-                <ActionButton color="#25D366" icon={<WhatsappIcon size={22} color="#25D366" variant="stroke" />} onPress={() => Linking.openURL(`https://wa.me/${customer?.phone?.replace(/\D/g, "")}`)} />
-              )}
-              {customer?.email && (
-                <ActionButton color="#3b82f6" icon={<Mail01Icon size={22} color="#3b82f6" variant="stroke" />} onPress={() => Linking.openURL(`mailto:${customer?.email}`)} />
-              )}
+              <ActionButton color="#6366f1" icon={<Call02Icon size={22} color="#6366f1" variant="stroke" />} onPress={() => customer?.phone && Linking.openURL(`tel:${customer?.phone}`)} />
+              <ActionButton color="#25D366" icon={<WhatsappIcon size={22} color="#25D366" variant="stroke" />} onPress={() => customer?.phone && Linking.openURL(`https://wa.me/${customer?.phone?.replace(/\D/g, "")}`)} />
+              <ActionButton color="#3b82f6" icon={<Mail01Icon size={22} color="#3b82f6" variant="stroke" />} onPress={() => customer?.email && Linking.openURL(`mailto:${customer?.email}`)} />
               <ActionButton color="#ef4444" icon={<MapsCircle01Icon size={22} color="#ef4444" variant="stroke" />} onPress={handleMapOpen} />
             </View>
           </View>
@@ -194,15 +204,17 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
             <Location01Icon size={18} color={THEME.primary} variant="stroke" />
             <Text style={[styles.sectionTitle, { color: THEME.text }]}>ADRES & KONUM</Text>
           </View>
-          <Text style={[styles.addressText, { color: THEME.text }]}>{customer?.address || 'Adres bilgisi girilmemiş.'}</Text>
+          <Text style={[styles.addressText, { color: customer?.address ? THEME.text : THEME.textMute, fontStyle: customer?.address ? 'normal' : 'italic' }]}>
+            {customer?.address || 'Adres bilgisi belirtilmemiş.'}
+          </Text>
           <View style={styles.locationGrid}>
             <View style={styles.locItem}>
               <Text style={[styles.gridLabel, { color: THEME.textMute }]}>Şehir / İlçe</Text>
-              <Text style={[styles.gridValue, { color: THEME.text }]}>{customer?.cityName || '---'} / {customer?.districtName || '---'}</Text>
+              <Text style={[styles.gridValue, { color: THEME.text }]}>{(customer?.cityName || '---') + ' / ' + (customer?.districtName || '---')}</Text>
             </View>
             <View style={styles.locItem}>
               <Text style={[styles.gridLabel, { color: THEME.textMute }]}>Ülke</Text>
-              <Text style={[styles.gridValue, { color: THEME.text }]}>{customer?.countryName || 'Türkiye'}</Text>
+              <Text style={[styles.gridValue, { color: THEME.text }]}>{customer?.countryName || 'Belirtilmemiş'}</Text>
             </View>
           </View>
         </View>
@@ -216,8 +228,19 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
           <View style={[styles.gridCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
              <Invoice01Icon size={20} color={THEME.primary} style={{marginBottom: 8}} variant="stroke" />
              <Text style={[styles.gridLabel, { color: THEME.textMute }]}>Vergi No</Text>
-             <Text style={[styles.gridValue, { color: THEME.text, fontSize: 16 }]}>{customer?.taxNumber || '---'}</Text>
+             <Text style={[styles.gridValue, { color: THEME.text, fontSize: 16 }]}>{customer?.taxNumber || 'Belirtilmemiş'}</Text>
           </View>
+        </View>
+
+        {/* YENİ: MÜŞTERİ NOTLARI KARTI */}
+        <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
+          <View style={styles.sectionHeader}>
+            <Note01Icon size={18} color="#F59E0B" variant="stroke" /> 
+            <Text style={[styles.sectionTitle, { color: THEME.text }]}>MÜŞTERİ NOTLARI</Text>
+          </View>
+          <Text style={[styles.notesText, { color: (customer?.notes || customer?.description) ? THEME.text : THEME.textMute, fontStyle: (customer?.notes || customer?.description) ? 'normal' : 'italic' }]}>
+            {customer?.notes || customer?.description || "Bu müşteri için henüz bir not eklenmemiş."}
+          </Text>
         </View>
 
         <View style={[styles.sectionCard, { backgroundColor: THEME.cardBg, borderColor: THEME.borderColor }]}>
@@ -256,30 +279,40 @@ export function CustomerDetailContent({ customer, insets, t }: CustomerDetailCon
 const styles = StyleSheet.create({
   container: { flex: 1 },
   content: { flex: 1, backgroundColor: 'transparent' },
-  profileCard: {
-    padding: 24,
-    borderRadius: 32,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  avatarWrapper: {
-    width: 90,
-    height: 90,
-    borderRadius: 32,
-    borderWidth: 1.5,
-    overflow: 'hidden',
-    marginBottom: 16,
-  },
+  
+  // GÖLGELER (SHADOW VE ELEVATION) TAMAMEN KALDIRILDI - TERTEMİZ CAM EFEKTİ GERİ GELDİ
+  profileCard: { padding: 24, borderRadius: 32, borderWidth: 1.5, alignItems: 'center', marginBottom: 16 },
+  sectionCard: { padding: 16, borderRadius: 24, borderWidth: 1.5, marginBottom: 12 },
+  gridCard: { flex: 1, padding: 16, borderRadius: 24, borderWidth: 1.5 },
+  footerCard: { padding: 16, borderRadius: 24, borderWidth: 1.5, marginTop: 12 },
+
+  avatarWrapper: { width: 90, height: 90, borderRadius: 32, borderWidth: 1.5, overflow: 'hidden', marginBottom: 16 },
   avatarInner: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   avatarText: { fontSize: 32, fontWeight: '800' },
   kunyeInfo: { alignItems: 'center', width: '100%' },
   customerNameLarge: { fontSize: 22, fontWeight: '800', textAlign: 'center', marginBottom: 6, letterSpacing: -0.5 },
-  idTagCentered: { backgroundColor: 'rgba(0,0,0,0.12)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginBottom: 20 },
+  idTagCentered: { backgroundColor: 'rgba(0,0,0,0.12)', paddingHorizontal: 12, paddingVertical: 4, borderRadius: 10, marginBottom: 14 }, 
+  
+  btn360: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    marginBottom: 20, 
+  },
+  text360: {
+    fontSize: 14,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+  },
+
   codeTagTextLarge: { color: '#AAA', fontSize: 13, fontWeight: '700', letterSpacing: 1 },
   quickActionsRow: { flexDirection: 'row', gap: 18, justifyContent: 'center', width: '100%' },
   actionCircle: { width: 48, height: 48, borderRadius: 24, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
-  sectionCard: { padding: 16, borderRadius: 24, borderWidth: 1.5, marginBottom: 12 },
+  
   sectionHeader: { flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 14 },
   sectionTitle: { fontSize: 13, fontWeight: '800', letterSpacing: 0.5 },
   detailRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12 },
@@ -291,17 +324,17 @@ const styles = StyleSheet.create({
   locationGrid: { flexDirection: 'row', gap: 12, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.05)' },
   locItem: { flex: 1 },
   gridRow: { flexDirection: 'row', gap: 12, marginBottom: 12 },
-  gridCard: { flex: 1, padding: 16, borderRadius: 24, borderWidth: 1.5 },
   gridLabel: { fontSize: 11, fontWeight: '600', marginBottom: 4 },
   gridValue: { fontWeight: '800' },
+  
+  notesText: { fontSize: 14, lineHeight: 24, opacity: 0.9 },
+
   statusContainer: { flexDirection: 'row', gap: 8, marginBottom: 12 },
   statusBadge: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12, borderWidth: 1, gap: 6 },
   statusDot: { width: 6, height: 6, borderRadius: 3 },
   statusText: { fontSize: 11, fontWeight: '700' },
   pendingBadge: { backgroundColor: 'rgba(245, 158, 11, 0.1)', paddingHorizontal: 10, paddingVertical: 6, borderRadius: 12 },
   pendingText: { color: '#F59E0B', fontSize: 11, fontWeight: '700' },
-  notesText: { fontSize: 13, lineHeight: 20, opacity: 0.9 },
-  footerCard: { padding: 16, borderRadius: 24, borderWidth: 1.5, marginTop: 12 },
   footerRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   footerText: { fontSize: 12, fontWeight: '500' },
 });
