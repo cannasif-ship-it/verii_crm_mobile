@@ -1,46 +1,38 @@
 import React, { memo, useMemo, useState } from "react";
-import { 
-  View, 
-  StyleSheet, 
-  Text, 
-  Dimensions, 
+import {
+  View,
+  StyleSheet,
+  Text,
+  Dimensions,
   TouchableWithoutFeedback,
   Platform
 } from "react-native";
-import { 
-  Call02Icon, 
-  Mail01Icon, 
-  Location01Icon, 
+import {
+  Call02Icon,
+  Mail01Icon,
+  Location01Icon,
   ArrowRight01Icon,
-  UserCircleIcon
 } from "hugeicons-react-native";
-import type { CustomerDto } from "../types";
+import type { CustomerDto } from "../types"; 
 import { useUIStore } from "../../../store/ui";
 
 const { width } = Dimensions.get('window');
 const GAP = 12;
-const PADDING = 16;
+const PADDING = 12; 
 const GRID_WIDTH = (width - (PADDING * 2) - GAP) / 2;
 
+// Senin marka renklerin
+const BRAND_COLOR = "#db2777";
+const BRAND_COLOR_DARK = "#ec4899";
+
 interface CustomerCardProps {
-  customer: CustomerDto;
+  customer: any; 
   viewMode: 'grid' | 'list';
   onPress: () => void;
 }
 
-// --- YARDIMCI FONKSİYONLAR ---
-
 const getInitials = (name: string) => {
   return name?.replace(/[^a-zA-ZğüşıöçĞÜŞİÖÇ ]/g, "").split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase() || "?";
-};
-
-const getAvatarColor = (name: string) => {
-  const colors = ["#db2777", "#7c3aed", "#2563eb", "#059669", "#ea580c", "#dc2626", "#0891b2"];
-  let hash = 0;
-  for (let i = 0; i < name.length; i++) {
-    hash = name.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  return colors[Math.abs(hash) % colors.length];
 };
 
 const formatPhoneNumber = (phone: string | null | undefined) => {
@@ -55,50 +47,55 @@ const formatPhoneNumber = (phone: string | null | undefined) => {
 
 const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProps) => {
   const { themeMode } = useUIStore();
-  const [isPressed, setIsPressed] = useState(false); // Basma durumunu takip ediyoruz
+  const [isPressed, setIsPressed] = useState(false);
 
   const isDark = themeMode === "dark";
   const isGrid = viewMode === 'grid';
 
-  // Dinamik Veriler
-  const avatarColor = useMemo(() => getAvatarColor(customer.name || "?"), [customer.name]);
   const initials = useMemo(() => getInitials(customer.name || "?"), [customer.name]);
   const formattedPhone = useMemo(() => formatPhoneNumber(customer.phone), [customer.phone]);
-  
-  const displayContact = formattedPhone || customer.email || "-";
-  const ContactIcon = customer.phone ? Call02Icon : Mail01Icon;
+  const email = customer.email;
 
-  // --- TEMA ---
-  const THEME = {
-    bg: isDark ? "rgba(30, 41, 59, 0.6)" : "#FFFFFF",
-    activeBg: isDark ? "rgba(255, 255, 255, 0.05)" : "#F8FAFC",
-    
-    border: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.08)",
-    activeBorder: avatarColor, // 🔥 BASINCA BU RENK OLACAK
-    
-    text: isDark ? "#FFFFFF" : "#0F172A",
-    textMute: isDark ? "#94a3b8" : "#64748B",
-    
-    avatarBg: `${avatarColor}15`,
-    avatarText: avatarColor,
-  };
+  const displayContactForList = formattedPhone || email || "-";
+  const ContactIconForList = customer.phone ? Call02Icon : Mail01Icon;
 
   const locationText = useMemo(() => {
     const parts = [customer.cityName, customer.countryName].filter(Boolean);
     return parts.length > 0 ? parts.join(", ") : null;
   }, [customer]);
 
-  // --- AVATAR KUTUSU ---
+  // --- TEMA RENKLERİ ---
+  const THEME = {
+    surface: isDark ? "rgba(255, 255, 255, 0.04)" : "#FFFFFF",
+    surfaceActive: isDark ? "rgba(219, 39, 119, 0.08)" : "#F8FAFC",
+    
+    border: isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)",
+    activeBorder: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,
+    separator: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.08)",
+    
+    text: isDark ? "#F8FAFC" : "#1E293B",
+    textSub: isDark ? "#CBD5E1" : "#475569",
+    textMute: isDark ? "#94A3B8" : "#64748B",
+    
+    avatarBg: isDark ? "rgba(255, 255, 255, 0.05)" : "#F1F5F9",
+    avatarText: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,
+    avatarBorder: isDark ? BRAND_COLOR_DARK : BRAND_COLOR, 
+    
+    badgeBorder: isDark ? "rgba(255, 255, 255, 0.15)" : "rgba(0, 0, 0, 0.1)",
+    erpBg: isDark ? "rgba(236, 72, 153, 0.12)" : "rgba(219, 39, 119, 0.08)", 
+    erpText: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,
+  };
+
   const AvatarBox = ({ size }: { size: number }) => (
-    <View style={[styles.avatarBox, { 
-      width: size, 
-      height: size, 
-      borderRadius: isGrid ? 14 : size / 2, 
+    <View style={[styles.avatarBox, {
+      width: size,
+      height: size,
+      borderRadius: 12,
       backgroundColor: THEME.avatarBg,
-      borderColor: `${avatarColor}30`,
-      borderWidth: 1
+      borderWidth: 1.5,
+      borderColor: THEME.avatarBorder, 
     }]}>
-      <Text style={[styles.avatarText, { color: THEME.avatarText, fontSize: size * 0.38 }]}>
+      <Text style={[styles.avatarText, { color: THEME.avatarText, fontSize: size * 0.4 }]}>
         {initials}
       </Text>
     </View>
@@ -107,112 +104,147 @@ const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProp
   return (
     <TouchableWithoutFeedback
       onPress={onPress}
-      onPressIn={() => setIsPressed(true)}  // Basınca tetiklenir
-      onPressOut={() => setIsPressed(false)} // Bırakınca tetiklenir
+      onPressIn={() => setIsPressed(true)}
+      onPressOut={() => setIsPressed(false)}
     >
       <View
         style={[
           isGrid ? styles.gridCard : styles.listCard,
           {
-            backgroundColor: isPressed && !isGrid ? THEME.activeBg : THEME.bg,
-            
-            // 🔥 HOVER BORDER MANTIĞI BURADA
+            backgroundColor: isPressed ? THEME.surfaceActive : THEME.surface,
             borderColor: isPressed ? THEME.activeBorder : THEME.border,
-            
-            // Listede basınca çizgi biraz daha kalınlaşsın (belirgin olsun diye)
-            borderBottomWidth: !isGrid && isPressed ? 2 : 1,
-            
-            // Grid'de scale efekti yerine hafif gölge artışı veya transform
-            transform: isGrid && isPressed ? [{ scale: 0.98 }] : [], 
-          },
-          isGrid && { shadowColor: isDark ? "#000" : "#94a3b8" }
+            transform: isPressed ? [{ scale: 0.98 }] : [{ scale: 1 }],
+            shadowColor: isDark ? "transparent" : "#64748B",
+            shadowOpacity: isGrid && !isDark ? 0.08 : 0,
+            elevation: isGrid && !isDark ? 2 : 0, 
+          }
         ]}
       >
         {isGrid ? (
-          // === GRID GÖRÜNÜMÜ ===
-          <>
-            <View style={styles.gridHeader}>
-              <AvatarBox size={42} />
-              {customer.customerTypeName && (
-                 <View style={[styles.badge, { borderColor: THEME.border }]}>
-                    <Text style={[styles.badgeText, { color: THEME.textMute }]} numberOfLines={1}>
-                       {customer.customerTypeName}
-                    </Text>
-                 </View>
-              )}
-            </View>
-
-            <View style={styles.gridBody}>
-              <Text style={[styles.gridName, { color: THEME.text }]} numberOfLines={2}>
-                {customer.name}
-              </Text>
+          <View style={{ flex: 1 }}>
+            
+            <View style={styles.gridTopRow}>
+              {/* SOL SÜTUN: Avatar ve ERP */}
+              <View style={styles.avatarColumn}>
+                <AvatarBox size={44} /> 
+                {customer.isERPIntegrated ? (
+                  <View style={[styles.erpBadge, { backgroundColor: THEME.erpBg }]}>
+                    <Text style={[styles.erpText, { color: THEME.erpText }]}>ERP</Text>
+                  </View>
+                ) : null}
+              </View>
               
-              <View style={styles.row}>
-                 <ContactIcon size={12} color={THEME.textMute} />
-                 <Text style={[styles.contactText, { color: THEME.textMute, marginLeft: 4 }]} numberOfLines={1}>
-                    {displayContact}
-                 </Text>
+              {/* SAĞ SÜTUN: İsim ve Sabit Çizgi */}
+              <View style={[styles.gridNameContainer, { borderBottomColor: THEME.separator }]}>
+                <Text style={[styles.gridName, { color: THEME.text }]} numberOfLines={2}>
+                  {customer.name}
+                </Text>
               </View>
             </View>
 
-            <View style={styles.gridFooter}>
-                <Location01Icon size={12} color={THEME.textMute} />
-                <Text style={[styles.footerText, { color: THEME.textMute, marginLeft: 4 }]} numberOfLines={1}>
-                  {locationText || "Konum Yok"}
+            {/* ORTA SATIR: İletişim */}
+            <View style={styles.gridMiddleRow}>
+              {Boolean(formattedPhone) ? (
+                <View style={styles.iconTextRow}>
+                  <Call02Icon size={14} color={THEME.textSub} variant="stroke" strokeWidth={1.5} />
+                  <Text style={[styles.contactText, { color: THEME.textSub }]} numberOfLines={1}>
+                    {formattedPhone}
+                  </Text>
+                </View>
+              ) : null}
+
+              {Boolean(email) ? (
+                <View style={[styles.iconTextRow, { marginTop: 6 }]}>
+                  <Mail01Icon size={14} color={THEME.textSub} variant="stroke" strokeWidth={1.5} />
+                  <Text style={[styles.contactText, { color: THEME.textSub }]} numberOfLines={1}>
+                    {email}
+                  </Text>
+                </View>
+              ) : null}
+
+              {(!formattedPhone && !email) ? (
+                 <Text style={{ color: THEME.textMute, fontSize: 11, fontStyle: 'italic' }}>
+                   İletişim bilgisi yok
+                 </Text>
+              ) : null}
+            </View>
+
+            {/* ALT SATIR: Konum Solda, Kategori Sağda (Aynı Hizada) */}
+            <View style={[styles.gridBottomRow, { borderTopColor: THEME.separator }]}>
+              {/* Konum Alanı (flex: 1 vererek kalan alanı doldurmasını sağladık, uzunsa kesilir) */}
+              <View style={[styles.row, { flex: 1, paddingRight: 8 }]}>
+                <Location01Icon size={14} color={THEME.textSub} variant="stroke" strokeWidth={1.5} />
+                <Text style={[styles.footerText, { color: THEME.textSub }]} numberOfLines={1}>
+                  {locationText || "Konum belirtilmedi"}
                 </Text>
+              </View>
+
+              {/* Kategori Rozeti (Sağa yaslı) */}
+              {Boolean(customer.customerTypeName) ? (
+                <View style={[styles.categoryBadge, { borderColor: THEME.badgeBorder }]}>
+                  <Text style={[styles.categoryText, { color: THEME.textSub }]}>
+                    {customer.customerTypeName}
+                  </Text>
+                </View>
+              ) : null}
             </View>
-          </>
+
+          </View>
         ) : (
-          // === LIST GÖRÜNÜMÜ ===
-          <>
-            <View style={styles.listLeft}>
-              <AvatarBox size={46} />
-            </View>
+          <View style={styles.listInnerContainer}>
             
+            <View style={styles.listLeft}>
+              <AvatarBox size={44} />
+              {customer.isERPIntegrated ? (
+                <View style={[styles.erpBadge, { backgroundColor: THEME.erpBg }]}>
+                  <Text style={[styles.erpText, { color: THEME.erpText }]}>ERP</Text>
+                </View>
+              ) : null}
+            </View>
+
             <View style={styles.listContent}>
-               
-               {/* 1. İSİM + OK */}
-               <View style={styles.listHeaderRow}>
-                  <Text style={[styles.listName, { color: THEME.text }]} numberOfLines={1}>
-                    {customer.name}
-                  </Text>
-                  <ArrowRight01Icon 
-                    size={16} 
-                    color={isPressed ? THEME.activeBorder : THEME.textMute} // Basınca ok da renklenir
-                    style={{ opacity: isPressed ? 1 : 0.4, marginLeft: 4 }} 
-                  />
+               <View style={styles.listNameRow}>
+                 <Text style={[styles.listName, { color: THEME.text }]} numberOfLines={1}>
+                   {customer.name}
+                 </Text>
                </View>
 
-               {/* 2. İLETİŞİM */}
-               <View style={[styles.row, { marginTop: 2, marginBottom: 4 }]}>
-                  <ContactIcon size={13} color={THEME.textMute} />
-                  <Text style={[styles.contactText, { color: THEME.textMute, marginLeft: 5 }]} numberOfLines={1}>
-                    {displayContact}
-                  </Text>
-               </View>
-
-               {/* 3. TİP ve LOKASYON */}
                <View style={styles.listFooterColumn}>
-                  {customer.customerTypeName ? (
-                    <View style={[styles.row, { marginRight: 10 }]}>
-                      <UserCircleIcon size={12} color={THEME.textMute} />
-                      <Text style={[styles.listDetailText, { color: THEME.textMute }]} numberOfLines={1}>
-                        {customer.customerTypeName}
-                      </Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', width: '100%' }}>
+                    <View style={[styles.row, { marginRight: 12, marginBottom: 4 }]}>
+                       <ContactIconForList size={13} color={THEME.textSub} strokeWidth={1.5} />
+                       <Text style={[styles.contactTextList, { color: THEME.textSub }]} numberOfLines={1}>
+                         {displayContactForList}
+                       </Text>
+                    </View>
+
+                    {Boolean(locationText) ? (
+                      <View style={[styles.row, { marginRight: 12, marginBottom: 4 }]}>
+                        <Location01Icon size={13} color={THEME.textSub} strokeWidth={1.5} />
+                        <Text style={[styles.listDetailText, { color: THEME.textSub }]} numberOfLines={1}>
+                          {locationText}
+                        </Text>
+                      </View>
+                    ) : null}
+                  </View>
+
+                  {/* LİSTE KATEGORİ: Kendi satırında, asla kesilmeyecek */}
+                  {Boolean(customer.customerTypeName) ? (
+                    <View style={{ alignItems: 'flex-start', marginTop: 2 }}>
+                       <View style={[styles.categoryBadge, { borderColor: THEME.badgeBorder, paddingVertical: 2 }]}>
+                          <Text style={[styles.categoryText, { color: THEME.textSub }]}>
+                            {customer.customerTypeName}
+                          </Text>
+                       </View>
                     </View>
                   ) : null}
-                  
-                  {locationText && (
-                    <View style={styles.row}>
-                      <Location01Icon size={12} color={THEME.textMute} />
-                      <Text style={[styles.listDetailText, { color: THEME.textMute }]} numberOfLines={1}>
-                        {locationText}
-                      </Text>
-                    </View>
-                  )}
                </View>
             </View>
-          </>
+
+            <View style={styles.listAction}>
+               <ArrowRight01Icon size={16} color={THEME.textMute} strokeWidth={2} />
+            </View>
+          </View>
         )}
       </View>
     </TouchableWithoutFeedback>
@@ -222,94 +254,145 @@ const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProp
 export const CustomerCard = memo(CustomerCardComponent);
 
 const styles = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center' },
+  avatarBox: { alignItems: 'center', justifyContent: 'center' },
+  avatarText: { fontWeight: "800" }, 
+  iconTextRow: { flexDirection: 'row', alignItems: 'center' },
+
+  // --- MİKRO DETAY STİLLERİ ---
+  avatarColumn: {
+    alignItems: 'center', 
+  },
+  erpBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6, 
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 6, 
+  },
+  erpText: {
+    fontSize: 9, 
+    fontWeight: "800",
+  },
+  categoryBadge: {
+    borderWidth: 1,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryText: {
+    fontSize: 9.5,
+    fontWeight: "600",
+  },
+
   // --- GRID STYLES ---
   gridCard: {
     width: GRID_WIDTH,
-    height: 180,
-    borderRadius: 20,
-    padding: 14,
-    justifyContent: 'space-between',
-    borderWidth: 1.5,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
-    marginBottom: 0,
+    height: 185, // İki öğe aynı satıra gelince yer açıldı, biraz toparladık
+    borderRadius: 16,
+    padding: 12, 
+    borderWidth: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
   },
-  gridHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  gridBody: { flex: 1, justifyContent: 'center', paddingVertical: 8 },
-  gridName: { fontSize: 14, fontWeight: "700", marginBottom: 6, lineHeight: 18, letterSpacing: -0.2 },
-  gridFooter: { 
-    paddingTop: 10, 
+  gridTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  gridNameContainer: {
+    flex: 1,
+    marginLeft: 10,
+    justifyContent: 'center', // İsmi dikeyde ortalar
+    height: 44, // AVATAR İLE BİREBİR AYNI YÜKSEKLİK! Çizgi asla kaymaz.
+    borderBottomWidth: 1, 
+  },
+  gridName: {
+    fontSize: 13.5, 
+    fontWeight: "700",
+    lineHeight: 18,
+    letterSpacing: -0.2,
+  },
+
+  gridMiddleRow: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingVertical: 8,
+  },
+  contactText: {
+    fontSize: 9.5, 
+    fontWeight: "500",
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : undefined,
+    marginLeft: 6,
+    letterSpacing: 0,
+    flexShrink: 1, 
+  },
+
+  gridBottomRow: {
+    flexDirection: 'row', // Konum ve Kategori artık YAN YANA
+    alignItems: 'center',
+    justifyContent: 'space-between', // Biri tam sola, diğeri tam sağa yaslanır
+    paddingTop: 8, 
     borderTopWidth: 1, 
-    borderTopColor: 'rgba(0,0,0,0.04)', 
-    flexDirection: 'row', 
-    alignItems: 'center' 
   },
-  badge: { 
-    paddingHorizontal: 6, 
-    paddingVertical: 3, 
-    borderRadius: 6, 
-    borderWidth: 1, 
-    maxWidth: '45%' 
+  footerText: {
+    fontSize: 10.5, 
+    fontWeight: "500",
+    marginLeft: 6,
+    flexShrink: 1, 
   },
-  badgeText: { fontSize: 9, fontWeight: "600" },
 
   // --- LIST STYLES ---
   listCard: {
     width: '100%',
-    height: 90, // Sabit yükseklik (Kaymayı önler)
+    padding: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  listInnerContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 4,
-    borderBottomWidth: 1,
-    // borderBottomColor burada verilmez, dinamik stilde verilir
-    overflow: 'hidden',
   },
   listLeft: {
     marginRight: 14,
-    paddingLeft: 4,
     justifyContent: 'center',
-    height: '100%',
+    alignItems: 'center', 
   },
   listContent: {
     flex: 1,
     justifyContent: 'center',
-    paddingRight: 6,
-    height: '100%',
+    paddingRight: 8,
   },
-  listHeaderRow: {
+  listNameRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: 4,
   },
   listName: {
-    fontSize: 15,
+    fontSize: 15, 
     fontWeight: "700",
-    flex: 1,
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
+    flexShrink: 1,
   },
-  listFooterColumn: { 
-    flexDirection: 'row',
-    alignItems: 'center',
+  listFooterColumn: {
+    flexDirection: 'column',
+    width: '100%',
+  },
+  contactTextList: {
+    fontSize: 12,
+    fontWeight: "500",
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : undefined,
+    marginLeft: 5,
   },
   listDetailText: {
-    fontSize: 11,
-    fontWeight: "500",
-    marginLeft: 4,
-  },
-
-  // --- ORTAK ---
-  avatarBox: { alignItems: 'center', justifyContent: 'center' },
-  avatarText: { fontWeight: "800", letterSpacing: 0.5 },
-  
-  contactText: {
     fontSize: 12,
-    fontWeight: "600",
-    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace', 
-    letterSpacing: 0.2,
+    fontWeight: "500",
+    marginLeft: 5,
   },
-  row: { flexDirection: 'row', alignItems: 'center' },
-  footerText: { fontSize: 11, fontWeight: "500" },
+  listAction: {
+    paddingLeft: 6,
+  }
 });
