@@ -33,9 +33,8 @@ import {
 import { 
   Edit02Icon, 
   Delete02Icon, 
-  Add01Icon, 
-  Analytics02Icon 
-} from "hugeicons-react-native";
+  Add01Icon 
+} from "hugeicons-react-native"; // Analytics02Icon silindi
 
 type TabType = "detail" | "contacts" | "addresses";
 
@@ -48,7 +47,8 @@ interface ThemeColors {
   borderColor: string;
   glassBtn: string;
   danger: string;
-  tabActiveBg: string; // Tab aktifken arka planı (opsiyonel)
+  tabActiveBg: string;
+  pillBorder: string; // Tab aktifken arka planı (opsiyonel)
 }
 
 interface TabBarProps {
@@ -130,6 +130,7 @@ function CustomerDetailPage(): React.ReactElement {
     glassBtn: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
     danger: "#ef4444",
     tabActiveBg: isDark ? "rgba(219, 39, 119, 0.1)" : "rgba(219, 39, 119, 0.05)",
+    pillBorder: isDark ? "rgba(239, 68, 68, 0.3)" : colors.border,
   };
 
   const [isDeleting, setIsDeleting] = useState(false);
@@ -282,9 +283,9 @@ function CustomerDetailPage(): React.ReactElement {
         return (
           <CustomerDetailContent
             customer={customer}
-            colors={colors} // Detay içeriği kendi içinde temayı halledebilir veya buradan alabilir
             insets={insets}
             t={t}
+            on360Press={handleCustomer360Press} // 360 Görünüm fonksiyonunu yavru bileşene yolladık
           />
         );
     }
@@ -301,33 +302,44 @@ function CustomerDetailPage(): React.ReactElement {
             <ScreenHeader
             title={t("customer.detail")}
             showBackButton
-            // ScreenHeader içinde tema desteği yoksa style prop ile geçmek gerekebilir
-            // style={{ backgroundColor: THEME.bg }} 
             rightElement={
                 customer ? (
-                <View style={styles.headerActions}>
-                    {/* --- 360 GÖRÜNÜM BUTONU --- */}
-                    <TouchableOpacity onPress={handleCustomer360Press} style={[styles.headerButton, { backgroundColor: THEME.glassBtn }]}>
-                       <Analytics02Icon size={20} color={THEME.text} variant="stroke" />
+                <View style={[
+                    styles.actionPill, 
+                    { 
+                      backgroundColor: THEME.glassBtn, 
+                      borderColor: THEME.pillBorder // YENİ: Neon çerçeve rengi
+                    }
+                ]}>
+                    
+                    {/* DÜZENLE BUTONU (Sol Taraf - Şeffaf) */}
+                    <TouchableOpacity onPress={handleEditPress} style={styles.pillButton}>
+                       <Edit02Icon size={18} color={THEME.text} variant="stroke" />
                     </TouchableOpacity>
                     
-                    {/* Düzenle Butonu */}
-                    <TouchableOpacity onPress={handleEditPress} style={[styles.headerButton, { backgroundColor: THEME.glassBtn }]}>
-                       <Edit02Icon size={20} color={THEME.text} variant="stroke" />
-                    </TouchableOpacity>
-                    
-                    {/* Sil Butonu */}
+                    {/* Ayırıcı çizgi SİLİNDİ */}
+
+                    {/* SİL BUTONU (Sağ Taraf - Neon Kırmızı Arka Plan) */}
                     <TouchableOpacity
                         onPress={handleDeletePress}
-                        style={[styles.headerButton, { backgroundColor: "rgba(239, 68, 68, 0.15)" }]}
+                        style={[
+                          styles.pillButton, 
+                          { 
+                            // YENİ: Koyu modda neon kırmızı, açık modda pastel kırmızı arka plan
+                            backgroundColor: isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2",
+                            borderLeftWidth: 1, // Düzenle butonuyla arasına ince bir çizgi
+                            borderLeftColor: THEME.pillBorder
+                          }
+                        ]}
                         disabled={isDeleting}
                     >
                     {isDeleting ? (
-                        <ActivityIndicator size="small" color="#FFFFFF" />
+                        <ActivityIndicator size="small" color={THEME.danger} />
                     ) : (
-                        <Delete02Icon size={20} color={THEME.danger} variant="stroke" />
+                        <Delete02Icon size={18} color={THEME.danger} variant="stroke" />
                     )}
                     </TouchableOpacity>
+                    
                 </View>
                 ) : undefined
             }
@@ -464,11 +476,12 @@ const styles = StyleSheet.create({
   },
   headerActions: {
     flexDirection: "row",
-    gap: 10,
+    gap: 8, // İkonların yan yana sığması için 10'dan 8'e düşürdük
+    marginRight:50, // Ekrana yapışmasınlar diye pay bıraktık
   },
   headerButton: {
-    width: 40,
-    height: 40,
+    width: 38, // İkonların yan yana sığması için kibar boyut
+    height: 38,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
@@ -477,6 +490,27 @@ const styles = StyleSheet.create({
     fontSize: 14, 
     color: "#FFF",
     fontWeight: "600"
+  },
+  // YENİ: KAPSÜL (PILL) TASARIMI
+  actionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1.5, // Çerçeveyi biraz daha belirginleştirdik (1'den 1.5'a)
+    borderRadius: 20, 
+    height: 38, 
+    marginRight: 50, 
+    overflow: "hidden", 
+  },
+  pillButton: {
+    width: 45, // Butonları biraz daha genişlettik (44'ten 46'ya)
+    height: "100%",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  pillDivider: {
+    width: 1,
+    height: 18, // Çizgi butonlardan biraz daha kısa (Premium detay)
+    opacity: 0.5, // Çizgiyi hafif silik yaptık ki göz yormasın
   },
 });
 

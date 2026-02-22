@@ -53,8 +53,15 @@ export function CustomerDetailScreen(): React.ReactElement {
     }
   }, [router, customer]);
 
+  // YENİ EKLENEN FONKSİYON: 360 Sayfasına yönlendirme
+  const handleCustomer360Press = useCallback(() => {
+    if (customerId) {
+      router.push(`/(tabs)/customers/360/${customerId}`);
+    }
+  }, [router, customerId]);
+
   const handleDeletePress = useCallback(() => {
-    Alert.alert(t("common.confirm"), t("customer.deleteConfirm"), [
+    Alert.alert(t("common.confirm"), t("customer.deleteConfirm") || "Bu müşteriyi silmek istediğinize emin misiniz?", [
       { text: t("common.cancel"), style: "cancel" },
       {
         text: t("common.delete"),
@@ -137,6 +144,7 @@ export function CustomerDetailScreen(): React.ReactElement {
               customer={customer}
               insets={insets}
               t={t}
+              on360Press={handleCustomer360Press} // YENİ EKLENEN PROP: TS hatasını çözen kahraman!
             />
           ) : null}
         </View>
