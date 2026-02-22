@@ -27,6 +27,9 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
   if (params.filters && params.filters.length > 0) {
     queryParams.filters = JSON.stringify(params.filters);
   }
+  if ((params as any).filterLogic) {
+    queryParams.filterLogic = (params as any).filterLogic;
+  }
 
   return queryParams;
 };

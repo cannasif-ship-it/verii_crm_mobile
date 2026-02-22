@@ -8,7 +8,9 @@ import {
   FlatList,
   Modal,
   TouchableWithoutFeedback,
-  Text 
+  ScrollView,
+  Text,
+  KeyboardAvoidingView
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -91,6 +93,7 @@ export function ContactListScreen(): React.ReactElement {
     const arr: PagedFilter[] = [];
     if (debouncedQuery.trim().length >= 2) {
       arr.push({ column: "fullName", operator: "contains", value: debouncedQuery.trim() });
+      arr.push({ column: "customerName", operator: "contains", value: debouncedQuery.trim() });
     }
     if (appliedCustomerId) {
       arr.push({ column: "customerId", operator: "eq", value: String(appliedCustomerId) });
@@ -106,7 +109,9 @@ export function ContactListScreen(): React.ReactElement {
   const { data, isPending, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isRefetching } = useContacts({ 
     filters,
     sortBy: "fullName",
-    sortDirection: sortOrder
+    sortDirection: sortOrder,
+    filterLogic: debouncedQuery.trim().length >= 2 ? "or" : "and",
+    pageSize: 20 
   });
 
   const contacts = useMemo(() => {
@@ -135,7 +140,9 @@ export function ContactListScreen(): React.ReactElement {
   }, [router]);
 
   const handleLoadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
+    if (hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   const openFilterModal = () => {
@@ -172,7 +179,11 @@ export function ContactListScreen(): React.ReactElement {
         <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       </View>
 
-      <View style={{ flex: 1 }}>
+      {/* ANA EKRAN KLAVYE KORUMASI */}
+      <KeyboardAvoidingView 
+        style={{ flex: 1 }} 
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         <ScreenHeader title={t("contact.title")} showBackButton />
         
         <View style={styles.content}> 
@@ -252,7 +263,11 @@ export function ContactListScreen(): React.ReactElement {
                   paddingBottom: insets.bottom + 100,
               }}
               onEndReached={handleLoadMore}
-              onEndReachedThreshold={0.3}
+              onEndReachedThreshold={0.5} 
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={Platform.OS === 'android'}
               refreshing={isRefetching && !isFetchingNextPage}
               onRefresh={refetch}
               ListFooterComponent={
@@ -269,7 +284,7 @@ export function ContactListScreen(): React.ReactElement {
             />
           )}
         </View>
-      </View>
+      </KeyboardAvoidingView>
 
       <Modal
         visible={isFilterModalVisible}
@@ -277,18 +292,29 @@ export function ContactListScreen(): React.ReactElement {
         animationType="slide"
         onRequestClose={() => setIsFilterModalVisible(false)}
       >
-        <TouchableWithoutFeedback onPress={() => setIsFilterModalVisible(false)}>
+        {/* MODAL KLAVYE KORUMASI (Alt Butonları Yukarı İter) */}
+        <KeyboardAvoidingView 
+           style={{ flex: 1 }} 
+           behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} 
+        >
           <View style={styles.modalOverlay}>
-            <TouchableWithoutFeedback>
-              <View style={[styles.modalContent, { backgroundColor: theme.modalBg, paddingBottom: insets.bottom + 20 }]}>
-                
-                <View style={styles.modalHeader}>
-                  <Text style={[styles.modalTitle, { color: theme.primary }]}>Filtreler</Text>
-                  <TouchableOpacity onPress={() => setIsFilterModalVisible(false)} style={styles.closeBtn}>
-                    <Cancel01Icon size={24} color={theme.textMute} variant="stroke" />
-                  </TouchableOpacity>
-                </View>
+            
+            {/* Arka Plana Tıklayınca Kapatma (Sorunsuz Yapı) */}
+            <TouchableWithoutFeedback onPress={() => setIsFilterModalVisible(false)}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
 
+            {/* Modal İçeriği (Max Height ile klavyeye yer açıldı) */}
+            <View style={[styles.modalContent, { backgroundColor: theme.modalBg, paddingBottom: Platform.OS === 'ios' ? insets.bottom + 20 : 20, maxHeight: '85%' }]}>
+              
+              <View style={styles.modalHeader}>
+                <Text style={[styles.modalTitle, { color: theme.primary }]}>Filtreler</Text>
+                <TouchableOpacity onPress={() => setIsFilterModalVisible(false)} style={styles.closeBtn}>
+                  <Cancel01Icon size={24} color={theme.textMute} variant="stroke" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
                 <Text style={[styles.modalLabel, { color: theme.textMute }]}>İletişim Bilgisi</Text>
                 <View style={styles.wrapContainer}>
                   {[
@@ -330,11 +356,11 @@ export function ContactListScreen(): React.ReactElement {
                     <Text style={[styles.modalActionText, { color: '#FFF' }]}>Uygula</Text>
                   </TouchableOpacity>
                 </View>
+              </ScrollView>
 
-              </View>
-            </TouchableWithoutFeedback>
+            </View>
           </View>
-        </TouchableWithoutFeedback>
+        </KeyboardAvoidingView>
       </Modal>
 
     </View>
@@ -382,7 +408,7 @@ const styles = StyleSheet.create({
   emptyText: { fontSize: 15, marginTop: 12, fontWeight: '500', letterSpacing: 0.5, textAlign: 'center' },
 
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24 },
   modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   modalTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
   closeBtn: { padding: 4 },

@@ -10,6 +10,7 @@ interface UseContactsParams {
   sortDirection?: "asc" | "desc";
   pageSize?: number;
   customerId?: number;
+  filterLogic?: "and" | "or";
 }
 
 export function useContacts(params: UseContactsParams = {}) {
@@ -19,6 +20,7 @@ export function useContacts(params: UseContactsParams = {}) {
     sortDirection = "asc",
     pageSize = DEFAULT_PAGE_SIZE,
     customerId,
+    filterLogic = "and"
   } = params;
 
   const filters: PagedFilter[] = externalFilters ? [...externalFilters] : [];
@@ -28,15 +30,18 @@ export function useContacts(params: UseContactsParams = {}) {
   }
 
   return useInfiniteQuery<PagedResponse<ContactDto>, Error>({
-    queryKey: ["contact", "list", { filters, sortBy, sortDirection }],
-    queryFn: ({ pageParam }) =>
-      contactApi.getList({
+    queryKey: ["contact", "list", { filters, sortBy, sortDirection, filterLogic }],
+    queryFn: ({ pageParam }) => {
+      const apiParams: any = {
         pageNumber: pageParam as number,
         pageSize,
         sortBy,
         sortDirection,
         filters: filters.length > 0 ? filters : undefined,
-      }),
+        filterLogic
+      };
+      return contactApi.getList(apiParams);
+    },
     initialPageParam: 1,
     getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.pageNumber + 1 : undefined),
     staleTime: 30 * 1000,
