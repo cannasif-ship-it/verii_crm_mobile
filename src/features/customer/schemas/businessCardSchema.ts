@@ -68,12 +68,56 @@ const WEBSITE_CANDIDATE_REGEX =
 const WEBSITE_TLD_REGEX = /\.(?:com(?:\.tr)?|net|org|tr|edu(?:\.tr)?|gov(?:\.tr)?|io|biz|info|me|tv)(?:\/|$)/i;
 const WEBSITE_BLACKLIST_REGEX = /\b(A\.?\s?Ş|AŞ|LTD|ŞT[İI]|SAN|T[İI]C|DIŞ|AKS|ORTAKLIĞI)\b/i;
 const COMPANY_MARKER_REGEX = /\b(A\.?\s?Ş|AŞ|LTD|ŞT[İI]|SAN|T[İI]C|ORTAKLIĞI)\b/i;
+const COMPANY_MARKER_BOUNDARY_REGEX =
+  /(^|[^A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû])(A\.?\s?Ş|AŞ|LTD|ŞT[İI]|SAN|T[İI]C|ORTAKLIĞI)(?=$|[^A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû])/i;
 const INDUSTRY_KEYWORD_REGEX =
-  /\b(makine|makina|tekstil|otomotiv|gıda|inşaat|mobilya|lojistik|logistics|trading|solutions|import|export|mühendislik|danışmanlık|turizm|enerji|group|holding|plastik|metal|kimya|elektrik|elektronik|yazılım|software|bilişim|otomasyon|otomasyonu|pvc|alüminyum|nakliyat|gayrimenkul|sigorta|reklam|medya|ambalaj|demir|çelik|cam|pencere|kapı|vinç|maden|lines|teknoloji|technology|iletişim|hizmet|hizmetleri|services|marin|marine|denizcilik|hafriyat|peyzaj|tarım|mimarlık|müteahhit|depolama|soğutma|jeneratör|asansör|matbaa|ajans|eczane|optik|kozmetik|giyim|konfeksiyon|ayakkabı|deri|kuyumculuk|mücevher|oto|otobüs|araç|lastik|akü|yedek\s*parça|rulman|conta|boya|hırdavat|nalburiye|seramik|mermer|parke|halı|perde|aydınlatma|mutfak|banyo|beyaz\s*eşya|klima|kombi|doğalgaz|ısıtma|iklimlendirme|havalandırma|yangın|güvenlik|temizlik|catering|gümrük|antrepo|freight|cargo|kargo|kurye|taşımacılık)\b/i;
+  /\b(makine|makina|tekstil|otomotiv|gıda|inşaat|mobilya|lojistik|logistics|trading|solutions|import|export|mühendislik|danışmanlık|turizm|enerji|group|grup|holding|plastik|metal|kimya|elektrik|elektronik|yazılım|software|bilişim|otomasyon|otomasyonu|pvc|alüminyum|nakliyat|gayrimenkul|sigorta|reklam|medya|ambalaj|demir|çelik|cam|pencere|kapı|vinç|maden|lines|teknoloji|technology|iletişim|hizmet|hizmetleri|services|marin|marine|denizcilik|hafriyat|peyzaj|tarım|mimarlık|müteahhit|depolama|soğutma|jeneratör|asansör|matbaa|ajans|eczane|optik|kozmetik|giyim|konfeksiyon|ayakkabı|deri|kuyumculuk|mücevher|oto|otobüs|araç|lastik|akü|yedek\s*parça|rulman|conta|boya|hırdavat|nalburiye|seramik|mermer|parke|halı|perde|aydınlatma|mutfak|banyo|beyaz\s*eşya|klima|kombi|doğalgaz|ısıtma|iklimlendirme|havalandırma|yangın|güvenlik|temizlik|catering|gümrük|antrepo|freight|cargo|kargo|kurye|taşımacılık|profil)\b/i;
 const PHONE_CANDIDATE_REGEX =
   /(?:\+?\s*90[\s().-]*)?(?:0[\s().-]*)?\(?\d{3}\)?[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}(?:\s*\/\s*\d{1,6}|\s*\(\d{1,6}\))?/gi;
 const PHONE_IN_TEXT_REGEX =
   /(?:\+?\s*90[\s().-]*)?(?:0[\s().-]*)?\(?\d{3}\)?[\s().-]*\d{3}[\s().-]*\d{2}[\s().-]*\d{2}(?:\s*\/\s*\d{1,6}|\s*\(\d{1,6}\))?/i;
+const TITLE_KEYWORDS = [
+  "sales",
+  "marketing",
+  "manager",
+  "planning",
+  "planner",
+  "müdür",
+  "müdürü",
+  "yardımcısı",
+  "yardimcisi",
+  "yönetici",
+  "yonetici",
+  "supervisor",
+  "director",
+  "chief",
+  "coordinator",
+  "assistant",
+  "deputy",
+  "logistic",
+  "lojistik",
+  "satış",
+  "satis",
+  "pazarlama",
+  "genel",
+  "engineer",
+  "uzmanı",
+  "uzmani",
+  "sorumlu",
+  "assembly",
+  "member",
+  "adviser",
+  "advisor",
+  "investment",
+  "koordinatörlüğü",
+  "koordinatorlugu",
+  "koordinatör",
+  "koordinator",
+] as const;
+const LETTER_CHAR_REGEX = /[A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû]/;
+const LETTER_GLOBAL_REGEX = /[A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû]/g;
+const UPPER_LETTER_GLOBAL_REGEX = /[A-ZÇĞİÖŞÜÂÎÛ]/g;
+const PERSON_TOKEN_REGEX = /^[A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû'.-]{2,}$/;
 
 const SAFE_PROVINCES = new Set([
   "istanbul", "ankara", "izmir", "bursa", "kocaeli", "antalya", "konya",
@@ -635,8 +679,15 @@ export function sanitizePhones(phones: string[]): string[] {
   return normalizePhones(phones, []);
 }
 
+function hasCompanyMarker(value: string): boolean {
+  return COMPANY_MARKER_REGEX.test(value) || COMPANY_MARKER_BOUNDARY_REGEX.test(value);
+}
+
 function looksLikeCompany(value: string): boolean {
-  if (COMPANY_MARKER_REGEX.test(value)) return true;
+  const lower = value.toLocaleLowerCase("tr-TR");
+  if (/\bgrup\b/.test(lower)) return true;
+  if (/\bprof[ıi]l\b/.test(lower)) return true;
+  if (hasCompanyMarker(value)) return true;
   if (INDUSTRY_KEYWORD_REGEX.test(value)) return true;
   return false;
 }
@@ -652,7 +703,7 @@ function sanitizeName(value: string | null): string | null {
 
 function sanitizeTitle(value: string | null): string | null {
   if (!value) return null;
-  if (COMPANY_MARKER_REGEX.test(value) && !/\b(manager|müdür|architect|satın|export|purchasing|logistics|chief|yönetmeni|director|sales)\b/i.test(value)) {
+  if (hasCompanyMarker(value) && !/\b(manager|müdür|architect|satın|export|purchasing|logistics|chief|yönetmeni|director|sales)\b/i.test(value)) {
     return null;
   }
   if (CONTACT_TOKEN_REGEX.test(value)) return null;
@@ -663,6 +714,173 @@ function sanitizeCompany(value: string | null): string | null {
   if (!value) return null;
   if (/@|www\.|https?:\/\//i.test(value)) return null;
   return normalizeCompanySuffix(value);
+}
+
+function collectIdentitySourceLines(rawText?: string, rawLines?: string[]): string[] {
+  const source = rawLines && rawLines.length > 0 ? rawLines : normalizeTextLines(rawText ?? "");
+  return uniqueStrings(
+    source
+      .map((line) => line.replace(/\s+/g, " ").trim())
+      .filter((line) => line.length >= 2 && line.length <= 120)
+      .filter((line) => LETTER_CHAR_REGEX.test(line))
+  );
+}
+
+function uppercaseRatio(value: string): number {
+  const letters = value.match(LETTER_GLOBAL_REGEX) ?? [];
+  if (letters.length === 0) return 0;
+  const upper = value.match(UPPER_LETTER_GLOBAL_REGEX) ?? [];
+  return upper.length / letters.length;
+}
+
+function isIdentityNoiseLine(line: string): boolean {
+  if (CONTACT_TOKEN_REGEX.test(line)) return true;
+  if (EMAIL_REGEX.test(line)) return true;
+  if (PHONE_IN_TEXT_REGEX.test(line)) return true;
+  if (ADDRESS_HINT_REGEX.test(line)) return true;
+  if (ADDRESS_NO_REGEX.test(line)) return true;
+  if (POSTAL_CODE_REGEX.test(line)) return true;
+  if (containsKnownLocation(line)) return true;
+  if (/\d/.test(line)) return true;
+  return false;
+}
+
+function hasTitleKeyword(line: string): boolean {
+  const lower = line.toLocaleLowerCase("tr-TR");
+  return TITLE_KEYWORDS.some((keyword) => lower.includes(keyword));
+}
+
+function isLikelyTitleLine(line: string): boolean {
+  if (line.length > 90) return false;
+  if (!hasTitleKeyword(line)) return false;
+  if (CONTACT_TOKEN_REGEX.test(line)) return false;
+  if (EMAIL_REGEX.test(line)) return false;
+  if (PHONE_IN_TEXT_REGEX.test(line)) return false;
+  return true;
+}
+
+function isLikelyPersonNameLine(line: string): boolean {
+  if (isIdentityNoiseLine(line)) return false;
+  if (looksLikeCompany(line)) return false;
+  if (isLikelyTitleLine(line)) return false;
+
+  const clean = line.replace(/[^A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû\s'.-]/g, " ");
+  const tokens = clean.split(/\s+/).filter(Boolean);
+  if (tokens.length < 2 || tokens.length > 4) return false;
+  if (!tokens.every((token) => PERSON_TOKEN_REGEX.test(token))) return false;
+  const hasLower = /[a-zçğıöşüâîû]/.test(clean);
+  const allUpperLike = uppercaseRatio(clean) >= 0.9 && tokens.length === 2;
+  if (!hasLower && !allUpperLike) return false;
+
+  const properTokenCount = tokens.filter((token) => {
+    const first = token[0];
+    if (!first) return false;
+    return first === first.toUpperCase();
+  }).length;
+
+  return properTokenCount >= 2;
+}
+
+function isLikelyCompanyLine(line: string, index: number): boolean {
+  if (isIdentityNoiseLine(line)) return false;
+  if (isLikelyTitleLine(line)) return false;
+  if (isLikelyPersonNameLine(line)) return false;
+  if (looksLikeCompany(line)) return true;
+
+  const tokens = line.split(/\s+/).filter(Boolean);
+  const ratio = uppercaseRatio(line);
+
+  if (index <= 1 && tokens.length === 1 && /^[A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû]{2,12}$/.test(line.trim())) return true;
+  if (ratio >= 0.72 && tokens.length <= 6) return true;
+  if (index <= 2 && tokens.length <= 2 && /[A-ZÇĞİÖŞÜ]/.test(line)) return true;
+  return false;
+}
+
+function mergeCompanyLines(lines: string[], startIndex: number): string {
+  const base = lines[startIndex];
+  if (!base) return "";
+
+  const next = lines[startIndex + 1];
+  if (!next) return base;
+  if (isLikelyPersonNameLine(next) || isLikelyTitleLine(next) || isIdentityNoiseLine(next)) return base;
+  if (!hasCompanyMarker(next)) return base;
+
+  return `${base} ${next}`.replace(/\s+/g, " ").trim();
+}
+
+function inferIdentityFromRawText(
+  rawText?: string,
+  rawLines?: string[]
+): { inferredName: string | null; inferredTitle: string | null; inferredCompany: string | null } {
+  const lines = collectIdentitySourceLines(rawText, rawLines);
+  if (lines.length === 0) {
+    return { inferredName: null, inferredTitle: null, inferredCompany: null };
+  }
+
+  let inferredName: string | null = null;
+  let nameIndex = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]!;
+    if (isLikelyPersonNameLine(line)) {
+      const normalized = line.replace(/[^A-Za-zÇĞİÖŞÜçğıöşüÂâÎîÛû\s'.-]/g, " ").trim();
+      const tokens = normalized.split(/\s+/).filter(Boolean);
+      const isAllUpperCandidate = uppercaseRatio(normalized) >= 0.9 && tokens.length === 2;
+      if (isAllUpperCandidate) {
+        const hasNearbyTitle = [i + 1, i + 2].some(
+          (idx) => idx < lines.length && isLikelyTitleLine(lines[idx]!)
+        );
+        if (!hasNearbyTitle) continue;
+      }
+      inferredName = line;
+      nameIndex = i;
+      break;
+    }
+  }
+
+  let inferredTitle: string | null = null;
+  if (nameIndex >= 0) {
+    for (let i = nameIndex + 1; i <= Math.min(nameIndex + 2, lines.length - 1); i += 1) {
+      const line = lines[i]!;
+      if (isLikelyTitleLine(line)) {
+        inferredTitle = line;
+        break;
+      }
+    }
+  }
+  if (!inferredTitle) {
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i]!;
+      if (!isLikelyTitleLine(line)) continue;
+      if (nameIndex >= 0 && Math.abs(i - nameIndex) > 2) continue;
+      inferredTitle = line;
+      break;
+    }
+  }
+
+  let inferredCompany: string | null = null;
+  if (nameIndex > 0) {
+    for (let i = 0; i < nameIndex; i += 1) {
+      const line = lines[i]!;
+      if (!isLikelyCompanyLine(line, i)) continue;
+      inferredCompany = mergeCompanyLines(lines, i);
+      break;
+    }
+  }
+
+  if (!inferredCompany) {
+    for (let i = 0; i < Math.min(lines.length, 4); i += 1) {
+      const line = lines[i]!;
+      if (!isLikelyCompanyLine(line, i)) continue;
+      inferredCompany = mergeCompanyLines(lines, i);
+      break;
+    }
+  }
+
+  return {
+    inferredName: sanitizeName(normalizeNullable(inferredName)),
+    inferredTitle: sanitizeTitle(normalizeNullable(inferredTitle)),
+    inferredCompany: sanitizeCompany(normalizeNullable(inferredCompany)),
+  };
 }
 
 function normalizeSocialHandle(value: string | null): string | null {
@@ -730,9 +948,19 @@ export function validateAndNormalizeBusinessCardExtraction(
 
   const rawName = normalizeNullable(parsed.data.name);
   const rawCompany = normalizeNullable(parsed.data.company);
+  const inferredIdentity = inferIdentityFromRawText(rawText, rawLines);
 
   let name = sanitizeName(rawName);
   let company = sanitizeCompany(rawCompany);
+  let title = sanitizeTitle(normalizeNullable(parsed.data.title));
+
+  if (!name && inferredIdentity.inferredName) {
+    name = inferredIdentity.inferredName;
+  }
+
+  if (!title && inferredIdentity.inferredTitle) {
+    title = inferredIdentity.inferredTitle;
+  }
 
   if (!company && rawName && looksLikeCompany(rawName)) {
     company = normalizeCompanySuffix(rawName);
@@ -740,6 +968,16 @@ export function validateAndNormalizeBusinessCardExtraction(
 
   if (!company && rawCompany && looksLikeCompany(rawCompany)) {
     company = normalizeCompanySuffix(rawCompany);
+  }
+
+  if (!company && inferredIdentity.inferredCompany) {
+    company = normalizeCompanySuffix(inferredIdentity.inferredCompany);
+  } else if (company && inferredIdentity.inferredCompany) {
+    const existing = company.toLocaleLowerCase("tr-TR");
+    const inferred = inferredIdentity.inferredCompany.toLocaleLowerCase("tr-TR");
+    if ((inferred.includes(existing) || existing.includes(inferred)) && inferred.length > existing.length + 3) {
+      company = normalizeCompanySuffix(inferredIdentity.inferredCompany);
+    }
   }
 
   if (!company && emails.length > 0) {
@@ -761,7 +999,7 @@ export function validateAndNormalizeBusinessCardExtraction(
   return {
     contactNameAndSurname,
     name,
-    title: sanitizeTitle(normalizeNullable(parsed.data.title)),
+    title,
     company,
     phones,
     emails,
