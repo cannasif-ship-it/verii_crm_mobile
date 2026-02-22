@@ -17,6 +17,7 @@ import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { FormField, LocationPicker, CustomerPicker } from "../../customer";
+import { useCountries, useCities, useDistricts } from "../../customer/hooks";
 import { useShippingAddress, useCreateShippingAddress, useUpdateShippingAddress } from "../hooks";
 import { createShippingAddressSchema, type ShippingAddressFormData } from "../schemas";
 import type { CustomerDto, CountryDto, CityDto, DistrictDto } from "../../customer";
@@ -62,7 +63,37 @@ export function ShippingAddressFormScreen(): React.ReactElement {
 
   const watchCountryId = watch("countryId");
   const watchCityId = watch("cityId");
+  const watchDistrictId = watch("districtId");
   const watchCustomerId = watch("customerId");
+  const { data: countries } = useCountries();
+  const { data: cities } = useCities(watchCountryId);
+  const { data: districts } = useDistricts(watchCityId);
+  const [pendingCountryName, setPendingCountryName] = useState<string | null>(null);
+  const [pendingCityName, setPendingCityName] = useState<string | null>(null);
+  const [pendingDistrictName, setPendingDistrictName] = useState<string | null>(null);
+
+  const normalizeLookupName = useCallback((value?: string | null): string => {
+    if (!value) return "";
+    return value
+      .toLocaleLowerCase("tr-TR")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9çğıöşü]+/g, "")
+      .trim();
+  }, []);
+
+  const findLookupByName = useCallback(<T extends { id: number; name: string }>(
+    items: T[] | undefined,
+    name?: string | null
+  ): T | undefined => {
+    if (!items || items.length === 0 || !name) return undefined;
+    const target = normalizeLookupName(name);
+    if (!target) return undefined;
+    return items.find((item) => {
+      const normalized = normalizeLookupName(item.name);
+      return normalized === target || normalized.includes(target) || target.includes(normalized);
+    });
+  }, [normalizeLookupName]);
 
   useEffect(() => {
     if (existingAddress) {
@@ -85,6 +116,14 @@ export function ShippingAddressFormScreen(): React.ReactElement {
     (customer: CustomerDto | undefined) => {
       setValue("customerId", customer?.id || 0);
       setSelectedCustomerName(customer?.name);
+
+      setValue("countryId", customer?.countryId);
+      setValue("cityId", customer?.cityId);
+      setValue("districtId", customer?.districtId);
+
+      setPendingCountryName(customer?.countryName ?? null);
+      setPendingCityName(customer?.cityName ?? null);
+      setPendingDistrictName(customer?.districtName ?? null);
     },
     [setValue]
   );
@@ -92,6 +131,11 @@ export function ShippingAddressFormScreen(): React.ReactElement {
   const handleCountryChange = useCallback(
     (country: CountryDto | undefined) => {
       setValue("countryId", country?.id);
+      setValue("cityId", undefined);
+      setValue("districtId", undefined);
+      setPendingCountryName(null);
+      setPendingCityName(null);
+      setPendingDistrictName(null);
     },
     [setValue]
   );
@@ -99,6 +143,9 @@ export function ShippingAddressFormScreen(): React.ReactElement {
   const handleCityChange = useCallback(
     (city: CityDto | undefined) => {
       setValue("cityId", city?.id);
+      setValue("districtId", undefined);
+      setPendingCityName(null);
+      setPendingDistrictName(null);
     },
     [setValue]
   );
@@ -106,9 +153,39 @@ export function ShippingAddressFormScreen(): React.ReactElement {
   const handleDistrictChange = useCallback(
     (district: DistrictDto | undefined) => {
       setValue("districtId", district?.id);
+      setPendingDistrictName(null);
     },
     [setValue]
   );
+
+  useEffect(() => {
+    if (!pendingCountryName) return;
+    if (watchCountryId) return;
+    const matchedCountry = findLookupByName(countries, pendingCountryName);
+    if (!matchedCountry) return;
+    setValue("countryId", matchedCountry.id);
+    setPendingCountryName(null);
+  }, [pendingCountryName, watchCountryId, countries, findLookupByName, setValue]);
+
+  useEffect(() => {
+    if (!pendingCityName) return;
+    if (!watchCountryId) return;
+    if (watchCityId) return;
+    const matchedCity = findLookupByName(cities, pendingCityName);
+    if (!matchedCity) return;
+    setValue("cityId", matchedCity.id);
+    setPendingCityName(null);
+  }, [pendingCityName, watchCountryId, watchCityId, cities, findLookupByName, setValue]);
+
+  useEffect(() => {
+    if (!pendingDistrictName) return;
+    if (!watchCityId) return;
+    if (watchDistrictId) return;
+    const matchedDistrict = findLookupByName(districts, pendingDistrictName);
+    if (!matchedDistrict) return;
+    setValue("districtId", matchedDistrict.id);
+    setPendingDistrictName(null);
+  }, [pendingDistrictName, watchCityId, watchDistrictId, districts, findLookupByName, setValue]);
 
   const onSubmit = useCallback(
     async (data: ShippingAddressFormData) => {
