@@ -1,57 +1,113 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Platform, Text as RNText } from "react-native";
-import { FlatListScrollView } from "@/components/FlatListScrollView";
+import React, { useCallback, useMemo, useState, useEffect } from "react";
+import { 
+  View, 
+  StyleSheet, 
+  ActivityIndicator, 
+  TouchableOpacity, 
+  Platform, 
+  FlatList,
+  Modal,
+  TouchableWithoutFeedback,
+  Text 
+} from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient"; // Gradient eklendi
+import { LinearGradient } from "expo-linear-gradient"; 
 import { ScreenHeader } from "../../../components/navigation";
-import { Text } from "../../../components/ui/text";
-import { CustomRefreshControl } from "../../../components/CustomRefreshControl";
 import { useUIStore } from "../../../store/ui";
-import { SearchInput } from "../../customer";
+
 import { useContacts } from "../hooks";
-import { ContactCard } from "../components";
+import { useCustomers } from "../../customer/hooks";
+import { ContactListCard } from "../components/ContactListCard"; 
+import { SearchInput } from "../components/SearchInput"; 
+import { FilterCustomerDropdown } from "../components/FilterCustomerDropdown"; 
 import type { ContactDto, PagedFilter } from "../types";
+
+import { 
+  Add01Icon, 
+  AlertCircleIcon, 
+  RefreshIcon,
+  ArrowDown01Icon,
+  ArrowUp01Icon,
+  FilterIcon,
+  Cancel01Icon
+} from "hugeicons-react-native";
 
 export function ContactListScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors, themeMode } = useUIStore();
+  const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
 
   const isDark = themeMode === "dark";
 
-  // --- AMBIENT GRADIENT AYARLARI ---
-  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const BRAND_COLOR = "#db2777"; 
+  const BRAND_COLOR_DARK = "#ec4899";
+
+  const mainBg = isDark ? "#0c0516" : "#FAFAFA";
   const gradientColors = (isDark
-    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
-    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+    ? ['rgba(236, 72, 153, 0.08)', 'transparent', 'rgba(249, 115, 22, 0.05)'] 
+    : ['rgba(219, 39, 119, 0.05)', 'transparent', 'rgba(255, 240, 225, 0.3)']) as [string, string, ...string[]];
+
+  const theme = {
+    text: isDark ? "#FFFFFF" : "#0F172A",
+    textMute: isDark ? "#94a3b8" : "#64748B",
+    primary: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,     
+    surfaceBg: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
+    borderColor: isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(219, 39, 119, 0.2)',
+    switchBg: isDark ? 'rgba(0,0,0,0.3)' : '#F1F5F9',
+    activeSwitchBg: isDark ? 'rgba(236, 72, 153, 0.15)' : 'rgba(219, 39, 119, 0.1)',
+    iconColor: isDark ? "#64748B" : "#94a3b8",
+    filterBg: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9',
+    filterText: isDark ? '#CBD5E1' : '#475569',
+    modalBg: isDark ? '#1E293B' : '#FFFFFF', 
+    error: "#EF4444"
+  };
 
   const [searchText, setSearchText] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
-  const filters: PagedFilter[] | undefined = useMemo(() => {
-    if (searchText.trim().length >= 2) {
-      return [{ column: "fullName", operator: "contains", value: searchText.trim() }];
-    }
-    return undefined;
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
+  
+  const [appliedCustomerId, setAppliedCustomerId] = useState<number | null>(null);
+  const [appliedContactType, setAppliedContactType] = useState<string>('all');
+  
+  const [tempCustomerId, setTempCustomerId] = useState<number | null>(null);
+  const [tempContactType, setTempContactType] = useState<string>('all');
+  const [isCustomerDropdownOpen, setIsCustomerDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const handler = setTimeout(() => { setDebouncedQuery(searchText); }, 300);
+    return () => clearTimeout(handler);
   }, [searchText]);
 
-  const {
-    data,
-    isPending,
-    isError,
-    refetch,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isRefetching,
-  } = useContacts({ filters });
+  const { data: customersData } = useCustomers({ pageSize: 100 });
+  const customersList = customersData?.pages?.flatMap(p => p.items) || [];
 
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
+  const filters = useMemo(() => {
+    const arr: PagedFilter[] = [];
+    if (debouncedQuery.trim().length >= 2) {
+      arr.push({ column: "fullName", operator: "contains", value: debouncedQuery.trim() });
+    }
+    if (appliedCustomerId) {
+      arr.push({ column: "customerId", operator: "eq", value: String(appliedCustomerId) });
+    }
+    if (appliedContactType === 'hasPhone') {
+      arr.push({ column: "phone", operator: "isNotNull", value: "" });
+    } else if (appliedContactType === 'hasEmail') {
+      arr.push({ column: "email", operator: "isNotNull", value: "" });
+    }
+    return arr.length > 0 ? arr : undefined;
+  }, [debouncedQuery, appliedCustomerId, appliedContactType]);
+
+  const { data, isPending, isError, refetch, fetchNextPage, hasNextPage, isFetchingNextPage, isRefetching } = useContacts({ 
+    filters,
+    sortBy: "fullName",
+    sortDirection: sortOrder
+  });
 
   const contacts = useMemo(() => {
     const pages = data?.pages ?? [];
@@ -65,210 +121,278 @@ export function ContactListScreen(): React.ReactElement {
       .filter((item): item is ContactDto => item != null);
   }, [data]);
 
+  const totalCount = data?.pages?.[0]?.totalCount || contacts.length || 0;
   const isInitialLoading = isPending && contacts.length === 0;
+  const isAnyFilterActive = appliedCustomerId !== null || appliedContactType !== 'all';
 
-  const handleContactPress = useCallback(
-    (contact: ContactDto) => {
+  const handleContactPress = useCallback((contact: ContactDto) => {
       if (!contact?.id) return;
       router.push(`/customers/contacts/${contact.id}`);
-    },
-    [router]
-  );
+    }, [router]);
 
   const handleCreatePress = useCallback(() => {
     router.push("/customers/contacts/create");
   }, [router]);
 
   const handleLoadMore = useCallback(() => {
-    if (hasNextPage && !isFetchingNextPage) {
-      fetchNextPage();
-    }
+    if (hasNextPage && !isFetchingNextPage) fetchNextPage();
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  const renderEmpty = useCallback(() => {
-    if (isInitialLoading) {
-      return (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={colors.accent} />
-        </View>
-      );
-    }
-    return (
-      <View style={styles.emptyContainer}>
-        <Text style={styles.emptyIcon}>👤</Text>
-        <Text style={[styles.emptyText, { color: colors.textMuted }]}> 
-          {t("contact.noContacts")}
-        </Text>
-      </View>
-    );
-  }, [isInitialLoading, colors, t]);
+  const openFilterModal = () => {
+    setTempCustomerId(appliedCustomerId);
+    setTempContactType(appliedContactType);
+    setIsCustomerDropdownOpen(false);
+    setIsFilterModalVisible(true);
+  };
+
+  const applyFilters = () => {
+    setAppliedCustomerId(tempCustomerId);
+    setAppliedContactType(tempContactType);
+    setIsFilterModalVisible(false);
+  };
+
+  const clearFilters = () => {
+    setTempCustomerId(null);
+    setTempContactType('all');
+    setIsCustomerDropdownOpen(false);
+  };
+
+  const renderItem = useCallback(({ item }: { item: ContactDto }) => (
+    <ContactListCard 
+       contact={item} 
+       onPress={() => handleContactPress(item)} 
+    />
+  ), [handleContactPress]);
 
   return (
     <View style={[styles.container, { backgroundColor: mainBg }]}>
       <StatusBar style={isDark ? "light" : "dark"} />
       
-      {/* KATMAN 1: Ambient Gradient (En arkada duracak) */}
       <View style={StyleSheet.absoluteFill}>
-        <LinearGradient
-          colors={gradientColors}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
-        />
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       </View>
 
-      {/* KATMAN 2: Sayfa İçeriği */}
       <View style={{ flex: 1 }}>
-        <ScreenHeader
-          title={t("contact.title")}
-          showBackButton
-          rightElement={
-            <TouchableOpacity onPress={handleCreatePress} style={styles.addButton}>
-              <Text style={styles.addIcon}>+</Text>
-            </TouchableOpacity>
-          }
-        />
+        <ScreenHeader title={t("contact.title")} showBackButton />
         
-        {/* İçerik alanını şeffaf yaptık ki gradient görünsün */}
         <View style={styles.content}> 
-          <View style={styles.topSection}>
-            <TouchableOpacity
-              style={[styles.createButton, { backgroundColor: colors.accent }]}
-              onPress={handleCreatePress}
-              activeOpacity={0.8}
+          
+          <View style={styles.controlsArea}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+              <SearchInput value={searchText} onSearch={setSearchText} placeholder={t("contact.searchPlaceholder")} />
+            </View>
+            <TouchableOpacity 
+              onPress={handleCreatePress} 
+              style={[
+                styles.iconBtn, 
+                { 
+                  backgroundColor: isDark ? "rgba(219, 39, 119, 0.15)" : theme.surfaceBg, 
+                  borderColor: isDark ? "rgba(236, 72, 153, 0.3)" : theme.borderColor,
+                  shadowOpacity: isDark ? 0 : 0.25,
+                  elevation: isDark ? 0 : 3
+                }
+              ]} 
+              activeOpacity={0.7}
             >
-              <Text style={styles.createButtonIcon}>+</Text>
-              <Text style={styles.createButtonText}>{t("contact.create")}</Text>
+              <Add01Icon size={22} color={theme.primary} variant="stroke" strokeWidth={2.5} />
             </TouchableOpacity>
-            <SearchInput
-              value={searchText}
-              onSearch={setSearchText}
-              placeholder={t("contact.searchPlaceholder")}
-            />
           </View>
 
+          {(!isInitialLoading || data) && (
+            <View style={styles.metaRow}>
+              <Text style={[styles.metaText, { color: theme.textMute }]}>
+                {totalCount} kişi bulundu
+              </Text>
+              
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <TouchableOpacity style={[styles.sortBtn, { marginRight: 12, position: 'relative' }]} onPress={openFilterModal}>
+                  <Text style={[styles.sortText, { color: isAnyFilterActive ? theme.primary : theme.textMute }]}>
+                    Filtrele
+                  </Text>
+                  <FilterIcon size={16} color={isAnyFilterActive ? theme.primary : theme.textMute} strokeWidth={2.5} style={{ marginLeft: 4 }} />
+                  {isAnyFilterActive && <View style={[styles.activeFilterDot, { backgroundColor: theme.primary }]} />}
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.sortBtn} onPress={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}>
+                  <Text style={[styles.sortText, { color: theme.primary }]}>
+                    {sortOrder === 'desc' ? 'Z - A' : 'A - Z'}
+                  </Text>
+                  {sortOrder === 'desc' ? (
+                    <ArrowDown01Icon size={16} color={theme.primary} strokeWidth={2.5} style={{ marginLeft: 4 }} />
+                  ) : (
+                    <ArrowUp01Icon size={16} color={theme.primary} strokeWidth={2.5} style={{ marginLeft: 4 }} />
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
           {isInitialLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
+            <View style={styles.centerContainer}>
+              <ActivityIndicator size="large" color={theme.primary} />
             </View>
           ) : isError ? (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: colors.error }]}>{t("common.error")}</Text>
-              <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-                <Text style={[styles.retryText, { color: colors.accent }]}>{t("common.retry")}</Text>
+            <View style={styles.centerContainer}>
+               <AlertCircleIcon size={48} color={theme.textMute} variant="stroke" />
+              <Text style={[styles.errorText, { color: theme.error }]}>{t("common.error")}</Text>
+              <TouchableOpacity onPress={() => refetch()} style={[styles.retryButton, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }]}>
+                <RefreshIcon size={16} color={theme.text} variant="stroke" />
+                <Text style={[styles.retryText, { color: theme.text }]}>{t("common.retry")}</Text>
               </TouchableOpacity>
             </View>
           ) : (
-            <FlatListScrollView
-              style={styles.list}
-              contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
+            <FlatList
+              data={contacts}
+              renderItem={renderItem}
+              keyExtractor={(item, index) => String(item.id ?? index)}
               showsVerticalScrollIndicator={false}
-              refreshControl={
-                Platform.OS === "android"
-                  ? undefined
-                  : <CustomRefreshControl refreshing={isRefetching && !isFetchingNextPage} onRefresh={handleRefresh} />
+              contentContainerStyle={{
+                  paddingHorizontal: 16,
+                  paddingTop: 4, 
+                  paddingBottom: insets.bottom + 100,
+              }}
+              onEndReached={handleLoadMore}
+              onEndReachedThreshold={0.3}
+              refreshing={isRefetching && !isFetchingNextPage}
+              onRefresh={refetch}
+              ListFooterComponent={
+                isFetchingNextPage ? (
+                  <View style={{ paddingVertical: 20 }}><ActivityIndicator size="small" color={theme.primary} /></View>
+                ) : null
               }
-            >
-              {contacts.length === 0 ? renderEmpty() : null}
-              {contacts.map((item, index) =>
-                Platform.OS === "android" ? (
-                  <TouchableOpacity
-                    key={String(item.id ?? index)}
-                    style={[styles.androidCard, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }]}
-                    onPress={() => handleContactPress(item)}
-                    activeOpacity={0.8}
-                  >
-                    <RNText style={[styles.androidCardTitle, { color: colors.text }]}>{item.fullName || "-"}</RNText>
-                    <RNText style={[styles.androidCardSub, { color: colors.textMuted }]}>{item.titleName || "Unvan: -"}</RNText>
-                    <RNText style={[styles.androidCardSub, { color: colors.textMuted }]}>{item.phone || item.mobile || "-"}</RNText>
-                  </TouchableOpacity>
-                ) : (
-                  <ContactCard
-                    key={String(item.id ?? index)}
-                    contact={item}
-                    onPress={() => handleContactPress(item)}
-                  />
-                )
-              )}
-              {hasNextPage ? (
-                <TouchableOpacity
-                  style={[styles.loadMoreButton, { borderColor: colors.cardBorder, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#FFFFFF' }]}
-                  onPress={handleLoadMore}
-                  disabled={isFetchingNextPage}
-                >
-                  {isFetchingNextPage ? (
-                    <ActivityIndicator size="small" color={colors.accent} />
-                  ) : (
-                    <Text style={{ color: colors.text }}>{t("common.loadMore")}</Text>
-                  )}
-                </TouchableOpacity>
-              ) : null}
-            </FlatListScrollView>
+              ListEmptyComponent={
+                <View style={styles.emptyContainer}>
+                  <Text style={{ fontSize: 40, opacity: 0.8 }}>📇</Text>
+                  <Text style={[styles.emptyText, { color: theme.textMute }]}>{t("contact.noContacts")}</Text>
+                </View>
+              }
+            />
           )}
         </View>
       </View>
+
+      <Modal
+        visible={isFilterModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setIsFilterModalVisible(false)}
+      >
+        <TouchableWithoutFeedback onPress={() => setIsFilterModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalContent, { backgroundColor: theme.modalBg, paddingBottom: insets.bottom + 20 }]}>
+                
+                <View style={styles.modalHeader}>
+                  <Text style={[styles.modalTitle, { color: theme.primary }]}>Filtreler</Text>
+                  <TouchableOpacity onPress={() => setIsFilterModalVisible(false)} style={styles.closeBtn}>
+                    <Cancel01Icon size={24} color={theme.textMute} variant="stroke" />
+                  </TouchableOpacity>
+                </View>
+
+                <Text style={[styles.modalLabel, { color: theme.textMute }]}>İletişim Bilgisi</Text>
+                <View style={styles.wrapContainer}>
+                  {[
+                    { id: 'all', label: 'Tümü' },
+                    { id: 'hasPhone', label: 'Telefonu Olanlar' },
+                    { id: 'hasEmail', label: 'E-Postası Olanlar' }
+                  ].map(filter => (
+                    <TouchableOpacity
+                      key={filter.id}
+                      style={[styles.filterPill, { backgroundColor: theme.filterBg }, tempContactType === filter.id && { backgroundColor: theme.activeSwitchBg, borderColor: theme.borderColor, borderWidth: 1 }]}
+                      onPress={() => setTempContactType(filter.id)} 
+                    >
+                      <Text style={[styles.filterPillText, { color: theme.filterText }, tempContactType === filter.id && { color: theme.primary }]}>{filter.label}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={[styles.modalLabel, { color: theme.textMute, marginTop: 24 }]}>Şirket Seçimi</Text>
+                <FilterCustomerDropdown 
+                  customers={customersList}
+                  selectedId={tempCustomerId}
+                  onSelect={setTempCustomerId}
+                  isOpen={isCustomerDropdownOpen}
+                  onToggle={() => setIsCustomerDropdownOpen(!isCustomerDropdownOpen)}
+                />
+
+                <View style={styles.modalFooter}>
+                  <TouchableOpacity 
+                    style={[styles.modalActionBtn, { backgroundColor: theme.switchBg, flex: 1, marginRight: 10 }]} 
+                    onPress={clearFilters}
+                  >
+                    <Text style={[styles.modalActionText, { color: theme.textMute }]}>Temizle</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity 
+                    style={[styles.modalActionBtn, { backgroundColor: theme.primary, flex: 2 }]} 
+                    onPress={applyFilters}
+                  >
+                    <Text style={[styles.modalActionText, { color: '#FFF' }]}>Uygula</Text>
+                  </TouchableOpacity>
+                </View>
+
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  content: {
-    flex: 1,
-    backgroundColor: 'transparent',
+  content: { flex: 1, backgroundColor: 'transparent' },
+  
+  controlsArea: { 
+    flexDirection: 'row', 
+    alignItems: 'center', 
+    paddingHorizontal: 16, 
+    paddingTop: 12, 
+    paddingBottom: 8 
   },
-  topSection: {
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    gap: 12,
+  iconBtn: { 
+    height: 48, 
+    width: 48, 
+    borderRadius: 14, 
+    borderWidth: 1.5, 
+    alignItems: 'center', 
+    justifyContent: 'center', 
   },
-  createButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    alignSelf: "flex-start",
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 20,
-    gap: 6,
+
+  metaRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 18, 
+    paddingBottom: 10 
   },
-  createButtonIcon: { fontSize: 16, color: "#FFFFFF", fontWeight: "600" },
-  createButtonText: { fontSize: 13, color: "#FFFFFF", fontWeight: "600" },
-  list: { flex: 1, backgroundColor: 'transparent' },
-  listContent: { paddingHorizontal: 20 },
-  loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
-  errorContainer: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },
-  errorText: { fontSize: 16, marginBottom: 16 },
-  retryButton: { paddingHorizontal: 20, paddingVertical: 10 },
-  retryText: { fontSize: 16, fontWeight: "600" },
-  emptyContainer: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 60 },
-  emptyIcon: { fontSize: 48, marginBottom: 16 },
-  emptyText: { fontSize: 16 },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(255, 255, 255, 0.2)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addIcon: { fontSize: 18, color: "#FFFFFF", fontWeight: "600", lineHeight: 22 },
-  loadMoreButton: {
-    minHeight: 42,
-    borderWidth: 1,
-    borderRadius: 10,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 16,
-    marginTop: 8,
-  },
-  androidCard: {
-    borderColor: "rgba(255,255,255,0.15)",
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 12,
-  },
-  androidCardTitle: { fontSize: 15, fontWeight: "600", marginBottom: 4 },
-  androidCardSub: { fontSize: 13 },
+  metaText: { fontSize: 12, fontWeight: '600', letterSpacing: 0.2 },
+  sortBtn: { flexDirection: 'row', alignItems: 'center', paddingVertical: 4, paddingLeft: 8 },
+  sortText: { fontSize: 12, fontWeight: '700' },
+  activeFilterDot: { position: 'absolute', top: 2, right: -4, width: 6, height: 6, borderRadius: 3 },
+
+  centerContainer: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 20 },
+  errorText: { fontSize: 16, marginTop: 12 },
+  retryButton: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  retryText: { fontSize: 15, fontWeight: "700" },
+  
+  emptyContainer: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 80 },
+  emptyText: { fontSize: 15, marginTop: 12, fontWeight: '500', letterSpacing: 0.5, textAlign: 'center' },
+
+  modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, paddingBottom: 40 },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle: { fontSize: 18, fontWeight: '700', letterSpacing: -0.3 },
+  closeBtn: { padding: 4 },
+  modalLabel: { fontSize: 13, fontWeight: '700', marginBottom: 10, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  
+  wrapContainer: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 8 },
+  filterPill: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: 'transparent' },
+  filterPillText: { fontSize: 13, fontWeight: '600', letterSpacing: 0.3 },
+
+  modalFooter: { flexDirection: 'row', marginTop: 30 },
+  modalActionBtn: { height: 50, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  modalActionText: { fontSize: 15, fontWeight: '700' }
 });

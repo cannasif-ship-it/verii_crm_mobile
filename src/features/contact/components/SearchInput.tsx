@@ -14,34 +14,19 @@ export function SearchInput({
   onSearch,
   placeholder = "Ara...",
 }: SearchInputProps): React.ReactElement {
-  // --- STATE ---
   const [localValue, setLocalValue] = useState(value);
   const [isFocused, setIsFocused] = useState(false);
 
-  // --- TEMA (DİNAMİK) ---
-  const { themeMode, colors } = useUIStore();
+  const { themeMode } = useUIStore();
   const isDark = themeMode === "dark";
 
   const THEME = {
-    // Arka Plan: Koyu ise #1e1b29, Açık ise Beyaz
     bg: isDark ? "#1e1b29" : "#FFFFFF", 
-    
-    // Çerçeve: Koyu ise şeffaf beyaz, Açık ise gri (#E2E8F0)
     border: isDark ? "rgba(255,255,255,0.1)" : "#E2E8F0", 
-    
-    // Focus Rengi: Her iki modda da Neon Pembe
     focusBorder: "#db2777", 
-    
-    // Metin Rengi: Koyu ise Beyaz, Açık ise Koyu Gri (#0F172A)
     text: isDark ? "#FFFFFF" : "#0F172A",
-    
-    // Placeholder: Koyu ise Slate-500, Açık ise Slate-400
     placeholder: isDark ? "#64748B" : "#94a3b8", 
-    
-    // İkon Rengi
     icon: isDark ? "#94a3b8" : "#64748B",
-    
-    // Temizle Butonu Arka Planı
     clearBtnBg: isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)",
   };
 
@@ -68,14 +53,12 @@ export function SearchInput({
         },
       ]}
     >
-      {/* Sol Arama İkonu */}
       <Search01Icon 
         size={20} 
         color={isFocused ? THEME.focusBorder : THEME.icon} 
         variant="stroke" 
         style={styles.searchIcon}
       />
-
       <TextInput
         style={[styles.input, { color: THEME.text }]}
         value={localValue}
@@ -87,8 +70,6 @@ export function SearchInput({
         onFocus={() => setIsFocused(true)}
         onBlur={() => setIsFocused(false)}
       />
-
-      {/* Temizle Butonu (X) */}
       {localValue.length > 0 && (
         <TouchableOpacity 
           onPress={handleClear} 
@@ -106,13 +87,12 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     borderRadius: 12,
-    borderWidth: 1, // Kenarlık her zaman var
+    borderWidth: 1,
     paddingHorizontal: 12,
     height: 48,
-    // Gölge efekti (Hafif derinlik)
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05, // Gölgeyi biraz azalttım, açık modda daha temiz dursun
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     elevation: 2,
   },
@@ -122,7 +102,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 15,
-    padding: 0, // Android'de dikey kaymayı önler
+    padding: 0,
     fontWeight: "500",
   },
   clearButton: {
