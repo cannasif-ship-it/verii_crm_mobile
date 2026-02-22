@@ -34,9 +34,10 @@ apiClient.interceptors.request.use(
     }
 
     // Let axios/native layer set the correct multipart boundary for FormData requests.
-    if (typeof FormData !== "undefined" && config.data instanceof FormData) {
-      delete config.headers["Content-Type"];
-    }
+    if (config.data instanceof FormData) {
+  // SİLMEK YERİNE AÇIKÇA MULTIPART OLDUĞUNU SÖYLÜYORUZ
+  config.headers["Content-Type"] = "multipart/form-data";
+}
 
     if (__DEV__) {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
