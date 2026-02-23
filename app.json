@@ -3,6 +3,7 @@
     "name": "V3RII CRM",
     "slug": "v3rii-octopus",
     "version": "1.0.0",
+    "newArchEnabled": false,
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",  
@@ -49,7 +50,8 @@
             "10.0.2.2"
           ]
         }
-      ]
+      ],
+      "./plugins/withWorkletsAndroidInclude"
     ]
   }
 }

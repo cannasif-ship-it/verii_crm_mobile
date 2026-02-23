@@ -9,18 +9,13 @@ import {
   Pressable,
   Platform,
   Switch,
+  Animated,
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
-import Animated, {
-  useSharedValue,
-  useAnimatedStyle,
-  withTiming,
-  Easing,
-} from "react-native-reanimated";
 import { useTranslation } from "react-i18next";
 
 import {
@@ -44,8 +39,6 @@ const PANEL_WIDTH = width * 0.85;
 
 const ACTIVE_COLOR = "#fb923c";
 const ACTIVE_BG_COLOR = "rgba(251, 146, 60, 0.12)";
-
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
 
 interface ProfilePanelProps {
   isOpen: boolean;
@@ -72,24 +65,23 @@ const ProfilePanel = ({
   const isDarkMode = themeMode === "dark";
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
 
-  const translateX = useSharedValue(PANEL_WIDTH);
-  const backdropOpacity = useSharedValue(0);
+  const translateX = React.useRef(new Animated.Value(PANEL_WIDTH)).current;
+  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (isOpen) {
-      translateX.value = withTiming(0, {
+    Animated.parallel([
+      Animated.timing(translateX, {
+        toValue: isOpen ? 0 : PANEL_WIDTH,
         duration: 300,
-        easing: Easing.out(Easing.cubic),
-      });
-      backdropOpacity.value = withTiming(1, { duration: 300 });
-    } else {
-      translateX.value = withTiming(PANEL_WIDTH, {
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: isOpen ? 1 : 0,
         duration: 300,
-        easing: Easing.in(Easing.cubic),
-      });
-      backdropOpacity.value = withTiming(0, { duration: 300 });
-    }
-  }, [isOpen]);
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [backdropOpacity, isOpen, translateX]);
 
   const handleClose = () => {
     onClose();
@@ -109,15 +101,15 @@ const ProfilePanel = ({
     }, 150);
   };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
+  const animatedStyle = {
+    transform: [{ translateX }],
+  };
 
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: backdropOpacity.value,
-  }));
+  const backdropStyle = {
+    opacity: backdropOpacity,
+  };
 
-  if (!isOpen && translateX.value === PANEL_WIDTH) return null;
+  if (!isOpen) return null;
 
   return (
     <Modal
@@ -129,11 +121,13 @@ const ProfilePanel = ({
     >
       <View style={styles.container}>
         <Pressable style={StyleSheet.absoluteFill} onPress={handleClose}>
-          <AnimatedBlurView
-            intensity={Platform.OS === "android" ? 50 : 20}
-            tint={isDarkMode ? "dark" : "light"}
-            style={[StyleSheet.absoluteFill, backdropStyle]}
-          />
+          <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
+            <BlurView
+              intensity={Platform.OS === "android" ? 50 : 20}
+              tint={isDarkMode ? "dark" : "light"}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
         </Pressable>
 
         <Animated.View

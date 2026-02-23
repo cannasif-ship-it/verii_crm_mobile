@@ -7,19 +7,14 @@ import {
   Pressable, 
   Dimensions, 
   Platform,
-  Image 
+  Image,
+  Animated,
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { BlurView } from "expo-blur"; 
-import Animated, { 
-  useSharedValue, 
-  useAnimatedStyle, 
-  withTiming, 
-  Easing,
-} from "react-native-reanimated";
 import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "../ui/text";
 import { useUIStore } from "../../store/ui";
@@ -51,8 +46,6 @@ const SIDEBAR_WIDTH = width * 0.8;
 const ACTIVE_COLOR = "#fb923c"; 
 const ACTIVE_BG_COLOR = "rgba(251, 146, 60, 0.12)"; 
 
-const AnimatedBlurView = Animated.createAnimatedComponent(BlurView);
-
 export function Sidebar(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
@@ -64,8 +57,8 @@ export function Sidebar(): React.ReactElement {
 
   const isAuthScreen = pathname.includes("/(auth)") || pathname === "/login";
 
-  const translateX = useSharedValue(-SIDEBAR_WIDTH);
-  const backdropOpacity = useSharedValue(0);
+  const translateX = React.useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
+  const backdropOpacity = React.useRef(new Animated.Value(0)).current;
 
   const TEXT_COLOR = themeMode === "dark" ? "#FFFFFF" : colors.text;
   const TEXT_SECONDARY_COLOR = themeMode === "dark" ? "#E2E8F0" : colors.textSecondary;
@@ -93,20 +86,19 @@ export function Sidebar(): React.ReactElement {
   ];
 
   useEffect(() => {
-    if (isSidebarOpen) {
-      translateX.value = withTiming(0, { 
+    Animated.parallel([
+      Animated.timing(translateX, {
+        toValue: isSidebarOpen ? 0 : -SIDEBAR_WIDTH,
         duration: 300,
-        easing: Easing.out(Easing.cubic),
-      });
-      backdropOpacity.value = withTiming(1, { duration: 300 });
-    } else {
-      translateX.value = withTiming(-SIDEBAR_WIDTH, { 
+        useNativeDriver: true,
+      }),
+      Animated.timing(backdropOpacity, {
+        toValue: isSidebarOpen ? 1 : 0,
         duration: 300,
-        easing: Easing.in(Easing.cubic),
-      });
-      backdropOpacity.value = withTiming(0, { duration: 300 });
-    }
-  }, [isSidebarOpen]);
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [backdropOpacity, isSidebarOpen, translateX]);
 
   const handleNavigation = (route: string) => {
     closeSidebar();
@@ -115,13 +107,13 @@ export function Sidebar(): React.ReactElement {
     }, 150);
   };
 
-  const animatedStyle = useAnimatedStyle(() => ({
-    transform: [{ translateX: translateX.value }],
-  }));
+  const animatedStyle = {
+    transform: [{ translateX }],
+  };
 
-  const backdropStyle = useAnimatedStyle(() => ({
-    opacity: backdropOpacity.value,
-  }));
+  const backdropStyle = {
+    opacity: backdropOpacity,
+  };
 
   if (!isSidebarOpen) return <View />;
   if (isAuthScreen) return <View />;
@@ -137,11 +129,13 @@ export function Sidebar(): React.ReactElement {
       <View style={styles.container}>
         {/* Backdrop (Arka Plan) */}
         <Pressable style={StyleSheet.absoluteFill} onPress={closeSidebar}>
-          <AnimatedBlurView
-            intensity={Platform.OS === "android" ? 50 : 20}
-            tint={themeMode === "dark" ? "dark" : "light"}
-            style={[StyleSheet.absoluteFill, backdropStyle]}
-          />
+          <Animated.View style={[StyleSheet.absoluteFill, backdropStyle]}>
+            <BlurView
+              intensity={Platform.OS === "android" ? 50 : 20}
+              tint={themeMode === "dark" ? "dark" : "light"}
+              style={StyleSheet.absoluteFill}
+            />
+          </Animated.View>
         </Pressable>
 
         {/* Sidebar Container */}
