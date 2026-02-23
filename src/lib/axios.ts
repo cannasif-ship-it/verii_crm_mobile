@@ -6,11 +6,37 @@ import type { ApiResponse, Branch } from "../features/auth/types";
 import { useAuthStore } from "../store/auth";
 import { router } from "expo-router";
 
+function isFormDataPayload(data: unknown): boolean {
+  if (!data) return false;
+  if (typeof FormData !== "undefined" && data instanceof FormData) return true;
+
+  // React Native can expose FormData from a different runtime/context.
+  // Fallback to a minimal duck-typing check.
+  const candidate = data as { append?: unknown; getParts?: unknown; _parts?: unknown };
+  const hasAppend = typeof candidate.append === "function";
+  const hasRnParts = Array.isArray(candidate._parts) || typeof candidate.getParts === "function";
+  return hasAppend && hasRnParts;
+}
+
+function applyContentTypeByPayload(config: InternalAxiosRequestConfig): void {
+  const multipart = isFormDataPayload(config.data);
+  if (multipart) {
+    // Let axios/native networking layer generate multipart boundary automatically.
+    delete config.headers["Content-Type"];
+    delete config.headers["content-type"];
+    return;
+  }
+
+  if (!config.headers["Content-Type"] && !config.headers["content-type"]) {
+    config.headers["Content-Type"] = "application/json";
+  }
+}
+
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT,
   headers: {
-    "Content-Type": "application/json",
+    Accept: "application/json",
   },
 });
 
@@ -33,11 +59,7 @@ apiClient.interceptors.request.use(
       config.headers.BranchCode = normalizedBranchCode;
     }
 
-    // Let axios/native layer set the correct multipart boundary for FormData requests.
-    if (config.data instanceof FormData) {
-  // SİLMEK YERİNE AÇIKÇA MULTIPART OLDUĞUNU SÖYLÜYORUZ
-  config.headers["Content-Type"] = "multipart/form-data";
-}
+    applyContentTypeByPayload(config);
 
     if (__DEV__) {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
