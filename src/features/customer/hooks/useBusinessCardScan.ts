@@ -75,19 +75,12 @@ export function useBusinessCardScan(): {
       const ext = extensionByMime[asset.mimeType ?? ""] ?? "jpg";
       const target = `${persistentBase}picked_card_${Date.now()}.${ext}`;
 
-      if (asset.base64) {
-        await FileSystem.writeAsStringAsync(target, asset.base64, {
-          encoding: FileSystem.EncodingType.Base64,
-        });
+      if (imageUri.startsWith("content://")) {
+        await FileSystem.copyAsync({ from: imageUri, to: target });
         const info = await FileSystem.getInfoAsync(target);
         if (!info.exists) {
           throw new Error("Seçilen görsel kaydedilemedi. Lütfen tekrar seçin.");
         }
-        return target;
-      }
-
-      if (imageUri.startsWith("content://")) {
-        await FileSystem.copyAsync({ from: imageUri, to: target });
         return target;
       }
 
@@ -165,7 +158,6 @@ export function useBusinessCardScan(): {
         // Cropping produced invalid JPEG payloads on some devices (tiny ~600B files).
         allowsEditing: false,
         quality: 0.85,
-        base64: true,
       });
 
       if (result.canceled || !result.assets?.[0]?.uri) {
@@ -189,7 +181,6 @@ export function useBusinessCardScan(): {
       // Keep original file to avoid broken image payloads from editor output.
       allowsEditing: false,
       quality: 0.85,
-      base64: true,
     });
 
     if (result.canceled || !result.assets?.[0]?.uri) {
