@@ -63,7 +63,7 @@ export function ReportTab({ entityId, ruleType }: ReportTabProps): React.ReactEl
     generatePdf.mutate(
       { templateId: selectedTemplateId, entityId },
       {
-        onSuccess: async (arrayBuffer) => {
+        onSuccess: async (arrayBuffer: ArrayBuffer) => {
           try {
             const base64 = arrayBufferToBase64(arrayBuffer);
             const dir = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
@@ -86,7 +86,7 @@ export function ReportTab({ entityId, ruleType }: ReportTabProps): React.ReactEl
           }
           generatePdf.reset();
         },
-        onError: (err) => {
+        onError: (err: unknown) => {
           const message = err instanceof Error ? err.message : t("report.generateError");
           showToast("error", message);
         },

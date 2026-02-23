@@ -2,8 +2,13 @@ import { useMutation } from "@tanstack/react-query";
 import { quotationApi } from "../api";
 import type { GenerateReportPdfRequest } from "../types";
 
+type MutateOptions = {
+  onSuccess?: (data: ArrayBuffer) => void;
+  onError?: (error: unknown) => void;
+};
+
 export function useGenerateReportPdf(): {
-  mutate: (params: GenerateReportPdfRequest) => void;
+  mutate: (params: GenerateReportPdfRequest, options?: MutateOptions) => void;
   mutateAsync: (params: GenerateReportPdfRequest) => Promise<ArrayBuffer>;
   isPending: boolean;
   isError: boolean;
