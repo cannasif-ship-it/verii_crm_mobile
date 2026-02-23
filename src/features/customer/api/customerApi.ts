@@ -54,14 +54,16 @@ async function ensureReadableUploadUri(imageUri: string): Promise<string> {
 
   if (imageUri.startsWith("content://")) {
     const cacheBase = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-    if (!cacheBase) return imageUri;
+    if (!cacheBase) {
+      throw new Error("Seçilen görsel geçerli bir dosyaya dönüştürülemedi.");
+    }
 
     const fallbackFile = `${cacheBase}upload_${Date.now()}.jpg`;
     try {
       await FileSystem.copyAsync({ from: imageUri, to: fallbackFile });
       return fallbackFile;
     } catch {
-      return imageUri;
+      throw new Error("Seçilen görsel uygulama tarafından okunamadı. Lütfen galeriden tekrar seçin.");
     }
   }
 

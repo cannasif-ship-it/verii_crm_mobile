@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
+import * as FileSystem from "expo-file-system";
 import { runOCR } from "../services/ocrService";
 import { extractBusinessCardViaLLM } from "../services/businessCardLlmService";
 import { buildBusinessCardCandidateHints } from "../services/businessCardHeuristics";
@@ -49,6 +50,24 @@ export function useBusinessCardScan(): {
 } {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const normalizePickedImageUri = useCallback(async (imageUri: string): Promise<string> => {
+    if (!imageUri) return imageUri;
+    if (imageUri.startsWith("file://")) return imageUri;
+
+    if (imageUri.startsWith("content://")) {
+      const cacheBase = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+      if (!cacheBase) {
+        throw new Error("Seçilen görsel geçerli bir dosyaya dönüştürülemedi.");
+      }
+
+      const target = `${cacheBase}picked_card_${Date.now()}.jpg`;
+      await FileSystem.copyAsync({ from: imageUri, to: target });
+      return target;
+    }
+
+    return imageUri;
+  }, []);
 
   const processImage = useCallback(
     async (imageUri: string): Promise<BusinessCardOcrResult | null> => {
@@ -125,7 +144,7 @@ export function useBusinessCardScan(): {
         return null;
       }
 
-      return result.assets[0].uri;
+      return await normalizePickedImageUri(result.assets[0].uri);
     }
 
     let status = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -148,8 +167,8 @@ export function useBusinessCardScan(): {
       return null;
     }
 
-    return result.assets[0].uri;
-  }, []);
+    return await normalizePickedImageUri(result.assets[0].uri);
+  }, [normalizePickedImageUri]);
 
   const scanBusinessCard = useCallback(
     async (): Promise<BusinessCardOcrResult | null> => {
