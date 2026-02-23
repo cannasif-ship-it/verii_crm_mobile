@@ -73,8 +73,13 @@ async function ensureReadableUploadUri(imageUri: string): Promise<string> {
 async function assertUploadFileIsValid(imageUri: string): Promise<void> {
   try {
     const info = await FileSystem.getInfoAsync(imageUri);
-    const size = (info as { size?: number }).size ?? 0;
-    if (!info.exists || size < 1024) {
+    const size = (info as { size?: number }).size;
+    if (!info.exists) {
+      throw new Error("Seçilen görsel okunamadı. Lütfen resmi tekrar seçin.");
+    }
+    // Some Android providers return undefined size even for valid files.
+    // Only reject tiny files when we can reliably read size.
+    if (typeof size === "number" && size > 0 && size < 1024) {
       throw new Error("Seçilen görsel geçersiz görünüyor. Lütfen resmi tekrar seçin.");
     }
   } catch {

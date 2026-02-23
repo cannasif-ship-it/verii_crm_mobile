@@ -51,23 +51,46 @@ export function useBusinessCardScan(): {
   const [isScanning, setIsScanning] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const normalizePickedImageUri = useCallback(async (imageUri: string): Promise<string> => {
-    if (!imageUri) return imageUri;
-    if (imageUri.startsWith("file://")) return imageUri;
+  const normalizePickedImageAsset = useCallback(
+    async (asset: ImagePicker.ImagePickerAsset): Promise<string> => {
+      const imageUri = asset?.uri;
+      if (!imageUri) {
+        throw new Error("Seçilen görsel bulunamadı.");
+      }
+      if (imageUri.startsWith("file://")) return imageUri;
 
-    if (imageUri.startsWith("content://")) {
       const cacheBase = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
       if (!cacheBase) {
         throw new Error("Seçilen görsel geçerli bir dosyaya dönüştürülemedi.");
       }
 
-      const target = `${cacheBase}picked_card_${Date.now()}.jpg`;
-      await FileSystem.copyAsync({ from: imageUri, to: target });
-      return target;
-    }
+      const extensionByMime: Record<string, string> = {
+        "image/jpeg": "jpg",
+        "image/jpg": "jpg",
+        "image/png": "png",
+        "image/webp": "webp",
+        "image/heic": "heic",
+        "image/heif": "heif",
+      };
+      const ext = extensionByMime[asset.mimeType ?? ""] ?? "jpg";
+      const target = `${cacheBase}picked_card_${Date.now()}.${ext}`;
 
-    return imageUri;
-  }, []);
+      if (asset.base64) {
+        await FileSystem.writeAsStringAsync(target, asset.base64, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+        return target;
+      }
+
+      if (imageUri.startsWith("content://")) {
+        await FileSystem.copyAsync({ from: imageUri, to: target });
+        return target;
+      }
+
+      return imageUri;
+    },
+    []
+  );
 
   const processImage = useCallback(
     async (imageUri: string): Promise<BusinessCardOcrResult | null> => {
@@ -138,13 +161,14 @@ export function useBusinessCardScan(): {
         // Cropping produced invalid JPEG payloads on some devices (tiny ~600B files).
         allowsEditing: false,
         quality: 0.85,
+        base64: true,
       });
 
       if (result.canceled || !result.assets?.[0]?.uri) {
         return null;
       }
 
-      return await normalizePickedImageUri(result.assets[0].uri);
+      return await normalizePickedImageAsset(result.assets[0]);
     }
 
     let status = await ImagePicker.getMediaLibraryPermissionsAsync();
@@ -161,14 +185,15 @@ export function useBusinessCardScan(): {
       // Keep original file to avoid broken image payloads from editor output.
       allowsEditing: false,
       quality: 0.85,
+      base64: true,
     });
 
     if (result.canceled || !result.assets?.[0]?.uri) {
       return null;
     }
 
-    return await normalizePickedImageUri(result.assets[0].uri);
-  }, [normalizePickedImageUri]);
+    return await normalizePickedImageAsset(result.assets[0]);
+  }, [normalizePickedImageAsset]);
 
   const scanBusinessCard = useCallback(
     async (): Promise<BusinessCardOcrResult | null> => {
