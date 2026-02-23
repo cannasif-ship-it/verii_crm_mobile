@@ -35,6 +35,7 @@ import {
   Delete02Icon, 
   Add01Icon 
 } from "hugeicons-react-native"; // Analytics02Icon silindi
+import { LinearGradient } from "expo-linear-gradient";
 
 type TabType = "detail" | "contacts" | "addresses";
 
@@ -234,9 +235,18 @@ function CustomerDetailPage(): React.ReactElement {
           showsVerticalScrollIndicator={false}
         />
       )}
+      {/* İki tabdaki FAB butonlarını da şu şekilde değiştir: */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: THEME.primary }]}
-        onPress={handleAddContactPress}
+        style={[
+          styles.fab, 
+          { 
+            backgroundColor: THEME.primary,
+            // Navbar'ın üstüne çıkması için insets.bottom + ek boşluk veriyoruz
+            bottom: Math.max(insets.bottom, 20) + 80, 
+            shadowColor: THEME.primary 
+          }
+        ]}
+        onPress={handleAddContactPress} // Adres için handleAddAddressPress
       >
         <Add01Icon size={28} color="#FFFFFF" variant="stroke" />
       </TouchableOpacity>
@@ -264,9 +274,18 @@ function CustomerDetailPage(): React.ReactElement {
           showsVerticalScrollIndicator={false}
         />
       )}
+      {/* İki tabdaki FAB butonlarını da şu şekilde değiştir: */}
       <TouchableOpacity
-        style={[styles.fab, { backgroundColor: THEME.primary }]}
-        onPress={handleAddAddressPress}
+        style={[
+          styles.fab, 
+          { 
+            backgroundColor: THEME.primary,
+            // Navbar'ın üstüne çıkması için insets.bottom + ek boşluk veriyoruz
+            bottom: Math.max(insets.bottom, 20) + 80, 
+            shadowColor: THEME.primary 
+          }
+        ]}
+        onPress={handleAddAddressPress} // Adres için handleAddAddressPress
       >
         <Add01Icon size={28} color="#FFFFFF" variant="stroke" />
       </TouchableOpacity>
@@ -293,87 +312,98 @@ function CustomerDetailPage(): React.ReactElement {
 
   return (
     <>
-      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={THEME.bg} />
+      {/* Transparan StatusBar */}
+      <StatusBar style={isDark ? "light" : "dark"} backgroundColor="transparent" translucent />
       
-      <View style={[styles.container, { backgroundColor: THEME.bg }]}>
-        
-        {/* HEADER BÖLÜMÜ */}
-        <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.borderColor }}>
+      <View style={styles.container}>
+        {/* 1. ANA ARKA PLAN - DETAY SAYFASI GRADIENT'İ */}
+        <View style={StyleSheet.absoluteFill}>
+          <LinearGradient 
+            colors={isDark 
+              ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.05)'] // Karanlık mod neon pembe-turuncu
+              : ['rgba(255, 240, 225, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']} // Aydınlık mod pastel şeftali
+            start={{ x: 0, y: 0 }} 
+            end={{ x: 1, y: 1 }} 
+            style={StyleSheet.absoluteFill} 
+          />
+        </View>
+
+        {/* 2. İÇERİK KATMANI */}
+        <View style={{ flex: 1, zIndex: 10 }}>
+          {/* HEADER BÖLÜMÜ */}
+          <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.borderColor }}>
             <ScreenHeader
-            title={t("customer.detail")}
-            showBackButton
-            rightElement={
+              title={t("customer.detail")}
+              showBackButton
+              rightElement={
                 customer ? (
-                <View style={[
+                  <View style={[
                     styles.actionPill, 
                     { 
                       backgroundColor: THEME.glassBtn, 
-                      borderColor: THEME.pillBorder // YENİ: Neon çerçeve rengi
+                      borderColor: THEME.pillBorder
                     }
-                ]}>
-                    
-                    {/* DÜZENLE BUTONU (Sol Taraf - Şeffaf) */}
+                  ]}>
+                    {/* DÜZENLE BUTONU */}
                     <TouchableOpacity onPress={handleEditPress} style={styles.pillButton}>
-                       <Edit02Icon size={18} color={THEME.text} variant="stroke" />
+                      <Edit02Icon size={18} color={THEME.text} variant="stroke" />
                     </TouchableOpacity>
-                    
-                    {/* Ayırıcı çizgi SİLİNDİ */}
 
-                    {/* SİL BUTONU (Sağ Taraf - Neon Kırmızı Arka Plan) */}
+                    {/* SİL BUTONU */}
                     <TouchableOpacity
-                        onPress={handleDeletePress}
-                        style={[
-                          styles.pillButton, 
-                          { 
-                            // YENİ: Koyu modda neon kırmızı, açık modda pastel kırmızı arka plan
-                            backgroundColor: isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2",
-                            borderLeftWidth: 1, // Düzenle butonuyla arasına ince bir çizgi
-                            borderLeftColor: THEME.pillBorder
-                          }
-                        ]}
-                        disabled={isDeleting}
+                      onPress={handleDeletePress}
+                      style={[
+                        styles.pillButton, 
+                        { 
+                          backgroundColor: isDark ? "rgba(239, 68, 68, 0.15)" : "#FEE2E2",
+                          borderLeftWidth: 1, 
+                          borderLeftColor: THEME.pillBorder
+                        }
+                      ]}
+                      disabled={isDeleting}
                     >
-                    {isDeleting ? (
+                      {isDeleting ? (
                         <ActivityIndicator size="small" color={THEME.danger} />
-                    ) : (
+                      ) : (
                         <Delete02Icon size={18} color={THEME.danger} variant="stroke" />
-                    )}
+                      )}
                     </TouchableOpacity>
-                    
-                </View>
+                  </View>
                 ) : undefined
-            }
+              }
             />
-        </View>
+          </View>
 
-        <View style={[styles.content, { backgroundColor: THEME.bg }]}>
-          {isLoading ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={THEME.primary} />
-            </View>
-          ) : isError ? (
-            <View style={styles.errorContainer}>
-              <Text style={[styles.errorText, { color: THEME.danger }]}>{t("common.error")}</Text>
-              <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
-                <Text style={[styles.retryText, { color: THEME.primary }]}>{t("common.retry")}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : customer ? (
-            <>
-              {/* TAB BAR */}
-              <TabBar
-                activeTab={activeTab}
-                onTabPress={setActiveTab}
-                theme={THEME} // Temayı TabBar'a iletiyoruz
-                t={t}
-                contactsCount={contacts.length}
-                addressesCount={addresses.length}
-              />
-              
-              {/* İÇERİK */}
-              {renderTabContent()}
-            </>
-          ) : null}
+          {/* 3. TABLAR VE İÇERİK - Arka planı tamamen şeffaf yapıyoruz */}
+          <View style={[styles.content, { backgroundColor: 'transparent' }]}>
+            {isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={THEME.primary} />
+              </View>
+            ) : isError ? (
+              <View style={styles.errorContainer}>
+                <Text style={[styles.errorText, { color: THEME.danger }]}>{t("common.error")}</Text>
+                <TouchableOpacity onPress={() => refetch()} style={styles.retryButton}>
+                  <Text style={[styles.retryText, { color: THEME.primary }]}>{t("common.retry")}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : customer ? (
+              <>
+                {/* TAB BAR */}
+                <TabBar
+                  activeTab={activeTab}
+                  onTabPress={setActiveTab}
+                  theme={THEME}
+                  t={t}
+                  contactsCount={contacts.length}
+                  addressesCount={addresses.length}
+                />
+                
+                {/* İÇERİK */}
+                {renderTabContent()}
+              </>
+            ) : null}
+          </View>
         </View>
       </View>
     </>
@@ -459,20 +489,21 @@ const styles = StyleSheet.create({
     fontSize: 15,
     textAlign: "center",
   },
-  fab: {
+ fab: {
     position: "absolute",
     right: 20,
-    bottom: 40,
+    // bottom değerini buradan sildik, dinamik olarak JSX içinde veriyoruz!
     width: 56,
     height: 56,
-    borderRadius: 28,
+    borderRadius: 20, // Tam yuvarlak yerine modern "squircle" (kapsülmsü) şekil
     alignItems: "center",
     justifyContent: "center",
-    elevation: 4,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
+    // Android 3D gölgeyi öldür
+    elevation: 0, 
+    // Neon Glow Efekti
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
   },
   headerActions: {
     flexDirection: "row",
