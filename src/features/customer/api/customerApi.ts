@@ -68,6 +68,18 @@ async function ensureReadableUploadUri(imageUri: string): Promise<string> {
   return imageUri;
 }
 
+async function assertUploadFileIsValid(imageUri: string): Promise<void> {
+  try {
+    const info = await FileSystem.getInfoAsync(imageUri);
+    const size = (info as { size?: number }).size ?? 0;
+    if (!info.exists || size < 1024) {
+      throw new Error("Seçilen görsel geçersiz görünüyor. Lütfen resmi tekrar seçin.");
+    }
+  } catch {
+    throw new Error("Seçilen görsel okunamadı. Lütfen resmi tekrar seçin.");
+  }
+}
+
 const buildQueryParams = (params: PagedParams): Record<string, string | number> => {
   const queryParams: Record<string, string | number> = {};
 
@@ -172,6 +184,7 @@ export const customerApi = {
 
     if (data.imageUri) {
       const readableUri = await ensureReadableUploadUri(data.imageUri);
+      await assertUploadFileIsValid(readableUri);
       const fileMeta = getSafeUploadMeta(readableUri);
       formData.append("imageFile", {
         uri: fileMeta.uri,
@@ -229,6 +242,7 @@ export const customerApi = {
     imageDescription?: string
   ): Promise<CustomerImageDto[]> => {
     const readableUri = await ensureReadableUploadUri(imageUri);
+    await assertUploadFileIsValid(readableUri);
     const fileMeta = getSafeUploadMeta(readableUri);
 
     const formData = new FormData();
