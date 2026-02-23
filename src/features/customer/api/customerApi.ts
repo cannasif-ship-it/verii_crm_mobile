@@ -1,4 +1,5 @@
 import { apiClient } from "../../../lib/axios";
+import * as FileSystem from "expo-file-system";
 import type { ApiResponse } from "../../auth/types";
 import type {
   CustomerGetDto,
@@ -45,6 +46,26 @@ function getSafeUploadMeta(imageUri: string): { name: string; type: string; uri:
     name: safeName,
     type: EXTENSION_TO_MIME[safeExt] ?? "image/jpeg",
   };
+}
+
+async function ensureReadableUploadUri(imageUri: string): Promise<string> {
+  if (!imageUri) return imageUri;
+  if (imageUri.startsWith("file://")) return imageUri;
+
+  if (imageUri.startsWith("content://")) {
+    const cacheBase = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+    if (!cacheBase) return imageUri;
+
+    const fallbackFile = `${cacheBase}upload_${Date.now()}.jpg`;
+    try {
+      await FileSystem.copyAsync({ from: imageUri, to: fallbackFile });
+      return fallbackFile;
+    } catch {
+      return imageUri;
+    }
+  }
+
+  return imageUri;
 }
 
 const buildQueryParams = (params: PagedParams): Record<string, string | number> => {
@@ -150,12 +171,13 @@ export const customerApi = {
     appendIfPresent("imageDescription", data.imageDescription);
 
     if (data.imageUri) {
-      const fileMeta = getSafeUploadMeta(data.imageUri);
+      const readableUri = await ensureReadableUploadUri(data.imageUri);
+      const fileMeta = getSafeUploadMeta(readableUri);
       formData.append("imageFile", {
         uri: fileMeta.uri,
         type: fileMeta.type,
         name: fileMeta.name,
-      } as unknown as Blob);
+      } as any);
     }
 
     const response = await apiClient.post<ApiResponse<CreateCustomerFromMobileResultDto>>(
@@ -206,14 +228,15 @@ export const customerApi = {
     imageUri: string,
     imageDescription?: string
   ): Promise<CustomerImageDto[]> => {
-    const fileMeta = getSafeUploadMeta(imageUri);
+    const readableUri = await ensureReadableUploadUri(imageUri);
+    const fileMeta = getSafeUploadMeta(readableUri);
 
     const formData = new FormData();
     formData.append("files", {
       uri: fileMeta.uri,
       type: fileMeta.type,
       name: fileMeta.name,
-    } as unknown as Blob);
+    } as any);
 
     if (imageDescription?.trim()) {
       formData.append("imageDescriptions", imageDescription.trim());

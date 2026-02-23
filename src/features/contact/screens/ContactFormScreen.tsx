@@ -209,8 +209,9 @@ export function ContactFormScreen(): React.ReactElement {
           Alert.alert("", t("contact.createSuccess"));
         }
         router.back();
-      } catch {
-        Alert.alert(t("common.error"), t("common.error"));
+      } catch (error) {
+        const message = error instanceof Error && error.message ? error.message : t("common.error");
+        Alert.alert(t("common.error"), message);
       }
     },
     [isEditMode, contactId, buildPayload, createContact, updateContact, router, t]
