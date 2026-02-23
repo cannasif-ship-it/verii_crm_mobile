@@ -82,7 +82,10 @@ async function assertUploadFileIsValid(imageUri: string): Promise<void> {
     if (typeof size === "number" && size > 0 && size < 1024) {
       throw new Error("Seçilen görsel geçersiz görünüyor. Lütfen resmi tekrar seçin.");
     }
-  } catch {
+  } catch (error) {
+    if (error instanceof Error && error.message) {
+      throw error;
+    }
     throw new Error("Seçilen görsel okunamadı. Lütfen resmi tekrar seçin.");
   }
 }

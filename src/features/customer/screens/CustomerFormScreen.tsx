@@ -305,7 +305,8 @@ export function CustomerFormScreen(): React.ReactElement {
         await updateCustomer.mutateAsync({ id: customerId, data: updatePayload });
         Alert.alert("", t("customer.updateSuccess"));
       } else {
-        const shouldUseMobileOcrFlow = Boolean(scannedImageUri || scannedContactName || scannedTitle);
+        // Mobile OCR endpoint is image-driven. If image is removed, fallback to standard create API.
+        const shouldUseMobileOcrFlow = Boolean(scannedImageUri);
 
         if (shouldUseMobileOcrFlow) {
           const contactNameParts = splitContactName(scannedContactName);

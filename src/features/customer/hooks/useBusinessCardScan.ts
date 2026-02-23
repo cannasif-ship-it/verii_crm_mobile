@@ -59,8 +59,8 @@ export function useBusinessCardScan(): {
       }
       if (imageUri.startsWith("file://")) return imageUri;
 
-      const cacheBase = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
-      if (!cacheBase) {
+      const persistentBase = FileSystem.documentDirectory ?? FileSystem.cacheDirectory;
+      if (!persistentBase) {
         throw new Error("Seçilen görsel geçerli bir dosyaya dönüştürülemedi.");
       }
 
@@ -73,12 +73,16 @@ export function useBusinessCardScan(): {
         "image/heif": "heif",
       };
       const ext = extensionByMime[asset.mimeType ?? ""] ?? "jpg";
-      const target = `${cacheBase}picked_card_${Date.now()}.${ext}`;
+      const target = `${persistentBase}picked_card_${Date.now()}.${ext}`;
 
       if (asset.base64) {
         await FileSystem.writeAsStringAsync(target, asset.base64, {
           encoding: FileSystem.EncodingType.Base64,
         });
+        const info = await FileSystem.getInfoAsync(target);
+        if (!info.exists) {
+          throw new Error("Seçilen görsel kaydedilemedi. Lütfen tekrar seçin.");
+        }
         return target;
       }
 
