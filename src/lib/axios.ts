@@ -6,69 +6,11 @@ import type { ApiResponse, Branch } from "../features/auth/types";
 import { useAuthStore } from "../store/auth";
 import { router } from "expo-router";
 
-type MutableHeaders = InternalAxiosRequestConfig["headers"] & {
-  delete?: (name: string) => void;
-  set?: (name: string, value: string | undefined) => void;
-};
-
-function clearContentType(headers: MutableHeaders): void {
-  // AxiosHeaders keeps an internal map; prefer API methods over bracket delete.
-  if (typeof headers.delete === "function") {
-    headers.delete("Content-Type");
-    headers.delete("content-type");
-  }
-  if (typeof headers.set === "function") {
-    headers.set("Content-Type", undefined);
-    headers.set("content-type", undefined);
-  }
-  delete headers["Content-Type"];
-  delete headers["content-type"];
-}
-
-function isFormDataPayload(data: unknown): boolean {
-  if (!data) return false;
-  if (typeof FormData !== "undefined" && data instanceof FormData) return true;
-
-  // In release builds, FormData may come from a different JS/runtime boundary.
-  // Be permissive: if it behaves like FormData (append), treat it as multipart.
-  const candidate = data as {
-    append?: unknown;
-    getParts?: unknown;
-    _parts?: unknown;
-    [Symbol.toStringTag]?: unknown;
-  };
-  if (typeof candidate.append === "function") return true;
-
-  // Extra fallback for runtimes where FormData crosses JS boundaries.
-  return (
-    candidate?.[Symbol.toStringTag] === "FormData" ||
-    typeof candidate.getParts === "function" ||
-    Array.isArray(candidate._parts)
-  );
-}
-
-function applyContentTypeByPayload(config: InternalAxiosRequestConfig): void {
-  const headers = config.headers as MutableHeaders;
-  const multipart = isFormDataPayload(config.data);
-  if (multipart) {
-    // Let axios/native networking layer generate multipart boundary automatically.
-    clearContentType(headers);
-    return;
-  }
-
-  if (!headers["Content-Type"] && !headers["content-type"]) {
-    if (typeof headers.set === "function") {
-      headers.set("Content-Type", "application/json");
-    } else {
-      headers["Content-Type"] = "application/json";
-    }
-  }
-}
-
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
   timeout: API_TIMEOUT,
   headers: {
+    "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
@@ -91,8 +33,6 @@ apiClient.interceptors.request.use(
       config.headers["X-Branch-Code"] = normalizedBranchCode;
       config.headers.BranchCode = normalizedBranchCode;
     }
-
-    applyContentTypeByPayload(config);
 
     if (__DEV__) {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {

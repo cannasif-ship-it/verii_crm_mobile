@@ -1,7 +1,5 @@
 import { apiClient } from "../../../lib/axios";
 import * as FileSystem from "expo-file-system/legacy";
-import { ACCESS_TOKEN_KEY, BRANCH_STORAGE_KEY, LANGUAGE_STORAGE_KEY } from "../../../constants/storage";
-import { storage } from "../../../lib/storage";
 import type { ApiResponse } from "../../auth/types";
 import type {
   CustomerGetDto,
@@ -15,46 +13,6 @@ import type {
   PagedResponse,
   PagedApiResponse,
 } from "../types";
-
-type BranchLike = { code?: string | number | null } | null;
-
-async function postMultipart<T>(path: string, formData: FormData, timeoutMs = 120000): Promise<ApiResponse<T>> {
-  const token = await storage.get<string>(ACCESS_TOKEN_KEY);
-  const branch = await storage.get<BranchLike>(BRANCH_STORAGE_KEY);
-  const language = await storage.get<string>(LANGUAGE_STORAGE_KEY);
-
-  const headers: Record<string, string> = {
-    Accept: "application/json",
-    "X-Language": language || "tr",
-  };
-
-  if (token) {
-    headers.Authorization = `Bearer ${token}`;
-  }
-
-  const branchCode = branch?.code;
-  if (branchCode !== undefined && branchCode !== null && String(branchCode).trim() !== "") {
-    const normalizedBranchCode = String(branchCode);
-    headers["X-Branch-Code"] = normalizedBranchCode;
-    headers.BranchCode = normalizedBranchCode;
-  }
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    const response = await fetch(`${apiClient.defaults.baseURL}${path}`, {
-      method: "POST",
-      headers,
-      body: formData,
-      signal: controller.signal,
-    });
-
-    const payload = (await response.json()) as ApiResponse<T>;
-    return payload;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
 
 const EXTENSION_TO_MIME: Record<string, string> = {
   jpg: "image/jpeg",
@@ -251,20 +209,25 @@ export const customerApi = {
       } as any);
     }
 
-    const payload = await postMultipart<CreateCustomerFromMobileResultDto>(
+    const response = await apiClient.post<ApiResponse<CreateCustomerFromMobileResultDto>>(
       "/api/Customer/mobile/create-from-ocr",
       formData,
-      120000
+      {
+        timeout: 120000,
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
     );
 
-    if (!payload.success) {
+    if (!response.data.success) {
       const msg =
-        [payload.message, payload.exceptionMessage].filter(Boolean).join(" — ") ||
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
         "Mobil OCR müşteri oluşturma başarısız";
       throw new Error(msg);
     }
 
-    return payload.data;
+    return response.data.data;
   },
 
   update: async (id: number, data: UpdateCustomerDto): Promise<CustomerGetDto> => {
@@ -311,15 +274,23 @@ export const customerApi = {
       formData.append("imageDescriptions", imageDescription.trim());
     }
 
-    const payload = await postMultipart<CustomerImageDto[]>(`/api/CustomerImage/upload/${customerId}`, formData);
+    const response = await apiClient.post<ApiResponse<CustomerImageDto[]>>(
+      `/api/CustomerImage/upload/${customerId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
 
-    if (!payload.success) {
+    if (!response.data.success) {
       const msg =
-        [payload.message, payload.exceptionMessage].filter(Boolean).join(" — ") ||
+        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
         "Müşteri görseli yüklenemedi";
       throw new Error(msg);
     }
 
-    return payload.data;
+    return response.data.data;
   },
 };
