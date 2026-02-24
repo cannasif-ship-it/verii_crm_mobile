@@ -10,12 +10,22 @@ function isFormDataPayload(data: unknown): boolean {
   if (!data) return false;
   if (typeof FormData !== "undefined" && data instanceof FormData) return true;
 
-  // React Native can expose FormData from a different runtime/context.
-  // Fallback to a minimal duck-typing check.
-  const candidate = data as { append?: unknown; getParts?: unknown; _parts?: unknown };
-  const hasAppend = typeof candidate.append === "function";
-  const hasRnParts = Array.isArray(candidate._parts) || typeof candidate.getParts === "function";
-  return hasAppend && hasRnParts;
+  // In release builds, FormData may come from a different JS/runtime boundary.
+  // Be permissive: if it behaves like FormData (append), treat it as multipart.
+  const candidate = data as {
+    append?: unknown;
+    getParts?: unknown;
+    _parts?: unknown;
+    [Symbol.toStringTag]?: unknown;
+  };
+  if (typeof candidate.append === "function") return true;
+
+  // Extra fallback for runtimes where FormData crosses JS boundaries.
+  return (
+    candidate?.[Symbol.toStringTag] === "FormData" ||
+    typeof candidate.getParts === "function" ||
+    Array.isArray(candidate._parts)
+  );
 }
 
 function applyContentTypeByPayload(config: InternalAxiosRequestConfig): void {

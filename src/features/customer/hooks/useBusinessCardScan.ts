@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import * as FileSystem from "expo-file-system/legacy";
+import { Platform } from "react-native";
 import { runOCR } from "../services/ocrService";
 import { extractBusinessCardViaLLM } from "../services/businessCardLlmService";
 import { buildBusinessCardCandidateHints } from "../services/businessCardHeuristics";
@@ -76,12 +77,18 @@ export function useBusinessCardScan(): {
       const target = `${persistentBase}picked_card_${Date.now()}.${ext}`;
 
       if (imageUri.startsWith("content://")) {
-        await FileSystem.copyAsync({ from: imageUri, to: target });
-        const info = await FileSystem.getInfoAsync(target);
-        if (!info.exists) {
-          throw new Error("Seçilen görsel kaydedilemedi. Lütfen tekrar seçin.");
+        try {
+          await FileSystem.copyAsync({ from: imageUri, to: target });
+          const info = await FileSystem.getInfoAsync(target);
+          if (info.exists) {
+            return target;
+          }
+        } catch {
+          // Some Android content providers block direct copy.
         }
-        return target;
+
+        // Fallback: continue with original content URI.
+        return imageUri;
       }
 
       return imageUri;
@@ -178,6 +185,9 @@ export function useBusinessCardScan(): {
 
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ["images"],
+      // Android Photo Picker content:// Uris can be unreadable in some release/device combos.
+      // Legacy mode returns direct file paths and is more stable for OCR+upload.
+      legacy: Platform.OS === "android",
       // Keep original file to avoid broken image payloads from editor output.
       allowsEditing: false,
       quality: 0.85,

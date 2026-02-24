@@ -63,7 +63,8 @@ async function ensureReadableUploadUri(imageUri: string): Promise<string> {
       await FileSystem.copyAsync({ from: imageUri, to: fallbackFile });
       return fallbackFile;
     } catch {
-      throw new Error("Seçilen görsel uygulama tarafından okunamadı. Lütfen galeriden tekrar seçin.");
+      // Some Android providers reject app-level copy, but networking can still stream content:// directly.
+      return imageUri;
     }
   }
 
@@ -71,6 +72,11 @@ async function ensureReadableUploadUri(imageUri: string): Promise<string> {
 }
 
 async function assertUploadFileIsValid(imageUri: string): Promise<void> {
+  // content:// providers often hide direct stat info; rely on upload attempt in that case.
+  if (imageUri.startsWith("content://")) {
+    return;
+  }
+
   try {
     const info = await FileSystem.getInfoAsync(imageUri);
     const size = (info as { size?: number }).size;
