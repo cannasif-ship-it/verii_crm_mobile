@@ -1,28 +1,41 @@
-import React from "react";
-import { View, StyleSheet, TouchableOpacity, Platform } from "react-native";
+import React, { useState } from "react";
+import { View, StyleSheet, TouchableOpacity, Platform, Dimensions, Pressable, Modal } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../ui/text";
 import { useUIStore } from "../../store/ui";
+import Svg, { Path } from "react-native-svg";
 import {
   PackageIcon,
   UserGroupIcon,
-  Home01Icon,
   Money03Icon,
   Calendar03Icon,
+  Add01Icon,
+  Cancel01Icon,
+  Camera01Icon,         
+  UserAdd01Icon,        
+  Home03Icon,           
+  NoteAddIcon,   
+  CalendarAdd01Icon,
+  Invoice01Icon,
+  ShoppingBag01Icon,
+  NoteIcon,
+  ArrowRight01Icon,
+  HugeiconsProps,
 } from "hugeicons-react-native";
+
+const { width, height } = Dimensions.get("window");
 
 interface NavItem {
   key: string;
-  icon: React.ComponentType<{ size: number; color: string; strokeWidth?: number }>;
+  icon: React.FC<HugeiconsProps>;
   route: string;
 }
 
 const NAV_ITEMS: NavItem[] = [
   { key: "stock", icon: PackageIcon, route: "/(tabs)/stock" },
   { key: "customers", icon: UserGroupIcon, route: "/(tabs)/customers" },
-  { key: "home", icon: Home01Icon, route: "/(tabs)" },
   { key: "sales", icon: Money03Icon, route: "/(tabs)/sales" },
   { key: "activities", icon: Calendar03Icon, route: "/(tabs)/activities" },
 ];
@@ -34,97 +47,242 @@ export function BottomNavBar(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const { colors, themeMode } = useUIStore();
 
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSalesActionSheetOpen, setIsSalesActionSheetOpen] = useState(false);
+  
   const isDark = themeMode === "dark";
 
-  // --- TEMA AYARLARI ---
   const THEME = {
     bg: isDark ? "#0f0518" : colors.navBar || "#FFFFFF",
-    
-    // AYDINLIK MOD DÜZELTMESİ:
-    // Koyu modda silik beyaz, aydınlık modda ise daha belirgin bir gri (#CBD5E1) kullandık.
-    borderTop: isDark ? "rgba(255,255,255,0.1)" : "#CBD5E1", 
-    
-    activeColor: "#db2777", 
-    inactiveColor: isDark ? "#94a3b8" : colors.textSecondary,
-    
-    // Aydınlık modda gölgeyi biraz daha belirgin yapalım
-    shadowOpacity: isDark ? 0.1 : 0.08, 
+    iconBg: isDark ? "#1E122D" : "#FFFFFF", 
+    iconBorder: isDark ? "rgba(219, 39, 119, 0.4)" : "rgba(219, 39, 119, 0.2)",
+    navTopBorder: isDark ? "rgba(219, 39, 119, 0.35)" : "rgba(219, 39, 119, 0.2)", 
+    backdropBg: isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.4)",
+    active: "#db2777",
+    inactive: isDark ? "#94a3b8" : "#64748B",
+    sheetBg: isDark ? "#160B24" : "#FFFFFF",
+    sheetBorder: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
+    text: isDark ? "#F8FAFC" : "#0F172A",
+    textMute: isDark ? "#94A3B8" : "#64748B",
   };
 
   const isActive = (route: string): boolean => {
-    if (route === "/(tabs)") {
-      return pathname === "/" || pathname === "/(tabs)" || pathname === "/index";
-    }
     return pathname === route || pathname.startsWith(route.replace("/(tabs)", ""));
   };
 
   const handlePress = (route: string): void => {
-    if (isActive(route)) {
-      return;
+    setIsMenuOpen(false);
+    
+    if (route === "/customers/create?autoScan=true") {
+       router.push(route as never);
+    } else {
+       router.replace(route as never);
     }
-    router.replace(route as never);
   };
 
-  const paddingBottom = Platform.OS === "ios" ? insets.bottom : Math.max(insets.bottom, 12);
+  const handleSalesActionPress = (route: string): void => {
+    setIsSalesActionSheetOpen(false);
+    setIsMenuOpen(false);
+    router.push(route as never);
+  };
+
+  const NAV_HEIGHT = 65;
+  const safeBottom = Math.max(insets.bottom, Platform.OS === "android" ? 15 : 0);
+  
+  const center = width / 2;
+  const holeWidth = 56; 
+  const depth = 46;     
+
+  const navPath = `M 0 0 L ${center - holeWidth} 0 C ${center - 28} 0, ${center - 34} ${depth}, ${center} ${depth} C ${center + 34} ${depth}, ${center + 28} 0, ${center + holeWidth} 0 L ${width} 0`;
+  const fillPath = `${navPath} L ${width} ${NAV_HEIGHT + safeBottom} L 0 ${NAV_HEIGHT + safeBottom} Z`;
 
   return (
     <View 
       style={[
         styles.wrapper, 
-        { 
-          backgroundColor: THEME.bg,
-          borderTopColor: THEME.borderTop,
-          shadowOpacity: THEME.shadowOpacity, // Dinamik gölge opaklığı
-        }
-      ]}
-    > 
-      <View
-        style={[
-          styles.container,
-          {
-            paddingBottom,
-            backgroundColor: THEME.bg, 
-          },
-        ]}
-      >
-        {NAV_ITEMS.map((item) => {
-          const IconComponent = item.icon;
-          const active = isActive(item.route);
-          const iconColor = active ? THEME.activeColor : THEME.inactiveColor;
+        { height: isMenuOpen ? height : NAV_HEIGHT + safeBottom + 35 }
+      ]} 
+      pointerEvents="box-none"
+    >
+      
+      {isMenuOpen && (
+        <Pressable
+          style={[styles.backdrop, { backgroundColor: THEME.backdropBg }]}
+          onPress={() => setIsMenuOpen(false)}
+        />
+      )}
 
-          return (
-            <TouchableOpacity
-              key={item.key}
-              style={styles.navItem}
-              onPress={() => handlePress(item.route)}
-              activeOpacity={0.7}
+      {isMenuOpen && (
+        <View style={[styles.radialWrapper, { bottom: safeBottom + 70 }]} pointerEvents="box-none">
+          
+          <View style={[styles.iconPos, { left: 15, top: 70 }]} pointerEvents="box-none">
+            <Pressable 
+              style={({ pressed }) => [styles.btnBase, pressed && styles.btnPressed]} 
+              onPress={() => handlePress("/customers/create?autoScan=true")} 
             >
-              <View style={styles.iconRow}>
-                {active && (
-                   <View style={[styles.activeIndicator, { backgroundColor: THEME.activeColor }]} />
-                )}
-                
-                <View style={styles.iconContainer}>
-                  <IconComponent
-                    size={24}
-                    color={iconColor}
-                    strokeWidth={active ? 2.5 : 1.5}
-                  />
-                </View>
+              <View style={[styles.miniCircle, { backgroundColor: THEME.iconBg, borderColor: THEME.iconBorder }]}>
+                <Camera01Icon size={24} color={THEME.active} variant="stroke" strokeWidth={2} />
               </View>
-              <Text
-                style={[
-                  styles.label,
-                  { color: iconColor },
-                  active && styles.labelActive,
-                ]}
-              >
-                {t(`nav.${item.key}`)}
-              </Text>
-            </TouchableOpacity>
-          );
-        })}
+            </Pressable>
+          </View>
+
+          <View style={[styles.iconPos, { left: 55, top: 25 }]} pointerEvents="box-none">
+            <Pressable 
+              style={({ pressed }) => [styles.btnBase, pressed && styles.btnPressed]} 
+              onPress={() => handlePress("/customers/create")}
+            >
+              <View style={[styles.miniCircle, { backgroundColor: THEME.iconBg, borderColor: THEME.iconBorder }]}>
+                <UserAdd01Icon size={24} color={THEME.active} variant="stroke" strokeWidth={2} />
+              </View>
+            </Pressable>
+          </View>
+
+          <View style={[styles.iconPos, { left: 117, top: 0 }]} pointerEvents="box-none">
+            <Pressable 
+              style={({ pressed }) => [styles.btnBase, pressed && styles.btnPressed]} 
+              onPress={() => handlePress("/(tabs)")}
+            >
+              <View style={[styles.miniCircle, { backgroundColor: THEME.iconBg, borderColor: THEME.iconBorder, width: 56, height: 56 }]}>
+                <Home03Icon size={28} color={THEME.active} variant="stroke" strokeWidth={2} />
+              </View>
+            </Pressable>
+          </View>
+
+          <View style={[styles.iconPos, { left: 185, top: 25 }]} pointerEvents="box-none">
+            <Pressable 
+              style={({ pressed }) => [styles.btnBase, pressed && styles.btnPressed]} 
+              onPress={() => setIsSalesActionSheetOpen(true)}
+            >
+              <View style={[styles.miniCircle, { backgroundColor: THEME.iconBg, borderColor: THEME.iconBorder }]}>
+                <NoteAddIcon size={24} color={THEME.active} variant="stroke" strokeWidth={2} />
+              </View>
+            </Pressable>
+          </View>
+
+          <View style={[styles.iconPos, { left: 225, top: 70 }]} pointerEvents="box-none">
+            <Pressable 
+              style={({ pressed }) => [styles.btnBase, pressed && styles.btnPressed]} 
+              onPress={() => handlePress("/(tabs)/activities/create")}
+            >
+              <View style={[styles.miniCircle, { backgroundColor: THEME.iconBg, borderColor: THEME.iconBorder }]}>
+                <CalendarAdd01Icon size={24} color={THEME.active} variant="stroke" strokeWidth={2} />
+              </View>
+            </Pressable>
+          </View>
+
+        </View>
+      )}
+
+      <View style={[styles.navContainer, { height: NAV_HEIGHT + safeBottom }]} pointerEvents="box-none">
+        
+        <Svg width={width} height={NAV_HEIGHT + safeBottom} style={styles.svgBackground}>
+          <Path d={fillPath} fill={THEME.bg} />
+          <Path d={navPath} stroke={THEME.navTopBorder} strokeWidth={1.5} fill="none" />
+        </Svg>
+
+        <View style={[styles.tabsContent, { paddingBottom: safeBottom }]} pointerEvents="box-none">
+          
+          <View style={styles.tabsGroup}>
+            {NAV_ITEMS.slice(0, 2).map((item) => {
+              const active = isActive(item.route);
+              return (
+                <TouchableOpacity key={item.key} style={styles.navTab} onPress={() => handlePress(item.route)}>
+                  {active && <View style={[styles.activeBar, { backgroundColor: THEME.active }]} />}
+                  <item.icon size={22} color={active ? THEME.active : THEME.inactive} strokeWidth={active ? 2.5 : 1.5} variant="stroke" />
+                  <Text style={[styles.tabLabel, { color: active ? THEME.active : THEME.inactive, fontWeight: active ? "800" : "500" }]}>{t(`nav.${item.key}`)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View style={styles.centerHoleSpace} />
+
+          <View style={styles.tabsGroup}>
+            {NAV_ITEMS.slice(2, 4).map((item) => {
+              const active = isActive(item.route);
+              return (
+                <TouchableOpacity key={item.key} style={styles.navTab} onPress={() => handlePress(item.route)}>
+                  {active && <View style={[styles.activeBar, { backgroundColor: THEME.active }]} />}
+                  <item.icon size={22} color={active ? THEME.active : THEME.inactive} strokeWidth={active ? 2.5 : 1.5} variant="stroke" />
+                  <Text style={[styles.tabLabel, { color: active ? THEME.active : THEME.inactive, fontWeight: active ? "800" : "500" }]}>{t(`nav.${item.key}`)}</Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+        </View>
       </View>
+
+      <TouchableOpacity
+        style={[styles.mainFab, { backgroundColor: THEME.active, bottom: safeBottom + 28 }]}
+        onPress={() => setIsMenuOpen(!isMenuOpen)}
+        activeOpacity={0.9}
+      >
+        {isMenuOpen ? <Cancel01Icon size={30} color="#FFF" variant="stroke" strokeWidth={2.5} /> : <Add01Icon size={30} color="#FFF" variant="stroke" strokeWidth={2.5} />}
+      </TouchableOpacity>
+
+      <Modal visible={isSalesActionSheetOpen} transparent animationType="slide" onRequestClose={() => setIsSalesActionSheetOpen(false)}>
+        <View style={styles.sheetOverlay}>
+          <Pressable style={StyleSheet.absoluteFill} onPress={() => setIsSalesActionSheetOpen(false)} />
+          <View style={[styles.sheetContent, { backgroundColor: THEME.sheetBg, paddingBottom: safeBottom + 20 }]}>
+            
+            <View style={styles.sheetHeader}>
+              <View style={[styles.sheetHandle, { backgroundColor: THEME.sheetBorder }]} />
+              <Text style={[styles.sheetTitle, { color: THEME.text }]}>Hızlı Satış İşlemi</Text>
+              <Text style={[styles.sheetSubtitle, { color: THEME.textMute }]}>Lütfen oluşturmak istediğiniz belgeyi seçin.</Text>
+            </View>
+
+            <View style={styles.sheetOptions}>
+              <TouchableOpacity 
+                style={[styles.sheetOptionBtn, { borderBottomColor: THEME.sheetBorder }]} 
+                onPress={() => handleSalesActionPress("/(tabs)/sales/quotations/create")}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.sheetIconBox, { backgroundColor: isDark ? 'rgba(219,39,119,0.15)' : '#FFF1F2' }]}>
+                  <Invoice01Icon size={22} color={THEME.active} variant="stroke" />
+                </View>
+                <View style={styles.sheetOptionTextWrap}>
+                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>Teklif Oluştur</Text>
+                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>Müşteriye yeni bir fiyat teklifi hazırlayın</Text>
+                </View>
+                <ArrowRight01Icon size={20} color={THEME.textMute} />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.sheetOptionBtn, { borderBottomColor: THEME.sheetBorder }]} 
+                onPress={() => handleSalesActionPress("/(tabs)/sales/orders/create")}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.sheetIconBox, { backgroundColor: isDark ? 'rgba(219,39,119,0.15)' : '#FFF1F2' }]}>
+                  <ShoppingBag01Icon size={22} color={THEME.active} variant="stroke" />
+                </View>
+                <View style={styles.sheetOptionTextWrap}>
+                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>Sipariş Oluştur</Text>
+                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>Doğrudan yeni bir satış siparişi girin</Text>
+                </View>
+                <ArrowRight01Icon size={20} color={THEME.textMute} />
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[styles.sheetOptionBtn, { borderBottomColor: "transparent" }]} 
+                onPress={() => handleSalesActionPress("/(tabs)/sales/demands/create")}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.sheetIconBox, { backgroundColor: isDark ? 'rgba(219,39,119,0.15)' : '#FFF1F2' }]}>
+                  <NoteIcon size={22} color={THEME.active} variant="stroke" />
+                </View>
+                <View style={styles.sheetOptionTextWrap}>
+                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>Talep Oluştur</Text>
+                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>Müşterinin ürün veya hizmet talebini kaydedin</Text>
+                </View>
+                <ArrowRight01Icon size={20} color={THEME.textMute} />
+              </TouchableOpacity>
+            </View>
+
+          </View>
+        </View>
+      </Modal>
+
     </View>
   );
 }
@@ -134,56 +292,176 @@ const styles = StyleSheet.create({
     position: "absolute",
     bottom: 0,
     left: 0,
+    width: width,
+    zIndex: 1000,
+  },
+  backdrop: {
+    position: "absolute",
+    top: -height, 
+    bottom: 0, 
+    left: 0,
     right: 0,
-    zIndex: 50,
-    
-    // Border (Üst Çizgi)
-    borderTopWidth: 1, 
-    
-    // Gölge (Sayfadan ayırma efekti)
+    zIndex: 1, 
+  },
+  navContainer: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    width: width,
+    zIndex: 20,
+    elevation: 20,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: -3 }, // Gölgeyi yukarı doğru verdik
-    shadowRadius: 6,
-    elevation: 10, // Android için daha yüksek elevation
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
   },
-  container: {
+  svgBackground: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+  },
+  tabsContent: {
     flexDirection: "row",
+    width: "100%",
+    height: "100%",
     alignItems: "center",
-    justifyContent: "space-around",
-    paddingTop: 12,
-    paddingHorizontal: 8,
-    minHeight: 60,
+    paddingHorizontal: 5, 
   },
-  navItem: {
+  tabsGroup: {
+    flex: 1,
+    flexDirection: "row",
+    height: "100%",
+  },
+  navTab: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 4,
+    height: "100%",
   },
-  iconRow: {
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-    position: 'relative',
-  },
-  activeIndicator: {
+  activeBar: {
     position: "absolute",
-    top: -12, 
-    width: 32, 
+    top: 0, 
+    width: 35,
     height: 3,
-    borderRadius: 1.5,
+    borderBottomLeftRadius: 4,
+    borderBottomRightRadius: 4,
   },
-  iconContainer: {
-    width: 28,
-    height: 28,
+  tabLabel: {
+    fontSize: 9.5, 
+    marginTop: 4,
+    textAlign: 'center', 
+  },
+  centerHoleSpace: {
+    width: 90, 
+  },
+  mainFab: {
+    position: "absolute",
+    left: (width - 58) / 2, 
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    justifyContent: "center",
+    alignItems: "center",
+    elevation: 25,
+    shadowColor: "#db2777",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    zIndex: 1001,
+  },
+
+  radialWrapper: {
+    position: "absolute",
+    left: (width - 290) / 2, 
+    width: 290,
+    height: 145, 
+    zIndex: 5, 
+    elevation: 5,
+  },
+  iconPos: {
+    position: "absolute",
+    alignItems: "center",
+    justifyContent: "center",
+    width: 50,  
+    height: 50,
+  },
+  btnBase: {
     alignItems: "center",
     justifyContent: "center",
   },
-  label: {
-    fontSize: 11,
-    fontWeight: "500",
+  miniCircle: {
+    width: 50, 
+    height: 50,
+    borderRadius: 25,
+    justifyContent: "center",
+    alignItems: "center",
+    borderWidth: 1.2,
+    shadowColor: "#db2777",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
   },
-  labelActive: {
+  btnPressed: {
+    transform: [{ scale: 0.92 }],
+    opacity: 0.95, 
+  },
+
+  sheetOverlay: {
+    flex: 1,
+    justifyContent: "flex-end",
+    backgroundColor: "rgba(0,0,0,0.5)",
+  },
+  sheetContent: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  sheetHeader: {
+    alignItems: "center",
+    marginBottom: 20,
+  },
+  sheetHandle: {
+    width: 40,
+    height: 5,
+    borderRadius: 3,
+    marginBottom: 16,
+  },
+  sheetTitle: {
+    fontSize: 18,
     fontWeight: "700",
+    marginBottom: 4,
   },
+  sheetSubtitle: {
+    fontSize: 13,
+  },
+  sheetOptions: {
+    flexDirection: "column",
+  },
+  sheetOptionBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+  },
+  sheetIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 14,
+  },
+  sheetOptionTextWrap: {
+    flex: 1,
+  },
+  sheetOptionTitle: {
+    fontSize: 15,
+    fontWeight: "600",
+    marginBottom: 2,
+  },
+  sheetOptionDesc: {
+    fontSize: 12,
+  }
 });

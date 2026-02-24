@@ -71,15 +71,15 @@ export function ScreenHeader({
             {({ pressed }) => (
                showBackButton ? (
                 <ArrowLeft02Icon 
-                  size={20} 
+                  size={28}
                   color={pressed ? "#db2777" : iconColor} 
-                  strokeWidth={2.5} 
+                  strokeWidth={3.5} 
                 />
               ) : (
                 <Menu01Icon 
-                  size={20} 
+                  size={28} 
                   color={pressed ? "#db2777" : iconColor} 
-                  strokeWidth={2.5} 
+                  strokeWidth={3.5} 
                 />
               )
             )}
