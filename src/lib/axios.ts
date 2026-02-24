@@ -6,6 +6,25 @@ import type { ApiResponse, Branch } from "../features/auth/types";
 import { useAuthStore } from "../store/auth";
 import { router } from "expo-router";
 
+type MutableHeaders = InternalAxiosRequestConfig["headers"] & {
+  delete?: (name: string) => void;
+  set?: (name: string, value: string | undefined) => void;
+};
+
+function clearContentType(headers: MutableHeaders): void {
+  // AxiosHeaders keeps an internal map; prefer API methods over bracket delete.
+  if (typeof headers.delete === "function") {
+    headers.delete("Content-Type");
+    headers.delete("content-type");
+  }
+  if (typeof headers.set === "function") {
+    headers.set("Content-Type", undefined);
+    headers.set("content-type", undefined);
+  }
+  delete headers["Content-Type"];
+  delete headers["content-type"];
+}
+
 function isFormDataPayload(data: unknown): boolean {
   if (!data) return false;
   if (typeof FormData !== "undefined" && data instanceof FormData) return true;
@@ -29,16 +48,20 @@ function isFormDataPayload(data: unknown): boolean {
 }
 
 function applyContentTypeByPayload(config: InternalAxiosRequestConfig): void {
+  const headers = config.headers as MutableHeaders;
   const multipart = isFormDataPayload(config.data);
   if (multipart) {
     // Let axios/native networking layer generate multipart boundary automatically.
-    delete config.headers["Content-Type"];
-    delete config.headers["content-type"];
+    clearContentType(headers);
     return;
   }
 
-  if (!config.headers["Content-Type"] && !config.headers["content-type"]) {
-    config.headers["Content-Type"] = "application/json";
+  if (!headers["Content-Type"] && !headers["content-type"]) {
+    if (typeof headers.set === "function") {
+      headers.set("Content-Type", "application/json");
+    } else {
+      headers["Content-Type"] = "application/json";
+    }
   }
 }
 
