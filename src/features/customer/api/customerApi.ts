@@ -1,5 +1,5 @@
 import { apiClient } from "../../../lib/axios";
-import * as FileSystem from "expo-file-system";
+import * as FileSystem from "expo-file-system/legacy";
 import type { ApiResponse } from "../../auth/types";
 import type {
   CustomerGetDto,
