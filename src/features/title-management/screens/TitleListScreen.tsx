@@ -6,38 +6,45 @@ import {
   ActivityIndicator, 
   TouchableOpacity, 
   Alert,
-  TouchableWithoutFeedback,
-  Dimensions,
+  KeyboardAvoidingView,
+  Platform
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { LinearGradient } from "expo-linear-gradient"; // Eklendi
+import { LinearGradient } from "expo-linear-gradient"; 
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
-import { CustomRefreshControl } from "../../../components/CustomRefreshControl"; // Eğer varsa bunu kullanabilirsin
 import { useUIStore } from "../../../store/ui";
 import { useTitles, useDeleteTitle } from "../hooks";
 import { SearchInput, TitleCard, TitleFormModal } from "../components";
 import type { TitleDto, PagedFilter } from "../types";
-import { Add01Icon } from "hugeicons-react-native";
-
-const GAP = 14;
-const PADDING = 20;
+import { Add01Icon, AlertCircleIcon, RefreshIcon } from "hugeicons-react-native";
 
 export function TitleListScreen(): React.ReactElement {
   const { t } = useTranslation();
-  const { colors, themeMode } = useUIStore();
+  const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
   const deleteTitle = useDeleteTitle();
 
   const isDark = themeMode === "dark";
 
-  // 1. Standart Ambient Gradient Yapısı
-  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const BRAND_COLOR = "#db2777"; 
+  const BRAND_COLOR_DARK = "#ec4899";
+
+  const mainBg = isDark ? "#0c0516" : "#FAFAFA";
   const gradientColors = (isDark
-    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)'] 
-    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+    ? ['rgba(236, 72, 153, 0.08)', 'transparent', 'rgba(249, 115, 22, 0.05)'] 
+    : ['rgba(219, 39, 119, 0.05)', 'transparent', 'rgba(255, 240, 225, 0.3)']) as [string, string, ...string[]];
+
+  const theme = {
+    text: isDark ? "#FFFFFF" : "#0F172A",
+    textMute: isDark ? "#94a3b8" : "#64748B",
+    primary: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,     
+    surfaceBg: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
+    borderColor: isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(219, 39, 119, 0.2)',
+    error: "#EF4444"
+  };
 
   const [searchText, setSearchText] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -78,6 +85,9 @@ export function TitleListScreen(): React.ReactElement {
         .filter((item): item is TitleDto => item != null) || []
     );
   }, [data]);
+
+  const totalCount = data?.pages?.[0]?.totalCount || titles.length || 0;
+  const isInitialLoading = isLoading && titles.length === 0;
 
   const handleTitlePress = useCallback((title: TitleDto) => {
     setSelectedTitle(title);
@@ -129,7 +139,7 @@ export function TitleListScreen(): React.ReactElement {
     ({ item }: { item: TitleDto }) => {
       if (!item) return null;
       return (
-        <View style={styles.cardWrapper}>
+        <View style={{ marginBottom: 14 }}>
             <TitleCard
               title={item}
               onPress={() => handleTitlePress(item)}
@@ -142,50 +152,11 @@ export function TitleListScreen(): React.ReactElement {
     [handleTitlePress, handleEdit, handleDelete]
   );
 
-  const renderFooter = useCallback(() => {
-    if (!isFetchingNextPage) return <View style={{ height: 40 }} />;
-    return (
-      <View style={styles.footerLoading}>
-        <ActivityIndicator size="small" color="#db2777" />
-      </View>
-    );
-  }, [isFetchingNextPage]);
-
-  const renderEmpty = useCallback(() => {
-    if (isLoading) return null;
-    return (
-      <View style={styles.center}>
-        <Text style={{ fontSize: 48, marginBottom: 16 }}>📋</Text>
-        <Text style={{ color: colors.textMuted, fontSize: 16 }}>
-          {t("titleManagement.noTitles")}
-        </Text>
-      </View>
-    );
-  }, [isLoading, colors.textMuted, t]);
-
-  if (isError) {
-    return (
-      <View style={[styles.container, { backgroundColor: mainBg }]}>
-        <ScreenHeader title={t("titleManagement.title")} showBackButton />
-        <View style={styles.center}>
-            <Text style={{ color: colors.error, marginBottom: 12 }}>{t("common.error")}</Text>
-            <TouchableOpacity 
-                style={[styles.retryButton, { backgroundColor: "#db2777" }]} 
-                onPress={() => refetch()}
-            >
-                <Text style={{ color: "#FFF", fontWeight: "600" }}>{t("common.retry")}</Text>
-            </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
   return (
     <>
       <View style={[styles.container, { backgroundColor: mainBg }]}>
         <StatusBar style={isDark ? "light" : "dark"} />
         
-        {/* KATMAN 1: Ambient Gradient */}
         <View style={StyleSheet.absoluteFill}>
             <LinearGradient
                 colors={gradientColors}
@@ -195,59 +166,95 @@ export function TitleListScreen(): React.ReactElement {
             />
         </View>
 
-        <View style={{ flex: 1 }}>
-            <ScreenHeader
-              title={t("titleManagement.title")}
-              showBackButton
-            />
+        <KeyboardAvoidingView 
+          style={{ flex: 1 }} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <ScreenHeader title={t("titleManagement.title")} showBackButton />
 
-            <View style={styles.listContainer}>
-                {/* Üst Kontrol Alanı - Arka planı transparent yaptık */}
-                <View style={styles.controlsArea}>
-                     <View style={{ flex: 1, marginRight: 12 }}>
-                        <SearchInput
-                            value={searchText}
-                            onSearch={setSearchText}
-                            placeholder={t("titleManagement.searchPlaceholder")}
-                        />
-                     </View>
+          <View style={styles.content}>
+            
+            <View style={styles.controlsArea}>
+               <View style={{ flex: 1, marginRight: 10 }}>
+                  <SearchInput
+                      value={searchText}
+                      onSearch={setSearchText}
+                      placeholder={t("titleManagement.searchPlaceholder")}
+                  />
+               </View>
 
-                     <TouchableOpacity 
-                        onPress={handleCreatePress}
-                        activeOpacity={0.8}
-                        style={[styles.addButton, { backgroundColor: "#db2777" }]}
-                     >
-                        <Add01Icon size={20} color="#FFF" variant="stroke" />
-                     </TouchableOpacity>
-                </View>
-
-                {isLoading && titles.length === 0 ? (
-                    <View style={styles.center}>
-                        <ActivityIndicator size="large" color="#db2777" />
-                    </View>
-                ) : (
-                    <FlatList
-                        data={titles}
-                        keyExtractor={(item, index) => String(item?.id ?? index)}
-                        renderItem={renderItem}
-                        contentContainerStyle={{
-                            paddingHorizontal: PADDING,
-                            paddingTop: 12,
-                            paddingBottom: insets.bottom + 20,
-                            gap: GAP, 
-                        }}
-                        style={styles.content}
-                        showsVerticalScrollIndicator={false}
-                        onEndReached={handleEndReached}
-                        onEndReachedThreshold={0.5}
-                        ListFooterComponent={renderFooter}
-                        ListEmptyComponent={renderEmpty}
-                        refreshing={isRefetching && !isFetchingNextPage}
-                        onRefresh={handleRefresh}
-                    />
-                )}
+               <TouchableOpacity 
+                  onPress={handleCreatePress}
+                  style={[
+                    styles.iconBtn, 
+                    { 
+                      backgroundColor: isDark ? "rgba(219, 39, 119, 0.15)" : theme.surfaceBg, 
+                      borderColor: isDark ? "rgba(236, 72, 153, 0.3)" : theme.borderColor,
+                      shadowOpacity: isDark ? 0 : 0.25,
+                      elevation: isDark ? 0 : 3
+                    }
+                  ]}
+                  activeOpacity={0.7}
+               >
+                  <Add01Icon size={24} color={theme.primary} variant="stroke" strokeWidth={2.5} />
+               </TouchableOpacity>
             </View>
-        </View>
+
+            {(!isInitialLoading || data) && (
+              <View style={styles.metaRow}>
+                <Text style={[styles.metaText, { color: theme.textMute }]}>
+                  {totalCount} unvan bulundu
+                </Text>
+              </View>
+            )}
+
+            {isInitialLoading ? (
+               <View style={styles.centerContainer}>
+                  <ActivityIndicator size="large" color={theme.primary} />
+               </View>
+            ) : isError ? (
+               <View style={styles.centerContainer}>
+                  <AlertCircleIcon size={48} color={theme.textMute} variant="stroke" />
+                  <Text style={[styles.errorText, { color: theme.error }]}>{t("common.error")}</Text>
+                  <TouchableOpacity onPress={() => refetch()} style={[styles.retryButton, { backgroundColor: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)" }]}>
+                    <RefreshIcon size={16} color={theme.text} variant="stroke" />
+                    <Text style={[styles.retryText, { color: theme.text }]}>{t("common.retry")}</Text>
+                  </TouchableOpacity>
+               </View>
+            ) : (
+                <FlatList
+                    data={titles}
+                    keyExtractor={(item, index) => String(item?.id ?? index)}
+                    renderItem={renderItem}
+                    contentContainerStyle={{
+                        paddingHorizontal: 16,
+                        paddingTop: 4,
+                        paddingBottom: insets.bottom + 100,
+                    }}
+                    showsVerticalScrollIndicator={false}
+                    onEndReached={handleEndReached}
+                    onEndReachedThreshold={0.5}
+                    initialNumToRender={15}
+                    maxToRenderPerBatch={15}
+                    windowSize={5}
+                    removeClippedSubviews={Platform.OS === 'android'}
+                    refreshing={isRefetching && !isFetchingNextPage}
+                    onRefresh={handleRefresh}
+                    ListFooterComponent={
+                      isFetchingNextPage ? (
+                        <View style={{ paddingVertical: 20 }}><ActivityIndicator size="small" color={theme.primary} /></View>
+                      ) : null
+                    }
+                    ListEmptyComponent={
+                      <View style={styles.emptyContainer}>
+                        <Text style={{ fontSize: 40, opacity: 0.8 }}>📋</Text>
+                        <Text style={[styles.emptyText, { color: theme.textMute }]}>{t("titleManagement.noTitles")}</Text>
+                      </View>
+                    }
+                />
+            )}
+          </View>
+        </KeyboardAvoidingView>
       </View>
 
       <TitleFormModal
@@ -261,47 +268,39 @@ export function TitleListScreen(): React.ReactElement {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContainer: { flex: 1 },
-  content: {
-    flex: 1,
-    backgroundColor: 'transparent',
-  },
-  center: { 
-    flex: 1, 
-    alignItems: "center", 
-    justifyContent: "center", 
-    marginTop: 50 
-  },
-  controlsArea: {
+  content: { flex: 1, backgroundColor: 'transparent' },
+  
+  controlsArea: { 
     flexDirection: 'row', 
     alignItems: 'center', 
-    paddingHorizontal: 20, 
-    paddingVertical: 12,
-    backgroundColor: 'transparent',
+    paddingHorizontal: 16, 
+    paddingTop: 12, 
+    paddingBottom: 8 
   },
-  addButton: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
-    alignItems: 'center',
+  iconBtn: { 
+    height: 48, 
+    width: 48, 
+    borderRadius: 14, 
+    borderWidth: 1.5, 
+    alignItems: 'center', 
     justifyContent: 'center',
-    shadowColor: "#db2777",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    overflow: 'hidden' 
   },
-  cardWrapper: {
-    // Wrapper artık sadece FlatList gap'ine güveniyor, tasarım TitleCard içinde.
-    overflow: 'hidden',
+
+  metaRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 18, 
+    paddingBottom: 10 
   },
-  footerLoading: {
-    paddingVertical: 20,
-    alignItems: "center",
-  },
-  retryButton: {
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 8,
-  }
+  metaText: { fontSize: 12, fontWeight: '600', letterSpacing: 0.2 },
+
+  centerContainer: { flex: 1, alignItems: "center", justifyContent: "center", gap: 16, padding: 20 },
+  errorText: { fontSize: 16, marginTop: 12 },
+  retryButton: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12, borderRadius: 12 },
+  retryText: { fontSize: 15, fontWeight: "700" },
+  
+  emptyContainer: { flex: 1, alignItems: "center", justifyContent: "center", paddingVertical: 80 },
+  emptyText: { fontSize: 15, marginTop: 12, fontWeight: '500', letterSpacing: 0.5, textAlign: 'center' },
 });
