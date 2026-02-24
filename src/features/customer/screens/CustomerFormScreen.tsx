@@ -24,6 +24,7 @@ import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
+import { useToastStore } from "../../../store/toast";
 import {
   useCustomer,
   useCreateCustomer,
@@ -58,10 +59,11 @@ import {
 export function CustomerFormScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id } = useLocalSearchParams<{ id?: string }>();
+  const { id, autoScan } = useLocalSearchParams<{ id?: string; autoScan?: string }>();
   const { colors, themeMode } = useUIStore();
   const { branch, user } = useAuthStore();
   const insets = useSafeAreaInsets();
+  const showToast = useToastStore((state) => state.showToast);
 
   const isEditMode = !!id;
   const customerId = id ? Number(id) : undefined;
@@ -190,10 +192,10 @@ export function CustomerFormScreen(): React.ReactElement {
         email: existingCustomer.email || "",
         website: existingCustomer.website || "",
         notes: existingCustomer.notes || "",
-        countryId: existingCustomer.countryId,
-        cityId: existingCustomer.cityId,
-        districtId: existingCustomer.districtId,
-        customerTypeId: existingCustomer.customerTypeId,
+        countryId: existingCustomer.countryId ?? undefined,
+        cityId: existingCustomer.cityId ?? undefined,
+        districtId: existingCustomer.districtId ?? undefined,
+        customerTypeId: existingCustomer.customerTypeId ?? undefined,
         salesRepCode: existingCustomer.salesRepCode || "",
         groupCode: existingCustomer.groupCode || "",
         creditLimit: existingCustomer.creditLimit,
@@ -305,7 +307,6 @@ export function CustomerFormScreen(): React.ReactElement {
         await updateCustomer.mutateAsync({ id: customerId, data: updatePayload });
         Alert.alert("", t("customer.updateSuccess"));
       } else {
-        // Mobile OCR endpoint is image-driven. If image is removed, fallback to standard create API.
         const shouldUseMobileOcrFlow = Boolean(scannedImageUri);
 
         if (shouldUseMobileOcrFlow) {
@@ -388,6 +389,17 @@ export function CustomerFormScreen(): React.ReactElement {
     scannedTitle
   ]);
 
+  const onError = useCallback((formErrors: any) => {
+    showToast("error", "Lütfen kırmızı ile işaretlenmiş zorunlu alanları doldurun.");
+    const generalFields = ["name", "customerTypeId", "countryId", "cityId", "districtId"];
+    const hasGeneralError = Object.keys(formErrors).some(field => generalFields.includes(field));
+    if (hasGeneralError) {
+      setActiveTab("general");
+    } else {
+      setActiveTab("details");
+    }
+  }, [showToast]);
+
   useEffect(() => {
     if (scanError) Alert.alert("Kartvizit Tarama", scanError);
   }, [scanError]);
@@ -455,6 +467,17 @@ export function CustomerFormScreen(): React.ReactElement {
     const result = await pickBusinessCardFromGallery();
     openBusinessCardReview(result);
   }, [pickBusinessCardFromGallery, openBusinessCardReview]);
+
+  const [hasAutoScanned, setHasAutoScanned] = useState(false);
+
+  useEffect(() => {
+    if (autoScan === "true" && !hasAutoScanned) {
+      setHasAutoScanned(true); 
+      setTimeout(() => {
+        handleScanBusinessCard();
+      }, 500);
+    }
+  }, [autoScan, hasAutoScanned, handleScanBusinessCard]);
 
   const handleCancelBusinessCardReview = useCallback(() => {
     setIsBusinessCardReviewOpen(false);
@@ -647,8 +670,8 @@ export function CustomerFormScreen(): React.ReactElement {
                 <Controller
                   control={control}
                   name="name"
-                  render={({ field: { onChange, value } }) => (
-                    <FormField label={t("customer.name")} value={value} onChangeText={onChange} error={errors.name?.message} required maxLength={250} />
+                  render={({ field: { onChange, value, ref } }) => (
+                    <FormField inputRef={ref}label={t("customer.name")} value={value} onChangeText={onChange} error={errors.name?.message} required maxLength={250} />
                   )}
                 />
 
@@ -659,9 +682,9 @@ export function CustomerFormScreen(): React.ReactElement {
                           <Controller
                             control={control}
                             name="customerCode"
-                            render={({ field: { value } }) => (
+                            render={({ field: { value, ref } }) => (
                               <View style={{ opacity: 0.6 }}>
-                                <FormField label={t("customer.customerCode")} value={value || ""} onChangeText={() => {}} maxLength={100} editable={false} />
+                                <FormField inputRef={ref} label={t("customer.customerCode")} value={value || ""} onChangeText={() => {}} maxLength={100} editable={false} />
                               </View>
                             )}
                           />
@@ -688,12 +711,12 @@ export function CustomerFormScreen(): React.ReactElement {
                       <View style={styles.row}>
                           {formConfig.showPhone && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="phone" render={({ field: { onChange, value } }) => <FormField label={t("customer.phone")} value={value || ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={100} />} />
+                              <Controller control={control} name="phone" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.phone")} value={value || ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={100} />} />
                           </View>
                           )}
                           {formConfig.showPhone2 && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="phone2" render={({ field: { onChange, value } }) => <FormField label={t("customer.phone2")} value={value || ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={100} />} />
+                              <Controller control={control} name="phone2" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.phone2")} value={value || ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={100} />} />
                           </View>
                           )}
                       </View>
@@ -703,12 +726,12 @@ export function CustomerFormScreen(): React.ReactElement {
                       <View style={styles.row}>
                           {formConfig.showEmail && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="email" render={({ field: { onChange, value } }) => <FormField label={t("customer.email")} value={value || ""} onChangeText={onChange} error={errors.email?.message} keyboardType="email-address" autoCapitalize="none" maxLength={100} />} />
+                              <Controller control={control} name="email" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref}label={t("customer.email")} value={value || ""} onChangeText={onChange} error={errors.email?.message} keyboardType="email-address" autoCapitalize="none" maxLength={100} />} />
                           </View>
                           )}
                           {formConfig.showWebsite && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="website" render={({ field: { onChange, value } }) => <FormField label={t("customer.website")} value={value || ""} onChangeText={onChange} autoCapitalize="none" maxLength={100} />} />
+                              <Controller control={control} name="website" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref}label={t("customer.website")} value={value || ""} onChangeText={onChange} autoCapitalize="none" maxLength={100} />} />
                           </View>
                           )}
                       </View>
@@ -725,12 +748,12 @@ export function CustomerFormScreen(): React.ReactElement {
                       <View style={styles.row}>
                           {formConfig.showSalesRep && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="salesRepCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.salesRepCode")} value={value || ""} onChangeText={onChange} maxLength={50} />} />
+                              <Controller control={control} name="salesRepCode" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.salesRepCode")} value={value || ""} onChangeText={onChange} maxLength={50} />} />
                           </View>
                           )}
                           {formConfig.showGroupCode && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="groupCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.groupCode")} value={value || ""} onChangeText={onChange} maxLength={50} />} />
+                              <Controller control={control} name="groupCode" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.groupCode")} value={value || ""} onChangeText={onChange} maxLength={50} />} />
                           </View>
                           )}
                       </View>
@@ -740,19 +763,19 @@ export function CustomerFormScreen(): React.ReactElement {
                       <View style={styles.row}>
                           {formConfig.showBranchCode && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="branchCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.branchCode")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : 0)} keyboardType="numeric" />} />
+                              <Controller control={control} name="branchCode" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.branchCode")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : 0)} keyboardType="numeric" />} />
                           </View>
                           )}
                           {formConfig.showBusinessUnit && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="businessUnitCode" render={({ field: { onChange, value } }) => <FormField label={t("customer.businessUnitCode")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : 0)} keyboardType="numeric" />} />
+                              <Controller control={control} name="businessUnitCode" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.businessUnitCode")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : 0)} keyboardType="numeric" />} />
                           </View>
                           )}
                       </View>
                   )}
 
                   {formConfig.showCreditLimit && (
-                    <Controller control={control} name="creditLimit" render={({ field: { onChange, value } }) => <FormField label={t("customer.creditLimit")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : undefined)} keyboardType="numeric" />} />
+                    <Controller control={control} name="creditLimit" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.creditLimit")} value={value !== undefined && value !== null ? String(value) : ""} onChangeText={(text) => onChange(text ? Number(text) : undefined)} keyboardType="numeric" />} />
                   )}
                 </FormSection>
               )}
@@ -767,7 +790,7 @@ export function CustomerFormScreen(): React.ReactElement {
                   )}
 
                   {formConfig.showAddress && (
-                    <Controller control={control} name="address" render={({ field: { onChange, value } }) => <FormField label={t("customer.address")} value={value || ""} onChangeText={onChange} multiline numberOfLines={2} maxLength={500} />} />
+                    <Controller control={control} name="address" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.address")} value={value || ""} onChangeText={onChange} multiline numberOfLines={2} maxLength={500} />} />
                   )}
 
                   {formConfig.showShippingAddress && (
@@ -790,26 +813,26 @@ export function CustomerFormScreen(): React.ReactElement {
                       <View style={styles.row}>
                           {formConfig.showTaxOffice && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="taxOffice" render={({ field: { onChange, value } }) => <FormField label={t("customer.taxOffice")} value={value || ""} onChangeText={onChange} maxLength={100} />} />
+                              <Controller control={control} name="taxOffice" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.taxOffice")} value={value || ""} onChangeText={onChange} maxLength={100} />} />
                           </View>
                           )}
                           {formConfig.showTaxNumber && (
                           <View style={styles.flex1}>
-                              <Controller control={control} name="taxNumber" render={({ field: { onChange, value } }) => <FormField label={t("customer.taxNumber")} value={value || ""} onChangeText={onChange} keyboardType="numeric" maxLength={15} />} />
+                              <Controller control={control} name="taxNumber" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.taxNumber")} value={value || ""} onChangeText={onChange} keyboardType="numeric" maxLength={15} />} />
                           </View>
                           )}
                       </View>
                   )}
 
                   {formConfig.showTCKN && (
-                    <Controller control={control} name="tcknNumber" render={({ field: { onChange, value } }) => <FormField label={t("customer.tcknNumber")} value={value || ""} onChangeText={onChange} keyboardType="numeric" maxLength={11} />} />
+                    <Controller control={control} name="tcknNumber" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.tcknNumber")} value={value || ""} onChangeText={onChange} keyboardType="numeric" maxLength={11} />} />
                   )}
                 </FormSection>
               )}
 
               {formConfig.showNotes && (
                 <FormSection title="Notlar" icon={<NoteIcon size={16} color={THEME.primary} variant="stroke" />}>
-                  <Controller control={control} name="notes" render={({ field: { onChange, value } }) => <FormField label={t("customer.notes")} value={value || ""} onChangeText={onChange} multiline numberOfLines={2} maxLength={250} />} />
+                  <Controller control={control} name="notes" render={({ field: { onChange, value, ref } }) => <FormField inputRef={ref} label={t("customer.notes")} value={value || ""} onChangeText={onChange} multiline numberOfLines={2} maxLength={250} />} />
                 </FormSection>
               )}
             </View>
@@ -836,7 +859,7 @@ export function CustomerFormScreen(): React.ReactElement {
             ) : (
               <TouchableOpacity 
                 activeOpacity={0.8}
-                onPress={handleSubmit(onSubmit)} 
+                onPress={handleSubmit(onSubmit, onError)}
                 disabled={isSubmitting}
                 style={[styles.submitButtonContainer, { shadowColor: THEME.primary, marginTop: 16 }]}
               >
@@ -961,7 +984,7 @@ const styles = StyleSheet.create({
   contentContainer: { padding: 10, gap: 5 }, 
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   
- tabContainer: {
+  tabContainer: {
     flexDirection: 'row',
     marginHorizontal: 12, 
     marginTop: 0,
@@ -974,7 +997,7 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 1,
   },
- tabButton: {
+  tabButton: {
     flex: 1,
     paddingVertical: 6, 
     alignItems: 'center',

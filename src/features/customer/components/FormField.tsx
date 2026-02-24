@@ -17,6 +17,7 @@ interface FormFieldProps {
   editable?: boolean;
   maxLength?: number;
   containerStyle?: StyleProp<ViewStyle>;
+  inputRef?: React.Ref<TextInput>; // <-- Referansı buradan alacağız
 }
 
 export function FormField({
@@ -33,6 +34,7 @@ export function FormField({
   editable = true,
   maxLength,
   containerStyle,
+  inputRef, // <-- Prop olarak içeri aldık
 }: FormFieldProps): React.ReactElement {
   const { colors, themeMode } = useUIStore();
   const [isFocused, setIsFocused] = useState(false);
@@ -63,6 +65,7 @@ export function FormField({
       </View>
       
       <TextInput
+        ref={inputRef} // <-- Buraya bağladık
         style={[
           styles.input,
           {
@@ -71,10 +74,10 @@ export function FormField({
             color: THEME.text,
           },
           multiline && { 
-              minHeight: 80, 
-              textAlignVertical: "top", 
-              paddingTop: 10 
-            },
+            minHeight: 80, 
+            textAlignVertical: "top", 
+            paddingTop: 10 
+          },
           !editable && styles.inputDisabled,
         ]}
         value={value}
