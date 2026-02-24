@@ -28,7 +28,7 @@ import { FilterCustomerDropdown } from "../components/FilterCustomerDropdown";
 import type { ContactDto, PagedFilter } from "../types";
 
 import { 
-  Add01Icon, 
+  ContactBookIcon, 
   AlertCircleIcon, 
   RefreshIcon,
   ArrowDown01Icon,
@@ -179,7 +179,6 @@ export function ContactListScreen(): React.ReactElement {
         <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       </View>
 
-      {/* ANA EKRAN KLAVYE KORUMASI */}
       <KeyboardAvoidingView 
         style={{ flex: 1 }} 
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -205,7 +204,7 @@ export function ContactListScreen(): React.ReactElement {
               ]} 
               activeOpacity={0.7}
             >
-              <Add01Icon size={22} color={theme.primary} variant="stroke" strokeWidth={2.5} />
+              <ContactBookIcon size={22} color={theme.primary} variant="stroke" strokeWidth={2.5} />
             </TouchableOpacity>
           </View>
 
@@ -292,19 +291,16 @@ export function ContactListScreen(): React.ReactElement {
         animationType="slide"
         onRequestClose={() => setIsFilterModalVisible(false)}
       >
-        {/* MODAL KLAVYE KORUMASI (Alt Butonları Yukarı İter) */}
         <KeyboardAvoidingView 
            style={{ flex: 1 }} 
            behavior={Platform.OS === 'ios' ? 'padding' : 'padding'} 
         >
           <View style={styles.modalOverlay}>
             
-            {/* Arka Plana Tıklayınca Kapatma (Sorunsuz Yapı) */}
             <TouchableWithoutFeedback onPress={() => setIsFilterModalVisible(false)}>
               <View style={StyleSheet.absoluteFill} />
             </TouchableWithoutFeedback>
 
-            {/* Modal İçeriği (Max Height ile klavyeye yer açıldı) */}
             <View style={[styles.modalContent, { backgroundColor: theme.modalBg, paddingBottom: Platform.OS === 'ios' ? insets.bottom + 20 : 20, maxHeight: '85%' }]}>
               
               <View style={styles.modalHeader}>
@@ -384,7 +380,8 @@ const styles = StyleSheet.create({
     borderRadius: 14, 
     borderWidth: 1.5, 
     alignItems: 'center', 
-    justifyContent: 'center', 
+    justifyContent: 'center',
+    overflow: 'hidden' 
   },
 
   metaRow: { 

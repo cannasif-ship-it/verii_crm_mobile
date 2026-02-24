@@ -22,6 +22,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { useToastStore } from "../../../store/toast";
 import { FormField, CustomerPicker, useTitles, useCustomer } from "../../customer";
 import { useContact, useCreateContact, useUpdateContact } from "../hooks";
 import { createContactSchema, type ContactFormData } from "../schemas";
@@ -52,6 +53,7 @@ export function ContactFormScreen(): React.ReactElement {
   const params = useLocalSearchParams<{ id?: string; customerId?: string }>();
   const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+  const showToast = useToastStore((state) => state.showToast);
 
   const id = params.id;
   const isEditMode = !!id;
@@ -64,7 +66,6 @@ export function ContactFormScreen(): React.ReactElement {
   const [salutationModalOpen, setSalutationModalOpen] = useState(false);
   const [selectedCustomerName, setSelectedCustomerName] = useState<string | undefined>();
 
-  // --- KOMPAKT & PREMIUM TEMA ---
   const isDark = themeMode === "dark";
   const mainBg = isDark ? "#0c0516" : "#FAFAFA"; 
   const gradientColors = (isDark
@@ -92,12 +93,13 @@ export function ContactFormScreen(): React.ReactElement {
 
   const schema = useMemo(() => createContactSchema(), []);
 
-  const {
+ const {
     control,
     handleSubmit,
     setValue,
     watch,
     reset,
+    setFocus, // <-- BİR TEK BURAYI EKLEDİK
     formState: { errors, isSubmitting },
   } = useForm<ContactFormData>({
     resolver: zodResolver(schema),
@@ -217,7 +219,35 @@ export function ContactFormScreen(): React.ReactElement {
     [isEditMode, contactId, buildPayload, createContact, updateContact, router, t]
   );
 
-  // --- DAHA KOMPAKT KART YAPISI ---
+ const onError = useCallback((formErrors: any) => {
+    showToast("error", "Lütfen kırmızı ile işaretlenmiş zorunlu alanları doldurun.");
+    
+    const generalFields = ["firstName", "lastName", "customerId", "titleId", "salutation"];
+    const errorKeys = Object.keys(formErrors);
+    const hasGeneralError = errorKeys.some(field => generalFields.includes(field));
+
+    if (hasGeneralError) {
+      setActiveTab("general");
+    } else {
+      setActiveTab("details");
+    }
+
+
+    setTimeout(() => {
+      if (errorKeys.length > 0) {
+
+        const focusableFields = ["firstName", "lastName", "email", "phone", "mobile", "notes"];
+        
+     
+        const fieldToFocus = errorKeys.find(key => focusableFields.includes(key)) as keyof ContactFormData;
+
+        if (fieldToFocus) {
+          setFocus(fieldToFocus); 
+        }
+      }
+    }, 300); 
+
+  }, [showToast, setFocus]);
   const FormSection = useCallback(({ title, icon, children }: { title: string, icon?: React.ReactNode, children: React.ReactNode }) => {
     const hasChildren = React.Children.count(children) > 0;
     if (!hasChildren) return null;
@@ -232,7 +262,6 @@ export function ContactFormScreen(): React.ReactElement {
           )}
           <Text style={[styles.sectionTitle, { color: THEME.text }]}>{title}</Text>
         </View>
-        {/* GAP 6 YAPILARAK ALANLAR SIKILAŞTIRILDI */}
         <View style={{ gap: 6 }}>{children}</View> 
       </View>
     );
@@ -270,48 +299,46 @@ export function ContactFormScreen(): React.ReactElement {
             showsVerticalScrollIndicator={false}
             keyboardShouldPersistTaps="handled"
           >
-            {/* --- ZARİF TABLAR --- */}
-<View style={[styles.tabContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F1F5F9' }]}>
-  <TouchableOpacity
-    activeOpacity={0.8}
-    style={[
-      styles.tabButton, 
-      activeTab === "general" && [
-        styles.activeTabPremium, 
-        { 
-          // Aydınlıkta uçuk şeker pembesi, karanlıkta transparan neon pembe
-          backgroundColor: isDark ? 'rgba(219, 39, 119, 0.2)' : '#FFF0F7',
-          borderColor: isDark ? 'rgba(219, 39, 119, 0.4)' : 'rgba(219, 39, 119, 0.2)'
-        }
-      ]
-    ]}
-    onPress={() => setActiveTab("general")}
-  >
-    <Text style={[styles.tabText, activeTab === "general" ? { color: THEME.primary } : { color: THEME.textMute, fontWeight: '600' }]}>
-      Kişi Bilgileri
-    </Text>
-  </TouchableOpacity>
+            <View style={[styles.tabContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.04)' : '#F1F5F9' }]}>
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.tabButton, 
+                  activeTab === "general" && [
+                    styles.activeTabPremium, 
+                    { 
+                      backgroundColor: isDark ? 'rgba(219, 39, 119, 0.2)' : '#FFF0F7',
+                      borderColor: isDark ? 'rgba(219, 39, 119, 0.4)' : 'rgba(219, 39, 119, 0.2)'
+                    }
+                  ]
+                ]}
+                onPress={() => setActiveTab("general")}
+              >
+                <Text style={[styles.tabText, activeTab === "general" ? { color: THEME.primary } : { color: THEME.textMute, fontWeight: '600' }]}>
+                  Kişi Bilgileri
+                </Text>
+              </TouchableOpacity>
 
-  <TouchableOpacity
-    activeOpacity={0.8}
-    style={[
-      styles.tabButton, 
-      activeTab === "details" && [
-        styles.activeTabPremium, 
-        { 
-          backgroundColor: isDark ? 'rgba(219, 39, 119, 0.2)' : '#FFF0F7',
-          borderColor: isDark ? 'rgba(219, 39, 119, 0.4)' : 'rgba(219, 39, 119, 0.2)'
-        }
-      ]
-    ]}
-    onPress={() => setActiveTab("details")}
-  >
-    <Text style={[styles.tabText, activeTab === "details" ? { color: THEME.primary } : { color: THEME.textMute, fontWeight: '600' }]}>
-      Detaylar & İletişim
-    </Text>
-  </TouchableOpacity>
-</View>
-            {/* --- SEKME 1: KİŞİ BİLGİLERİ --- */}
+              <TouchableOpacity
+                activeOpacity={0.8}
+                style={[
+                  styles.tabButton, 
+                  activeTab === "details" && [
+                    styles.activeTabPremium, 
+                    { 
+                      backgroundColor: isDark ? 'rgba(219, 39, 119, 0.2)' : '#FFF0F7',
+                      borderColor: isDark ? 'rgba(219, 39, 119, 0.4)' : 'rgba(219, 39, 119, 0.2)'
+                    }
+                  ]
+                ]}
+                onPress={() => setActiveTab("details")}
+              >
+                <Text style={[styles.tabText, activeTab === "details" ? { color: THEME.primary } : { color: THEME.textMute, fontWeight: '600' }]}>
+                  Detaylar & İletişim
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             <View style={{ display: activeTab === "general" ? "flex" : "none", gap: 10 }}>
               
               <FormSection title="Kişi Bilgileri" icon={<UserCircleIcon size={16} color={THEME.primary} variant="stroke" />}>
@@ -332,22 +359,21 @@ export function ContactFormScreen(): React.ReactElement {
                   </TouchableOpacity>
                 </View>
 
-                {/* YAN YANA İSİM SOYİSİM (Alan kazanmak için) */}
                 <View style={styles.row}>
                   <View style={styles.flex1}>
-                    <Controller control={control} name="firstName" render={({ field: { onChange, value } }) => (
-                      <FormField label={t("contact.firstName")} value={value} onChangeText={onChange} error={errors.firstName?.message} required maxLength={100} />
+                    <Controller control={control} name="firstName" render={({ field: { onChange, value, ref } }) => (
+                      <FormField inputRef={ref} label={t("contact.firstName")} value={value} onChangeText={onChange} error={errors.firstName?.message} required maxLength={100} />
                     )} />
                   </View>
                   <View style={styles.flex1}>
-                    <Controller control={control} name="lastName" render={({ field: { onChange, value } }) => (
-                      <FormField label={t("contact.lastName")} value={value} onChangeText={onChange} error={errors.lastName?.message} required maxLength={100} />
+                    <Controller control={control} name="lastName" render={({ field: { onChange, value, ref } }) => (
+                      <FormField inputRef={ref} label={t("contact.lastName")} value={value} onChangeText={onChange} error={errors.lastName?.message} required maxLength={100} />
                     )} />
                   </View>
                 </View>
 
-                <Controller control={control} name="middleName" render={({ field: { onChange, value } }) => (
-                  <FormField label={t("contact.middleName")} value={value ?? ""} onChangeText={onChange} maxLength={100} />
+                <Controller control={control} name="middleName" render={({ field: { onChange, value, ref } }) => (
+                  <FormField inputRef={ref} label={t("contact.middleName")} value={value ?? ""} onChangeText={onChange} maxLength={100} />
                 )} />
 
               </FormSection>
@@ -378,39 +404,37 @@ export function ContactFormScreen(): React.ReactElement {
 
             </View>
 
-            {/* --- SEKME 2: DETAYLAR --- */}
             <View style={{ display: activeTab === "details" ? "flex" : "none", gap: 10 }}>
               
               <FormSection title="İletişim" icon={<ContactBookIcon size={16} color={THEME.primary} variant="stroke" />}>
                 
                 <View style={styles.row}>
                   <View style={styles.flex1}>
-                    <Controller control={control} name="phone" render={({ field: { onChange, value } }) => (
-                      <FormField label={t("contact.phone")} value={value ?? ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={20} />
+                    <Controller control={control} name="phone" render={({ field: { onChange, value, ref } }) => (
+                      <FormField inputRef={ref} label={t("contact.phone")} value={value ?? ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={20} />
                     )} />
                   </View>
                   <View style={styles.flex1}>
-                    <Controller control={control} name="mobile" render={({ field: { onChange, value } }) => (
-                      <FormField label={t("contact.mobile")} value={value ?? ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={20} />
+                    <Controller control={control} name="mobile" render={({ field: { onChange, value, ref } }) => (
+                      <FormField inputRef={ref} label={t("contact.mobile")} value={value ?? ""} onChangeText={onChange} keyboardType="phone-pad" maxLength={20} />
                     )} />
                   </View>
                 </View>
 
-                <Controller control={control} name="email" render={({ field: { onChange, value } }) => (
-                  <FormField label={t("contact.email")} value={value ?? ""} onChangeText={onChange} error={errors.email?.message} keyboardType="email-address" autoCapitalize="none" maxLength={100} />
+                <Controller control={control} name="email" render={({ field: { onChange, value, ref } }) => (
+                  <FormField inputRef={ref} label={t("contact.email")} value={value ?? ""} onChangeText={onChange} error={errors.email?.message} keyboardType="email-address" autoCapitalize="none" maxLength={100} />
                 )} />
 
               </FormSection>
 
               <FormSection title="Notlar" icon={<NoteIcon size={16} color={THEME.primary} variant="stroke" />}>
-                <Controller control={control} name="notes" render={({ field: { onChange, value } }) => (
-                  <FormField label={t("contact.notes")} value={value ?? ""} onChangeText={onChange} multiline numberOfLines={3} maxLength={250} />
+                <Controller control={control} name="notes" render={({ field: { onChange, value, ref } }) => (
+                  <FormField inputRef={ref} label={t("contact.notes")} value={value ?? ""} onChangeText={onChange} multiline numberOfLines={3} maxLength={250} />
                 )} />
               </FormSection>
 
             </View>
 
-            {/* --- SABİT ALT AKSİYONLAR --- */}
             <View style={styles.stickyFooter}>
               {activeTab === "general" ? (
                 <View style={{ alignItems: 'flex-end', width: '100%' }}>
@@ -426,13 +450,12 @@ export function ContactFormScreen(): React.ReactElement {
              ) : (
                 <TouchableOpacity 
                 activeOpacity={0.8}
-                onPress={handleSubmit(onSubmit)} 
+                onPress={handleSubmit(onSubmit, onError)} 
                 disabled={isSubmitting}
                 style={[styles.submitButtonContainer, { shadowColor: THEME.primary }]}
               >
-                {/* Hafif Premium Geçişli Neon Arka Plan */}
                 <LinearGradient
-                  colors={['#f472b6', '#db2777']} // Yumuşak neon geçişi
+                  colors={['#f472b6', '#db2777']}
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                   style={styles.submitButtonGradient}
@@ -452,8 +475,7 @@ export function ContactFormScreen(): React.ReactElement {
           </ScrollView>
         </KeyboardAvoidingView>
       </View>
-
-      {/* --- MODALLAR --- */}
+      
       <Modal visible={salutationModalOpen} transparent animationType="slide" onRequestClose={() => setSalutationModalOpen(false)}>
         <View style={styles.modalOverlay}>
           <TouchableOpacity style={styles.modalBackdrop} onPress={() => setSalutationModalOpen(false)} />
@@ -530,45 +552,37 @@ const styles = StyleSheet.create({
   contentContainer: { padding: 10, paddingTop: 12, gap: 10 }, 
   loadingContainer: { flex: 1, alignItems: "center", justifyContent: "center" },
   
-  // -- TAB TASARIMI (Gölge Hataları Giderildi) --
   tabContainer: {
     flexDirection: 'row', marginHorizontal: 2, marginBottom: 6, borderRadius: 10,
     padding: 3, 
   },
-  // Tab butonu inceltildi (paddingVertical: 8)
   tabButton: { flex: 1, paddingVertical: 8, alignItems: 'center', justifyContent: 'center', borderRadius: 8, borderWidth: 1, borderColor: 'transparent' },
   tabText: { fontSize: 12, fontWeight: '700', letterSpacing: 0.3 },
-  // Ortadaki dikdörtgen hatasını yapmasın diye Android gölgesini (elevation) tamamen kaldırdık!
   activeTabPremium: { },
   
-  // -- KART (FormSection) TASARIMI (Daraltıldı) --
-  card: { borderRadius: 14, padding: 12, paddingBottom: 14, borderWidth: 1 }, // paddingler 16'dan 12'ye düştü
+  card: { borderRadius: 14, padding: 12, paddingBottom: 14, borderWidth: 1 },
   sectionHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 10, paddingBottom: 6, borderBottomWidth: 1, gap: 8 },
-  sectionIcon: { width: 26, height: 26, borderRadius: 6, alignItems: 'center', justifyContent: 'center' }, // İkon kutusu ufaldı
+  sectionIcon: { width: 26, height: 26, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
   sectionTitle: { fontSize: 13, fontWeight: "700", letterSpacing: 0.2, textTransform: 'uppercase' },
   
   row: { flexDirection: 'row', gap: 8 }, 
   flex1: { flex: 1 },
 
-  // -- PICKER TASARIMLARI (Daraltıldı) --
   fieldContainer: { marginBottom: 0 },
   label: { fontSize: 11, fontWeight: "600", marginBottom: 3, marginLeft: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
-  // Height 48'den 40'a indirildi!
   pickerField: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, height: 40 },
   pickerFieldText: { fontSize: 13, flex: 1, fontWeight: '500' },
   error: { fontSize: 11, marginTop: 2, marginLeft: 4 },
 
-  // -- SABİT ALT BUTONLAR (Premium Neon Glow) --
   stickyFooter: { marginTop: 8, paddingTop: 8, paddingHorizontal: 4 },
   
   submitButtonContainer: { 
     borderRadius: 12, 
     marginTop: 16,
-    // Saf Neon Etkisi:
     shadowOffset: { width: 0, height: 0 }, 
-    shadowOpacity: 0.6, // Işığın şiddeti
-    shadowRadius: 12,    // Işığın yayılma alanı
-    elevation: 0,       // 3D hantallığı yok et
+    shadowOpacity: 0.6,
+    shadowRadius: 12,
+    elevation: 0,
   },
   submitButtonGradient: { 
     flexDirection: 'row',
@@ -576,7 +590,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center', 
     height: 48, 
     borderRadius: 12,
-    // Butonu daha kaliteli gösteren ince bir iç parlatma border'ı
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
   },
@@ -586,7 +599,6 @@ const styles = StyleSheet.create({
     fontWeight: "700", 
     letterSpacing: 0.8, 
     textTransform: 'uppercase',
-    // Yazının daha net okunması için çok hafif derinlik
     textShadowColor: 'rgba(0, 0, 0, 0.1)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 1
@@ -605,7 +617,6 @@ const styles = StyleSheet.create({
     fontWeight: '600', 
   },
 
-  // -- MODAL TASARIMI --
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   modalBackdrop: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)" }, 
   modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "65%" },
