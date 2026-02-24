@@ -41,7 +41,7 @@ export function ActivityMenuScreen(): React.ReactElement {
   }, [router]);
 
   const handleRotaPress = useCallback(() => {
-    router.push("/(tabs)/activities/rota");
+    router.push("/(tabs)/activities/coming-soon");
   }, [router]);
 
   const menuItems = [
