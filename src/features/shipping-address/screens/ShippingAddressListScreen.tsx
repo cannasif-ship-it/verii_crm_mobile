@@ -5,25 +5,26 @@ import {
   FlatList, 
   ActivityIndicator, 
   TouchableOpacity,
-  TouchableWithoutFeedback,
-  Dimensions,
-  Text 
+  Text,
+  Platform
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
+
 import { ScreenHeader } from "../../../components/navigation";
 import { useUIStore } from "../../../store/ui";
 import { SearchInput } from "../../customer";
 import { useShippingAddresses } from "../hooks";
 import { ShippingAddressCard } from "../components";
 import type { ShippingAddressDto, PagedFilter } from "../types";
-// İkon ekliyoruz (Tasarım bütünlüğü için)
-import { Add01Icon } from "hugeicons-react-native";
+import { ShipmentTrackingIcon } from "hugeicons-react-native";
 
-const GAP = 12;
 const PADDING = 16;
+const BRAND_COLOR = "#db2777"; 
+const BRAND_COLOR_DARK = "#ec4899";
 
 export function ShippingAddressListScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -33,22 +34,20 @@ export function ShippingAddressListScreen(): React.ReactElement {
   
   const isDark = themeMode === "dark";
 
-  // --- TEMA AYARLARI (StockList ile aynı) ---
+  const mainBg = isDark ? "#0c0516" : "#FAFAFA";
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.08)', 'transparent', 'rgba(249, 115, 22, 0.05)'] 
+    : ['rgba(219, 39, 119, 0.05)', 'transparent', 'rgba(255, 240, 225, 0.3)']) as [string, string, ...string[]];
+
   const theme = {
-    screenBg: isDark ? "#1a0b2e" : "#F8FAFC",
-    headerBg: isDark ? "#1a0b2e" : "#FFFFFF",
-    cardBg: isDark ? "#1e1b29" : "#FFFFFF",
-    cardBorder: isDark ? "rgba(255, 255, 255, 0.1)" : "#E2E8F0",
-    textTitle: isDark ? "#FFFFFF" : "#0F172A",
     textMute: isDark ? "#94a3b8" : "#64748B",
-    primary: "#db2777",
-    primaryBg: isDark ? "rgba(219, 39, 119, 0.15)" : "rgba(219, 39, 119, 0.1)",
-    activeSwitch: "#db2777",
+    primary: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,     
+    surfaceBg: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
+    borderColor: isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(219, 39, 119, 0.2)',
     error: "#ef4444",
   };
 
   const [searchText, setSearchText] = useState("");
-  // Performans için debounce ekliyoruz (StockList mantığı)
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
@@ -56,7 +55,6 @@ export function ShippingAddressListScreen(): React.ReactElement {
     return () => clearTimeout(handler);
   }, [searchText]);
 
-  // Filtreleme mantığı
   const filters: PagedFilter[] | undefined = useMemo(() => {
     if (debouncedQuery.trim().length >= 2) {
       return [{ column: "address", operator: "contains", value: debouncedQuery.trim() }];
@@ -87,6 +85,8 @@ export function ShippingAddressListScreen(): React.ReactElement {
     );
   }, [data]);
 
+  const totalCount = data?.pages?.[0]?.totalCount || addresses.length;
+
   const handleAddressPress = useCallback(
     (address: ShippingAddressDto) => {
       if (!address?.id) return;
@@ -105,20 +105,11 @@ export function ShippingAddressListScreen(): React.ReactElement {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // --- RENDER ITEMS ---
-
   const renderItem = useCallback(
     ({ item }: { item: ShippingAddressDto }) => {
       if (!item) return null;
       return (
-        // Kart Wrapper: Tasarım bütünlüğü için çerçeve ekledik
-        <View style={[
-            styles.cardWrapper, 
-            { 
-                backgroundColor: theme.cardBg,
-                borderColor: theme.cardBorder
-            }
-        ]}>
+        <View style={{ marginBottom: 14 }}>
             <ShippingAddressCard 
                 address={item} 
                 onPress={() => handleAddressPress(item)} 
@@ -126,7 +117,7 @@ export function ShippingAddressListScreen(): React.ReactElement {
         </View>
       );
     },
-    [handleAddressPress, theme]
+    [handleAddressPress]
   );
 
   const renderFooter = useCallback(() => {
@@ -136,24 +127,23 @@ export function ShippingAddressListScreen(): React.ReactElement {
         <ActivityIndicator size="small" color={theme.primary} />
       </View>
     );
-  }, [isFetchingNextPage, theme]);
+  }, [isFetchingNextPage, theme.primary]);
 
   const renderEmpty = useCallback(() => {
     if (isLoading) return null;
     return (
       <View style={styles.center}>
-        <Text style={{ fontSize: 48, marginBottom: 16 }}>📍</Text>
-        <Text style={{ color: theme.textMute, fontSize: 16 }}>
-          {t("shippingAddress.noAddresses")}
+        <Text style={{ fontSize: 40, opacity: 0.8 }}>📍</Text>
+        <Text style={{ color: theme.textMute, marginTop: 12, fontWeight: '500', letterSpacing: 0.5, textAlign: 'center' }}>
+          {t("shippingAddress.noAddresses") || "Kriterlere uygun adres bulunamadı.\nFiltreleri temizlemeyi deneyin."}
         </Text>
       </View>
     );
   }, [isLoading, theme, t]);
 
-  // --- ERROR STATE ---
   if (isError) {
     return (
-        <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
+        <View style={[styles.container, { backgroundColor: mainBg }]}>
             <ScreenHeader title={t("shippingAddress.title")} showBackButton />
             <View style={styles.center}>
                 <Text style={{ color: theme.error, marginBottom: 12 }}>{t("common.error")}</Text>
@@ -168,62 +158,80 @@ export function ShippingAddressListScreen(): React.ReactElement {
     );
   }
 
-  // --- MAIN RENDER ---
   return (
-    <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
-      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       
-      {/* Header: RightElement'i kaldırdık, aşağıya taşıdık */}
-      <ScreenHeader title={t("shippingAddress.title")} showBackButton />
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      </View>
 
-      <View style={styles.listContainer}>
-        
-        {/* CONTROLS AREA (Arama + Ekle Butonu) */}
-        <View style={[styles.controlsArea, { backgroundColor: theme.headerBg }]}>
-             {/* Arama Inputu */}
-             <View style={{ flex: 1, marginRight: 10 }}>
-                <SearchInput
-                    value={searchText}
-                    onSearch={setSearchText}
-                    placeholder={t("shippingAddress.searchPlaceholder")}
+      <View style={{ flex: 1 }}>
+        <ScreenHeader title={t("shippingAddress.title")} showBackButton />
+
+        <View style={styles.contentContainer}>
+          
+          <View style={styles.controlsArea}>
+            <View style={{ flex: 1, marginRight: 10 }}>
+               <SearchInput 
+                  value={searchText} 
+                  onSearch={setSearchText} 
+                  placeholder={t("shippingAddress.searchPlaceholder")} 
                 />
-             </View>
-
-             {/* Yeni Ekle Butonu (Sağdaki kare buton) */}
-             <View style={[styles.actionBtnContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
-                <TouchableWithoutFeedback onPress={handleCreatePress}>
-                    <View style={[styles.iconBtn, { backgroundColor: theme.activeSwitch }]}>
-                         <Add01Icon size={20} color="#FFF" variant="stroke" />
-                    </View>
-                </TouchableWithoutFeedback>
-             </View>
-        </View>
-
-        {/* LOADING & LIST */}
-        {isLoading && addresses.length === 0 ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+            <TouchableOpacity 
+              onPress={handleCreatePress} 
+              style={[
+                styles.iconBtn, 
+                { 
+                  backgroundColor: isDark ? "rgba(219, 39, 119, 0.15)" : theme.surfaceBg, 
+                  borderColor: isDark ? "rgba(236, 72, 153, 0.3)" : theme.borderColor,
+                  shadowOpacity: isDark ? 0 : 0.25,
+                  elevation: isDark ? 0 : 3
+                }
+              ]} 
+              activeOpacity={0.7}
+            >
+              <ShipmentTrackingIcon size={22} color={theme.primary} variant="stroke" strokeWidth={2.5} />
+            </TouchableOpacity>
           </View>
-        ) : (
-          <FlatList
-            data={addresses}
-            keyExtractor={(item, index) => String(item?.id ?? index)}
-            renderItem={renderItem}
-            contentContainerStyle={{
-                paddingHorizontal: PADDING,
-                paddingTop: 12,
-                paddingBottom: insets.bottom + 20,
-                gap: GAP, 
-            }}
-            showsVerticalScrollIndicator={false}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            ListFooterComponent={renderFooter}
-            ListEmptyComponent={renderEmpty}
-            refreshing={isRefetching && !isFetchingNextPage}
-            onRefresh={handleRefresh}
-          />
-        )}
+
+          {(!isLoading || data) && (
+            <View style={styles.metaRow}>
+              <Text style={[styles.metaText, { color: theme.textMute }]}>
+                {totalCount} adres bulundu
+              </Text>
+            </View>
+          )}
+
+          {isLoading && !data ? (
+            <View style={styles.center}>
+              <ActivityIndicator size="large" color={theme.primary} />
+            </View>
+          ) : (
+            <FlatList
+              data={addresses}
+              keyExtractor={(item, index) => String(item?.id ?? index)}
+              renderItem={renderItem}
+              contentContainerStyle={{
+                  paddingHorizontal: PADDING,
+                  paddingTop: 4,
+                  paddingBottom: insets.bottom + 100,
+              }}
+              showsVerticalScrollIndicator={false}
+              onEndReached={handleEndReached}
+              onEndReachedThreshold={0.3}
+              initialNumToRender={10}
+              maxToRenderPerBatch={10}
+              windowSize={5}
+              removeClippedSubviews={Platform.OS === 'android'}
+              ListFooterComponent={renderFooter}
+              ListEmptyComponent={renderEmpty}
+              refreshing={isRefetching && !isFetchingNextPage}
+              onRefresh={handleRefresh}
+            />
+          )}
+        </View>
       </View>
     </View>
   );
@@ -231,43 +239,47 @@ export function ShippingAddressListScreen(): React.ReactElement {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  listContainer: { flex: 1 },
+  contentContainer: { flex: 1 },
   center: { 
     flex: 1, 
     alignItems: "center", 
     justifyContent: "center", 
-    marginTop: 50 
+    marginTop: 60 
   },
-  // Controls (Header altı)
-  controlsArea: {
+  
+  controlsArea: { 
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingHorizontal: 16, 
-    paddingVertical: 12,
-  },
-  actionBtnContainer: {
-    flexDirection: 'row', 
-    padding: 4, 
-    borderRadius: 12, 
-    alignItems: 'center', 
-    height: 48,
-    width: 48, 
-    justifyContent: 'center'
+    paddingTop: 12, 
+    paddingBottom: 8 
   },
   iconBtn: { 
-    padding: 8, 
-    borderRadius: 8, 
-    height: 40, 
-    width: 40, 
+    height: 50, 
+    width: 50, 
+    borderRadius: 14, 
+    borderWidth: 1.5, 
     alignItems: 'center', 
-    justifyContent: 'center' 
+    justifyContent: 'center', 
+    shadowColor: "#db2777", 
+    shadowOffset: { width: 0, height: 0 }, 
+    shadowRadius: 10, 
+    overflow: 'hidden'
   },
-  // Kart Stili
-  cardWrapper: {
-    borderRadius: 16,
-    borderWidth: 1,
-    overflow: 'hidden',
+
+  metaRow: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    alignItems: 'center', 
+    paddingHorizontal: 18, 
+    paddingBottom: 8 
   },
+  metaText: { 
+    fontSize: 12, 
+    fontWeight: '600', 
+    letterSpacing: 0.2 
+  },
+
   footerLoading: {
     paddingVertical: 20,
     alignItems: "center",
