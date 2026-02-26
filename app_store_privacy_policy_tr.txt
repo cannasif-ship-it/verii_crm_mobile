@@ -1,0 +1,40 @@
+Gizlilik Politikası (v3rii.com)
+
+Gizlilik Politikası
+Bu gizlilik politikası, v3rii ("Uygulama") kapsamında toplanan verilerin nasıl işlendiğini açıklar. Uygulama, firma bazlı CRM süreçlerini yönetmek amacıyla sunulur.
+
+Toplanan Veriler
+Uygulama aşağıdaki veri türlerini işleyebilir:
+- Ad/Soyad
+- E-posta adresi
+- Telefon numarası
+- Kullanıcı hesabı/kullanıcı kimliği (User ID)
+- Kullanıcı tarafından girilen içerikler (ör. notlar, mesaj içerikleri, eklenen görseller/dosyalar)
+- Uygulama içi etkileşim/kullanım verileri (Product Interaction)
+
+Verilerin Kullanım Amaçları
+Bu veriler şu amaçlarla kullanılır:
+- Kullanıcı kimlik doğrulama ve oturum yönetimi
+- Uygulama işlevlerinin sağlanması (CRM süreçleri)
+- Güvenlik, yetkilendirme ve kötüye kullanımın önlenmesi
+- Teknik destek ve hata giderme
+
+Reklam / Takip (Tracking)
+Uygulama, kullanıcı verilerini üçüncü taraf reklam amaçlarıyla kullanmaz veya satmaz. Uygulama, Apple’ın tanımladığı anlamda "tracking" yapmaz.
+
+Veri Paylaşımı
+Veriler, uygulamanın çalışması için gerekli teknik hizmet sağlayıcıları dışında üçüncü kişilerle paylaşılmaz. Yasal yükümlülük halinde ilgili makamlarla paylaşım yapılabilir.
+
+Veri Güvenliği
+Veriler, yetkisiz erişime karşı makul teknik ve idari önlemlerle korunur.
+
+Saklama Süresi
+Veriler, hesabın aktif olduğu süre boyunca veya hizmetin gerektirdiği süre boyunca saklanır; talep halinde yasal zorunluluklar saklı kalmak kaydıyla silinir/anonimleştirilir.
+
+Kullanıcı Hakları
+Kullanıcılar; erişim, düzeltme, silme ve itiraz hakları için bizimle iletişime geçebilir.
+
+İletişim
+- E-posta: can.nasif@v3rii.com
+- Gizlilik Politikası URL (EN): https://v3rii.com/privacy-policy
+- Gizlilik Politikası URL (TR): https://v3rii.com/gizlilik-politikasi
