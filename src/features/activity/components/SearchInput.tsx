@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { View, TextInput, StyleSheet, TouchableOpacity } from "react-native";
-import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { Search01Icon, Cancel01Icon } from "hugeicons-react-native";
 
 interface SearchInputProps {
   value: string;
@@ -14,8 +14,21 @@ export function SearchInput({
   onSearch,
   placeholder = "Ara...",
 }: SearchInputProps): React.ReactElement {
-  const { colors } = useUIStore();
+
   const [localValue, setLocalValue] = useState(value);
+  const [isFocused, setIsFocused] = useState(false); 
+  const { colors, themeMode } = useUIStore();
+  const isDark = themeMode === "dark";
+
+  const THEME = {
+    bg: isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF",
+    border: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.08)",
+    focusBorder: "#db2777", 
+    text: colors.text,
+    placeholder: isDark ? "#94A3B8" : "#64748B",
+    icon: isDark ? "#94A3B8" : "#64748B",
+    clearBtnBg: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.06)",
+  };
 
   const handleChangeText = useCallback(
     (text: string) => {
@@ -34,22 +47,43 @@ export function SearchInput({
     <View
       style={[
         styles.container,
-        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+        { 
+          backgroundColor: THEME.bg, 
+          borderColor: isFocused ? THEME.focusBorder : THEME.border 
+        },
       ]}
     >
-      <Text style={styles.searchIcon}>🔍</Text>
+      {/* İkon da tıklandığında pembe oluyor */}
+      <Search01Icon 
+        size={20} 
+        color={isFocused ? THEME.focusBorder : THEME.icon} 
+        variant="stroke" 
+        strokeWidth={2} 
+        style={styles.searchIcon} 
+      />
+      
       <TextInput
-        style={[styles.input, { color: colors.text }]}
+        style={[styles.input, { color: THEME.text }]}
         value={localValue}
         onChangeText={handleChangeText}
         placeholder={placeholder}
-        placeholderTextColor={colors.textMuted}
+        placeholderTextColor={THEME.placeholder}
         autoCapitalize="none"
         autoCorrect={false}
+        onFocus={() => setIsFocused(true)}
+        onBlur={() => setIsFocused(false)}
       />
+      
       {localValue.length > 0 && (
-        <TouchableOpacity onPress={handleClear} style={styles.clearButton}>
-          <Text style={[styles.clearIcon, { color: colors.textMuted }]}>✕</Text>
+        <TouchableOpacity 
+          onPress={handleClear} 
+          style={styles.clearButton} 
+          activeOpacity={0.7}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <View style={[styles.clearIconWrapper, { backgroundColor: THEME.clearBtnBg }]}>
+            <Cancel01Icon size={14} color={THEME.text} variant="stroke" strokeWidth={2} />
+          </View>
         </TouchableOpacity>
       )}
     </View>
@@ -60,25 +94,38 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",
-    borderRadius: 12,
+    borderRadius: 16, 
     borderWidth: 1,
-    paddingHorizontal: 12,
-    height: 48,
-    marginBottom: 16,
+    paddingHorizontal: 14,
+    height: 50, 
+    
+  
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   searchIcon: {
-    fontSize: 16,
-    marginRight: 8,
+    marginRight: 10,
   },
   input: {
     flex: 1,
-    fontSize: 16,
+    fontSize: 15,
+    fontWeight: "500",
+    letterSpacing: 0.2,
     padding: 0,
+    height: '100%',
   },
   clearButton: {
     padding: 4,
+    marginLeft: 8,
   },
-  clearIcon: {
-    fontSize: 14,
-  },
+  clearIconWrapper: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  }
 });

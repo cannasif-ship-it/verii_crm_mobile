@@ -5,24 +5,25 @@ import {
   FlatList,
   ActivityIndicator,
   TouchableOpacity,
-  TouchableWithoutFeedback,
   Dimensions,
-  Text
+  Text,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 import { ScreenHeader } from "../../../components/navigation";
 import { useUIStore } from "../../../store/ui";
 import { useActivities } from "../hooks";
 import { SearchInput, ActivityCard } from "../components";
 import type { ActivityDto, PagedFilter } from "../types";
-// İkon (Tasarım bütünlüğü için)
-import { Add01Icon } from "hugeicons-react-native";
+import { CalendarAdd01Icon } from "hugeicons-react-native";
 
 const GAP = 12;
 const PADDING = 16;
+const BRAND_COLOR = "#db2777"; 
+const BRAND_COLOR_DARK = "#ec4899";
 
 export function ActivityListScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -32,22 +33,23 @@ export function ActivityListScreen(): React.ReactElement {
   
   const isDark = themeMode === "dark";
 
-  // --- TEMA AYARLARI ---
+ 
+  const mainBg = isDark ? "#0c0516" : "#FAFAFA";
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.08)', 'transparent', 'rgba(249, 115, 22, 0.05)'] 
+    : ['rgba(219, 39, 119, 0.05)', 'transparent', 'rgba(255, 240, 225, 0.3)']) as [string, string, ...string[]];
+
   const theme = {
-    screenBg: isDark ? "#1a0b2e" : "#F8FAFC",
-    headerBg: isDark ? "#1a0b2e" : "#FFFFFF",
-    cardBg: isDark ? "#1e1b29" : "#FFFFFF",
-    cardBorder: isDark ? "rgba(255, 255, 255, 0.1)" : "#E2E8F0",
-    textTitle: isDark ? "#FFFFFF" : "#0F172A",
     textMute: isDark ? "#94a3b8" : "#64748B",
-    primary: "#db2777",
-    primaryBg: isDark ? "rgba(219, 39, 119, 0.15)" : "rgba(219, 39, 119, 0.1)",
-    activeSwitch: "#db2777",
+    primary: isDark ? BRAND_COLOR_DARK : BRAND_COLOR,    
+    surfaceBg: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
+    borderColor: isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(219, 39, 119, 0.2)',
     error: "#ef4444",
+    cardBg: isDark ? 'rgba(255,255,255,0.03)' : '#FFFFFF',
+    cardBorder: isDark ? 'rgba(236, 72, 153, 0.3)' : 'rgba(219, 39, 119, 0.2)',
   };
 
   const [searchText, setSearchText] = useState("");
-  // Performans için debounce
   const [debouncedQuery, setDebouncedQuery] = useState("");
 
   useEffect(() => {
@@ -72,13 +74,12 @@ export function ActivityListScreen(): React.ReactElement {
     hasNextPage,
     isFetchingNextPage,
     isRefetching,
-  } = useActivities({ filters });
+  } = useActivities({ filters, pageSize: 20 });
 
   const handleRefresh = useCallback(() => {
     refetch();
   }, [refetch]);
 
-  // Veri Düzleştirme
   const activities = useMemo(() => {
     return (
       data?.pages
@@ -105,13 +106,11 @@ export function ActivityListScreen(): React.ReactElement {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
-  // --- RENDER ITEMS ---
-
+ 
   const renderItem = useCallback(
     ({ item }: { item: ActivityDto }) => {
       if (!item) return null;
       return (
-        // Wrapper: Tema uyumu için çerçeve
         <View style={[
             styles.cardWrapper, 
             { 
@@ -150,11 +149,13 @@ export function ActivityListScreen(): React.ReactElement {
     );
   }, [isLoading, theme, t]);
 
-  // --- ERROR STATE ---
   if (isError) {
     return (
-      <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
-        <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
+      <View style={[styles.container, { backgroundColor: mainBg }]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={StyleSheet.absoluteFill}>
+           <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        </View>
         <ScreenHeader title={t("activity.title")} showBackButton />
         <View style={styles.center}>
             <Text style={{ color: theme.error, marginBottom: 12, textAlign: 'center' }}>
@@ -171,18 +172,20 @@ export function ActivityListScreen(): React.ReactElement {
     );
   }
 
-  // --- MAIN RENDER ---
   return (
-    <View style={[styles.container, { backgroundColor: theme.screenBg }]}>
-      <StatusBar style={isDark ? "light" : "dark"} backgroundColor={theme.headerBg} />
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
       
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+      </View>
+
       <ScreenHeader title={t("activity.title")} showBackButton />
 
       <View style={styles.listContainer}>
         
-        {/* CONTROLS AREA (Header Altı) */}
-        <View style={[styles.controlsArea, { backgroundColor: theme.headerBg }]}>
-             {/* Arama Inputu */}
+        {/* CONTROLS AREA */}
+        <View style={styles.controlsArea}>
              <View style={{ flex: 1, marginRight: 10 }}>
                 <SearchInput
                     value={searchText}
@@ -191,14 +194,13 @@ export function ActivityListScreen(): React.ReactElement {
                 />
              </View>
 
-             {/* Yeni Ekle Butonu */}
-             <View style={[styles.actionBtnContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
-                <TouchableWithoutFeedback onPress={handleCreatePress}>
-                    <View style={[styles.iconBtn, { backgroundColor: theme.activeSwitch }]}>
-                         <Add01Icon size={20} color="#FFF" variant="stroke" />
-                    </View>
-                </TouchableWithoutFeedback>
-             </View>
+             <TouchableOpacity 
+                onPress={handleCreatePress} 
+                style={styles.iconBtn} 
+                activeOpacity={0.7}
+             >
+               <CalendarAdd01Icon size={24} color="#FFF" variant="stroke" strokeWidth={2.5} />
+             </TouchableOpacity>
         </View>
 
         {/* LOADING & LIST */}
@@ -214,7 +216,8 @@ export function ActivityListScreen(): React.ReactElement {
             contentContainerStyle={{
                 paddingHorizontal: PADDING,
                 paddingTop: 12,
-                paddingBottom: insets.bottom + 20,
+              
+                paddingBottom: insets.bottom + 40, 
                 gap: GAP, 
             }}
             showsVerticalScrollIndicator={false}
@@ -240,31 +243,26 @@ const styles = StyleSheet.create({
     justifyContent: "center", 
     marginTop: 50 
   },
-  // Controls Area
   controlsArea: {
     flexDirection: 'row', 
     alignItems: 'center', 
     paddingHorizontal: 16, 
-    paddingVertical: 12,
-  },
-  actionBtnContainer: {
-    flexDirection: 'row', 
-    padding: 4, 
-    borderRadius: 12, 
-    alignItems: 'center', 
-    height: 48,
-    width: 48, 
-    justifyContent: 'center'
+    paddingTop: 12, 
+    paddingBottom: 8 
   },
   iconBtn: { 
-    padding: 8, 
-    borderRadius: 8, 
-    height: 40, 
-    width: 40, 
+    height: 50, 
+    width: 50, 
+    borderRadius: 16, 
+    backgroundColor: BRAND_COLOR, 
     alignItems: 'center', 
-    justifyContent: 'center' 
+    justifyContent: 'center', 
+    shadowColor: BRAND_COLOR, 
+    shadowOffset: { width: 0, height: 4 }, 
+    shadowOpacity: 0.4, 
+    shadowRadius: 8, 
+    elevation: 6 
   },
-  // Kart Stili
   cardWrapper: {
     borderRadius: 16,
     borderWidth: 1,

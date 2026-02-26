@@ -221,7 +221,7 @@ export function ActivityDetailScreen(): React.ReactElement {
         <ScreenHeader
           title={t("activity.detail")}
           showBackButton
-          rightContent={
+          rightElement={
             <View style={styles.headerActions}>
               <TouchableOpacity onPress={handleEdit} style={styles.headerButton}>
                 <Text style={styles.headerButtonText}>✏️</Text>
