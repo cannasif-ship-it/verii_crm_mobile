@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { View, StyleSheet, TouchableOpacity, Platform, Dimensions, Pressable, Modal } from "react-native";
+import { View, StyleSheet, TouchableOpacity, Platform, Dimensions, Pressable, Modal, Image } from "react-native";
 import { usePathname, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -58,7 +58,10 @@ export function BottomNavBar(): React.ReactElement {
     iconBorder: isDark ? "rgba(219, 39, 119, 0.4)" : "rgba(219, 39, 119, 0.2)",
     navTopBorder: isDark ? "rgba(219, 39, 119, 0.35)" : "rgba(219, 39, 119, 0.2)", 
     backdropBg: isDark ? "rgba(0, 0, 0, 0.6)" : "rgba(0, 0, 0, 0.4)",
-    active: "#db2777",
+    
+    active: isDark ? "#db2777" : "#EE66A6", 
+    fabBg: isDark ? "#be185d" : "#f5b1d1ff", 
+
     inactive: isDark ? "#94a3b8" : "#64748B",
     sheetBg: isDark ? "#160B24" : "#FFFFFF",
     sheetBorder: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
@@ -214,12 +217,32 @@ export function BottomNavBar(): React.ReactElement {
       </View>
 
       <TouchableOpacity
-        style={[styles.mainFab, { backgroundColor: THEME.active, bottom: safeBottom + 28 }]}
-        onPress={() => setIsMenuOpen(!isMenuOpen)}
-        activeOpacity={0.9}
-      >
-        {isMenuOpen ? <Cancel01Icon size={30} color="#FFF" variant="stroke" strokeWidth={2.5} /> : <Add01Icon size={30} color="#FFF" variant="stroke" strokeWidth={2.5} />}
-      </TouchableOpacity>
+  style={[
+    styles.mainFab, 
+    { 
+      backgroundColor: THEME.fabBg, 
+      shadowColor: THEME.fabBg, 
+      bottom: safeBottom + 28,
+      borderWidth: isDark ? 0 : 0.8, 
+      borderColor: isDark ? "transparent" : "#FF0066" 
+    }
+  ]}
+  onPress={() => setIsMenuOpen(!isMenuOpen)}
+  activeOpacity={0.9}
+>
+  {isMenuOpen ? (
+    <Cancel01Icon size={30} color="#FFF" variant="stroke" strokeWidth={2.5} />
+  ) : (
+    <Image 
+      source={require('../../../assets/v3logo.png')} 
+      style={{ 
+        width: 94, 
+        height: 94, 
+        resizeMode: 'contain'
+      }} 
+    />
+  )}
+</TouchableOpacity>
 
       <Modal visible={isSalesActionSheetOpen} transparent animationType="slide" onRequestClose={() => setIsSalesActionSheetOpen(false)}>
         <View style={styles.sheetOverlay}>
@@ -363,7 +386,6 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     elevation: 25,
-    shadowColor: "#db2777",
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.4,
     shadowRadius: 8,
