@@ -75,6 +75,7 @@ export function ContactFormScreen(): React.ReactElement {
   const THEME = {
     bg: isDark ? "#020617" : "#F8FAFC",
     cardBg: isDark ? "rgba(255,255,255,0.02)" : "#FFFFFF", 
+    modalBg: isDark ? "#0c0516" : "#FFFFFF", 
     text: isDark ? "#FFFFFF" : "#0F172A",
     textMute: isDark ? "#94a3b8" : "#64748B",
     border: isDark ? "rgba(236, 72, 153, 0.15)" : "rgba(0,0,0,0.08)",
@@ -93,13 +94,13 @@ export function ContactFormScreen(): React.ReactElement {
 
   const schema = useMemo(() => createContactSchema(), []);
 
- const {
+  const {
     control,
     handleSubmit,
     setValue,
     watch,
     reset,
-    setFocus, // <-- BİR TEK BURAYI EKLEDİK
+    setFocus,
     formState: { errors, isSubmitting },
   } = useForm<ContactFormData>({
     resolver: zodResolver(schema),
@@ -219,7 +220,7 @@ export function ContactFormScreen(): React.ReactElement {
     [isEditMode, contactId, buildPayload, createContact, updateContact, router, t]
   );
 
- const onError = useCallback((formErrors: any) => {
+  const onError = useCallback((formErrors: any) => {
     showToast("error", "Lütfen kırmızı ile işaretlenmiş zorunlu alanları doldurun.");
     
     const generalFields = ["firstName", "lastName", "customerId", "titleId", "salutation"];
@@ -232,13 +233,9 @@ export function ContactFormScreen(): React.ReactElement {
       setActiveTab("details");
     }
 
-
     setTimeout(() => {
       if (errorKeys.length > 0) {
-
         const focusableFields = ["firstName", "lastName", "email", "phone", "mobile", "notes"];
-        
-     
         const fieldToFocus = errorKeys.find(key => focusableFields.includes(key)) as keyof ContactFormData;
 
         if (fieldToFocus) {
@@ -248,6 +245,7 @@ export function ContactFormScreen(): React.ReactElement {
     }, 300); 
 
   }, [showToast, setFocus]);
+
   const FormSection = useCallback(({ title, icon, children }: { title: string, icon?: React.ReactNode, children: React.ReactNode }) => {
     const hasChildren = React.Children.count(children) > 0;
     if (!hasChildren) return null;
@@ -476,10 +474,16 @@ export function ContactFormScreen(): React.ReactElement {
         </KeyboardAvoidingView>
       </View>
       
+      {/* --- SALUTATION MODAL --- */}
       <Modal visible={salutationModalOpen} transparent animationType="slide" onRequestClose={() => setSalutationModalOpen(false)}>
         <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setSalutationModalOpen(false)} />
-          <View style={[styles.modalContent, { backgroundColor: THEME.cardBg, paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setSalutationModalOpen(false)} />
+          <View style={[styles.modalContent, { 
+            backgroundColor: THEME.modalBg, 
+            paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 32,
+            borderTopColor: isDark ? 'rgba(236, 72, 153, 0.4)' : THEME.border, 
+            borderTopWidth: 1 
+          }]}>
             <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
               <View style={[styles.handle, { backgroundColor: THEME.border }]} />
               <Text style={[styles.modalTitle, { color: THEME.text }]}>{t("contact.salutation")}</Text>
@@ -505,10 +509,16 @@ export function ContactFormScreen(): React.ReactElement {
         </View>
       </Modal>
 
+      {/* --- TITLE MODAL --- */}
       <Modal visible={titleModalOpen} transparent animationType="slide" onRequestClose={() => setTitleModalOpen(false)}>
         <View style={styles.modalOverlay}>
-          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setTitleModalOpen(false)} />
-          <View style={[styles.modalContent, { backgroundColor: THEME.cardBg, paddingBottom: insets.bottom + 16 }]}>
+          <TouchableOpacity style={styles.modalBackdrop} activeOpacity={1} onPress={() => setTitleModalOpen(false)} />
+          <View style={[styles.modalContent, { 
+            backgroundColor: THEME.modalBg, 
+            paddingBottom: insets.bottom > 0 ? insets.bottom + 16 : 32, 
+            borderTopColor: isDark ? 'rgba(236, 72, 153, 0.4)' : THEME.border, 
+            borderTopWidth: 1 
+          }]}>
             <View style={[styles.modalHeader, { borderBottomColor: THEME.border }]}>
               <View style={[styles.handle, { backgroundColor: THEME.border }]} />
               <Text style={[styles.modalTitle, { color: THEME.text }]}>{t("lookup.selectTitle")}</Text>
@@ -543,6 +553,7 @@ export function ContactFormScreen(): React.ReactElement {
           </View>
         </View>
       </Modal>
+
     </View>
   );
 }
@@ -618,8 +629,13 @@ const styles = StyleSheet.create({
   },
 
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
-  modalBackdrop: { flex: 1, backgroundColor: "rgba(0, 0, 0, 0.6)" }, 
-  modalContent: { borderTopLeftRadius: 24, borderTopRightRadius: 24, maxHeight: "65%" },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0, 0, 0, 0.6)" }, 
+  modalContent: { 
+    borderTopLeftRadius: 24, 
+    borderTopRightRadius: 24, 
+    maxHeight: "80%", 
+    minHeight: "45%", 
+  },
   modalHeader: { alignItems: "center", paddingVertical: 14, borderBottomWidth: 1 },
   handle: { width: 36, height: 4, borderRadius: 2, marginBottom: 10, opacity: 0.3 },
   modalTitle: { fontSize: 15, fontWeight: "700" },
