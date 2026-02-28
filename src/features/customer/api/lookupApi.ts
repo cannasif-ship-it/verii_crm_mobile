@@ -35,9 +35,14 @@ function extractItems<T>(data: T[] | PagedResponse<T>): T[] {
   return [];
 }
 
+
+const PAGE_PARAMS = { pageNumber: 1, pageSize: 10000, sorting: "Name ASC"};
+
 export const lookupApi = {
   getCountries: async (): Promise<CountryDto[]> => {
-    const response = await apiClient.get<LookupApiResponse<CountryDto>>("/api/Country");
+    const response = await apiClient.get<LookupApiResponse<CountryDto>>("/api/Country", {
+      params: { ...PAGE_PARAMS } 
+    });
 
     if (!response.data.success) {
       throw new Error(response.data.message || response.data.exceptionMessage || "Ülke listesi alınamadı");
@@ -47,7 +52,7 @@ export const lookupApi = {
   },
 
   getCities: async (countryId?: number): Promise<CityDto[]> => {
-    const params: Record<string, string> = {};
+    const params: Record<string, any> = { ...PAGE_PARAMS }; 
 
     if (countryId) {
       params.filters = buildFilterParam([
@@ -65,7 +70,7 @@ export const lookupApi = {
   },
 
   getDistricts: async (cityId?: number): Promise<DistrictDto[]> => {
-    const params: Record<string, string> = {};
+    const params: Record<string, any> = { ...PAGE_PARAMS }; 
 
     if (cityId) {
       params.filters = buildFilterParam([
@@ -83,7 +88,9 @@ export const lookupApi = {
   },
 
   getCustomerTypes: async (): Promise<CustomerTypeDto[]> => {
-    const response = await apiClient.get<LookupApiResponse<CustomerTypeDto>>("/api/CustomerType");
+    const response = await apiClient.get<LookupApiResponse<CustomerTypeDto>>("/api/CustomerType", {
+      params: { ...PAGE_PARAMS } 
+    });
 
     if (!response.data.success) {
       throw new Error(response.data.message || response.data.exceptionMessage || "Müşteri tipi listesi alınamadı");
@@ -93,7 +100,9 @@ export const lookupApi = {
   },
 
   getTitles: async (): Promise<TitleDto[]> => {
-    const response = await apiClient.get<LookupApiResponse<TitleDto>>("/api/Title");
+    const response = await apiClient.get<LookupApiResponse<TitleDto>>("/api/Title", {
+      params: { ...PAGE_PARAMS } 
+    });
 
     if (!response.data.success) {
       throw new Error(response.data.message || response.data.exceptionMessage || "Ünvan listesi alınamadı");
