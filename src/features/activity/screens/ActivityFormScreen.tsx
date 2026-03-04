@@ -62,10 +62,10 @@ export function ActivityFormScreen(): React.ReactElement {
     return new Date().toISOString();
   }, [initialDate, initialStartDateTime]);
 
-  const toDefaultEndDateTime = useCallback((): string | undefined => {
+  const toDefaultEndDateTime = useCallback((): string => {
     if (initialEndDateTime) return initialEndDateTime;
     const start = new Date(toDefaultStartDateTime());
-    if (Number.isNaN(start.getTime())) return undefined;
+    if (Number.isNaN(start.getTime())) return new Date().toISOString();
     start.setHours(start.getHours() + 1);
     return start.toISOString();
   }, [initialEndDateTime, toDefaultStartDateTime]);
@@ -107,6 +107,7 @@ export function ActivityFormScreen(): React.ReactElement {
       status: "Scheduled",
       isCompleted: false,
       priority: "Medium",
+      assignedUserId: user?.id,
       startDateTime: toDefaultStartDateTime(),
       endDateTime: toDefaultEndDateTime(),
       isAllDay: false,
@@ -340,6 +341,10 @@ export function ActivityFormScreen(): React.ReactElement {
         };
         const payloadInput = {
           ...data,
+          activityTypeName: watchActivityType || data.activityType,
+          potentialCustomerName: selectedCustomer?.name,
+          contactName: selectedContact?.fullName,
+          endDateTime: data.endDateTime || toDefaultEndDateTime(),
           reminders: (data.reminders || []).map((offsetMinutes) => ({
             offsetMinutes,
             channel: ReminderChannel.InApp,
@@ -524,12 +529,12 @@ export function ActivityFormScreen(): React.ReactElement {
 
           <View style={styles.fieldContainer}>
             <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {t("activity.endDate")}
+              {t("activity.endDate")} <Text style={{ color: colors.error }}>*</Text>
             </Text>
             <TouchableOpacity
               style={[
                 styles.pickerField,
-                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                { backgroundColor: colors.backgroundSecondary, borderColor: errors.endDateTime ? colors.error : colors.border },
               ]}
               onPress={handleOpenEndDateModal}
             >
@@ -538,6 +543,9 @@ export function ActivityFormScreen(): React.ReactElement {
               </Text>
               <Text style={[styles.arrow, { color: colors.textMuted }]}>🕒</Text>
             </TouchableOpacity>
+            {errors.endDateTime && (
+              <Text style={[styles.errorText, { color: colors.error }]}>{errors.endDateTime.message}</Text>
+            )}
           </View>
 
           <TouchableOpacity

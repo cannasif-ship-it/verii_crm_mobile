@@ -87,14 +87,26 @@ export function ActivityDetailScreen(): React.ReactElement {
                 subject: activity.subject,
                 description: activity.description,
                 activityTypeId: activity.activityTypeId ?? 0,
+                activityTypeName:
+                  activity.activityTypeName ||
+                  (typeof activity.activityType === "string"
+                    ? activity.activityType
+                    : activity.activityType?.name),
                 startDateTime: activity.startDateTime || activity.activityDate || new Date().toISOString(),
-                endDateTime: activity.endDateTime,
+                endDateTime:
+                  activity.endDateTime ||
+                  activity.startDateTime ||
+                  activity.activityDate ||
+                  new Date().toISOString(),
                 isAllDay: activity.isAllDay ?? false,
                 potentialCustomerId: activity.potentialCustomerId,
+                potentialCustomerName:
+                  activity.potentialCustomerName || activity.potentialCustomer?.name,
                 erpCustomerCode: activity.erpCustomerCode,
                 status: 1,
                 priority: typeof activity.priority === "number" ? activity.priority : 1,
                 contactId: activity.contactId,
+                contactName: activity.contactName || activity.contact?.fullName,
                 assignedUserId: activity.assignedUserId ?? 0,
                 reminders: (activity.reminders || []).map((reminder) => ({
                   offsetMinutes: reminder.offsetMinutes,

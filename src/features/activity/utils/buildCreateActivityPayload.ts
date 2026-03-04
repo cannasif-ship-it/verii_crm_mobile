@@ -1,5 +1,6 @@
 import type {
   CreateActivityDto,
+  UpdateActivityDto,
   ActivityTypeDto,
   ActivityTypeRef,
   CreateActivityReminderDto,
@@ -10,6 +11,7 @@ export interface ActivityFormLike {
   description?: string | null;
   activityType?: string | null;
   activityTypeId?: number | null;
+  activityTypeName?: string | null;
   isCompleted?: boolean;
   activityDate?: string;
   startDateTime?: string;
@@ -19,7 +21,9 @@ export interface ActivityFormLike {
   priority?: string | null;
   assignedUserId?: number | null;
   contactId?: number | null;
+  contactName?: string | null;
   potentialCustomerId?: number | null;
+  potentialCustomerName?: string | null;
   erpCustomerCode?: string | null;
   reminders?: CreateActivityReminderDto[];
 }
@@ -58,20 +62,27 @@ export function buildCreateActivityPayload(
   }
   const startDateTime =
     data.startDateTime ?? (data.activityDate ? new Date(data.activityDate).toISOString() : new Date().toISOString());
-  const endDateTime = data.endDateTime ?? undefined;
+  const parsedStart = new Date(startDateTime);
+  const fallbackEndDateTime = Number.isNaN(parsedStart.getTime())
+    ? new Date().toISOString()
+    : new Date(parsedStart.getTime() + 60 * 60 * 1000).toISOString();
+  const endDateTime = data.endDateTime ?? fallbackEndDateTime;
   const assignedUserId = data.assignedUserId ?? assignedUserIdFallback ?? 0;
 
   return {
     subject: data.subject,
     description: data.description ?? undefined,
     activityTypeId,
+    activityTypeName: data.activityTypeName ?? data.activityType ?? undefined,
     startDateTime,
     endDateTime,
     isAllDay: data.isAllDay ?? false,
     status: statusToNumeric(data.status),
     priority: priorityToNumeric(data.priority),
     assignedUserId,
+    contactName: data.contactName ?? undefined,
     contactId: data.contactId ?? undefined,
+    potentialCustomerName: data.potentialCustomerName ?? undefined,
     potentialCustomerId: data.potentialCustomerId ?? undefined,
     erpCustomerCode: data.erpCustomerCode ?? undefined,
     reminders: data.reminders ?? [],
@@ -81,7 +92,7 @@ export function buildCreateActivityPayload(
 export function buildUpdateActivityPayload(
   data: ActivityFormLike,
   options: BuildCreateActivityPayloadOptions & { existingAssignedUserId?: number }
-): CreateActivityDto {
+): UpdateActivityDto {
   const base = buildCreateActivityPayload(data, options);
   const assignedUserId =
     base.assignedUserId ||

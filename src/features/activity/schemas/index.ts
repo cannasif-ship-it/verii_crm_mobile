@@ -16,7 +16,7 @@ export const createActivitySchema = () =>
     contactId: z.number().optional().nullable(),
     assignedUserId: z.number().optional().nullable(),
     startDateTime: z.string().min(1, i18n.t("validation.dateRequired")),
-    endDateTime: z.string().optional().nullable(),
+    endDateTime: z.string().min(1, i18n.t("validation.endDateRequired")),
     isAllDay: z.boolean(),
     reminders: z.array(z.number().int().min(1)).optional(),
   });
