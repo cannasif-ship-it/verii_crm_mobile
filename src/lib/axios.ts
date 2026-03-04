@@ -14,7 +14,6 @@ export const apiClient = axios.create({
     Accept: "application/json",
   },
 });
-
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await storage.get<string>(ACCESS_TOKEN_KEY);

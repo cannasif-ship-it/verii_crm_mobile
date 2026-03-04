@@ -47,7 +47,6 @@ LogBox.ignoreLogs([
   /React keys must be passed directly/i,
   /SafeAreaView.*deprecated/i,
   /Path|Circle/i,
-  /Reanimated.*value.*render/i,
 ]);
 
 export default function RootLayout(): React.ReactElement {
