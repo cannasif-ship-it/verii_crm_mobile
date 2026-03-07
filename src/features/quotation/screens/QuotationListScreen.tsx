@@ -118,6 +118,14 @@ export function QuotationListScreen(): React.ReactElement {
     router.push("/(tabs)/sales/quotations/create");
   }, [router]);
 
+  const handleQuickListPress = useCallback(() => {
+    router.push("/(tabs)/sales/quotations/quick/list");
+  }, [router]);
+
+  const handleQuickCreatePress = useCallback(() => {
+    router.push("/(tabs)/sales/quotations/quick/create");
+  }, [router]);
+
   const handleEndReached = useCallback(() => {
     if (hasNextPage && !isFetchingNextPage) {
       fetchNextPage();
@@ -232,6 +240,22 @@ export function QuotationListScreen(): React.ReactElement {
                 </TouchableWithoutFeedback>
             </View>
         </View>
+        <View style={styles.quickActionsRow}>
+          <TouchableOpacity
+            style={[styles.quickActionButton, { backgroundColor: "#7c3aed" }]}
+            onPress={handleQuickListPress}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.quickActionText}>Hızlı Teklif Listele</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.quickActionButton, { backgroundColor: "#0ea5e9" }]}
+            onPress={handleQuickCreatePress}
+            activeOpacity={0.85}
+          >
+            <Text style={styles.quickActionText}>Hızlı Teklif Oluştur</Text>
+          </TouchableOpacity>
+        </View>
 
         {/* LOADING STATE */}
         {isLoading && !data ? (
@@ -278,6 +302,23 @@ const styles = StyleSheet.create({
     alignItems: 'center', 
     paddingHorizontal: 16, 
     paddingVertical: 12,
+  },
+  quickActionsRow: {
+    flexDirection: "row",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 6,
+  },
+  quickActionButton: {
+    flex: 1,
+    borderRadius: 10,
+    paddingVertical: 10,
+    alignItems: "center",
+  },
+  quickActionText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 12,
   },
   // Sağ taraftaki kutucuk (Eski ViewSwitcher, Yeni Create Button)
   actionBtnContainer: {
