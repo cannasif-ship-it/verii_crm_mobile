@@ -14,6 +14,7 @@ export const apiClient = axios.create({
     Accept: "application/json",
   },
 });
+
 apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     const token = await storage.get<string>(ACCESS_TOKEN_KEY);
@@ -68,7 +69,9 @@ apiClient.interceptors.response.use(
     return response;
   },
   async (error: AxiosError<ApiResponse<unknown>>) => {
-    if (error.response?.status === 401) {
+    const requestUrl = error.config?.url || "";
+
+    if (error.response?.status === 401 && !requestUrl.includes("/api/auth/login")) {
       await useAuthStore.getState().clearAuth();
       router.replace("/(auth)/login");
     }
@@ -76,7 +79,7 @@ apiClient.interceptors.response.use(
     let errorMessage = "Bir hata oluştu";
 
     if (error.response?.data) {
-      const responseData = error.response.data;
+      const responseData = error.response.data as any;
       if (responseData.message) {
         errorMessage = responseData.message;
       } else if (responseData.exceptionMessage) {
