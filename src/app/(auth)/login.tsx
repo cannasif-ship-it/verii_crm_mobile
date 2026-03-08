@@ -5,10 +5,12 @@ import {
   View,
   TouchableOpacity,
   Pressable,
-  Dimensions,
   Linking,
   LogBox,
   Image,
+  Alert,
+  useWindowDimensions,
+  Dimensions,
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { StatusBar } from "expo-status-bar";
@@ -16,11 +18,9 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation, Trans } from "react-i18next";
 import { Text } from "../../components/ui/text";
 
-// --- IMPORTLAR ---
 import { LoginForm } from "../../features/auth";
 import { setLanguage, getCurrentLanguage } from "../../locales";
 
-// --- HUGE ICONS ---
 import {
   Call02Icon,
   Globe02Icon,
@@ -30,11 +30,7 @@ import {
   InstagramIcon,
   NewTwitterIcon,
 } from "hugeicons-react-native";
-import { ToastAndroid as Toast } from 'react-native'
 
-const { width, height } = Dimensions.get("window");
-
-// --- SOSYAL MEDYA BUTONU ---
 const SocialButton = ({
   icon: Icon,
   color,
@@ -47,14 +43,21 @@ const SocialButton = ({
   return (
     <Pressable
       onPress={onPress}
-      className="w-14 h-14 rounded-full bg-white/5 border items-center justify-center"
       style={({ pressed }) => ({
-        borderColor: pressed ? color : `${color}4D`,
-        backgroundColor: pressed ? `${color}15` : "rgba(255, 255, 255, 0.03)",
-        transform: [{ scale: pressed ? 0.95 : 1 }],
+        width: 48,
+        height: 48,
+        borderRadius: 24,
+        alignItems: "center",
+        justifyContent: "center",
+        borderWidth: 1,
+        borderColor: pressed ? color : "rgba(255, 255, 255, 0.15)",
+        backgroundColor: pressed ? `${color}20` : "transparent",
+        transform: [{ scale: pressed ? 0.92 : 1 }],
       })}
     >
-      <Icon size={24} color={color} />
+      {({ pressed }) => (
+        <Icon size={22} color={pressed ? color : "#94a3b8"} />
+      )}
     </Pressable>
   );
 };
@@ -62,6 +65,9 @@ const SocialButton = ({
 export default function LoginScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { width } = useWindowDimensions(); 
+  const SCREEN_HEIGHT = Dimensions.get("screen").height; 
+
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
 
   useEffect(() => {
@@ -77,136 +83,121 @@ export default function LoginScreen(): React.ReactElement {
   };
 
   const openLink = async (url: string) => {
-    const supported = await Linking.canOpenURL(url);
-    if (supported) {
-      await Linking.openURL(url);
+    try {
+      const supported = await Linking.canOpenURL(url);
+      if (supported) {
+        await Linking.openURL(url);
+      } else {
+        Alert.alert(t("common.error", "Hata"), t("auth.linkError", "Bağlantı açılamıyor."));
+      }
+    } catch (error) {
+      console.error(error);
     }
   };
+
+  const handleComingSoon = () => {
+    Alert.alert(t("common.info", "Bilgi"), t("common.comingSoon", "Yakında!"));
+  };
+
+  const safeBottomPadding = Math.max(insets.bottom + 20, 40);
 
   return (
     <>
       <StatusBar style="light" />
-      <View className="flex-1 bg-[#0f0518]">
-        {/* --- GLOW EFEKTLERİ --- */}
+      <View style={{ flex: 1, backgroundColor: "#0f0518" }}>
+
         <View 
-          className="absolute -top-20 -left-20 bg-pink-500/10 opacity-70"
-          style={{ 
-            width: width * 1.1, 
-            height: width * 1.1, 
-            borderRadius: (width * 1.1) / 2,
-            transform: [{ scale: 1.1 }] 
-          }} 
-        />
-        <View 
-          className="absolute -bottom-24 -right-20 bg-orange-500/10 opacity-70"
-          style={{ 
-            width: width * 1.0, 
-            height: width * 1.0, 
-            borderRadius: (width * 1.0) / 2 
+          style={{
+            position: 'absolute',
+            top: -100,
+            alignSelf: 'center',
+            width: 400,
+            height: 400,
+            borderRadius: 200,
+            backgroundColor: '#ec4899', 
+            opacity: 0.05, 
+            transform: [{ scaleX: 1.5 }]
           }} 
         />
 
         <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="flex-1"
+          behavior={Platform.OS === "ios" ? "padding" : undefined}
+          style={{ flex: 1 }}
         >
           <FlatListScrollView
             contentContainerStyle={{ 
                 flexGrow: 1, 
                 justifyContent: "space-between",
-                minHeight: height 
+                minHeight: SCREEN_HEIGHT, 
             }}
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            {/* --- HEADER: DİL BUTONU --- */}
-            <View 
-              className="px-6 items-end" 
-              style={{ paddingTop: insets.top + 20 }}
+           
+          <View 
+              className="px-6 items-end z-20" 
+              style={{ paddingTop: Math.max(insets.top + 15, 30) }}
             >
               <TouchableOpacity
-                className="px-4 py-2 rounded-full border-[1.5px] border-white/30 bg-white/10 shadow-pink-500"
-                style={{ elevation: 5 }}
+                className="px-4 py-1.5 rounded-full border border-white/20 bg-white/5"
                 onPress={toggleLanguage}
                 activeOpacity={0.7}
               >
-                <Text className="text-[12px] font-[800] text-white tracking-[1px]">
+                <Text className="text-[11px] font-[800] text-slate-300 tracking-[1.5px]">
                   {currentLang === "tr" ? "EN" : "TR"}
                 </Text>
               </TouchableOpacity>
             </View>
 
-            {/* --- LOGO ALANI --- */}
-            <View className="items-center -mt-5 -mb-11">
+           
+            <View style={{ alignItems: "center", zIndex: 20, marginTop: -8, marginBottom: -32 }}>
               <Image
                 source={require("../../../assets/veriicrmlogo.png")}
-                className="w-[300px] h-[150px]"
+                style={{ width: 300, height: 150 }}
                 resizeMode="contain"
               />
             </View>
 
-            {/* --- ORTA ALAN: LOGIN KARTI --- */}
-            <View className="flex-1 justify-center px-5 my-2">
+              <View style={{ flex: 1, justifyContent: "center", paddingHorizontal: 20, marginVertical: 8, zIndex: 20 }}>
               <View 
-                className="bg-[#130b1b] rounded-[36px] border border-white/10 py-9 px-6 shadow-pink-500"
-                style={{ elevation: 5 }}
+                style={{ 
+                  backgroundColor: "#130b1b",
+                  borderRadius: 32,
+                  borderWidth: 1,
+                  borderColor: "rgba(255,255,255,0.05)",
+                  paddingVertical: 40,
+                  paddingHorizontal: 24,
+                  shadowColor: "#ec4899",
+                  shadowOffset: { width: 0, height: 8 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 20,
+                  elevation: 5 
+                }}
               >
                 <LoginForm />
               </View>
             </View>
 
-            {/* --- FOOTER --- */}
             <View
-              className="items-center mt-5"
-              style={{ paddingBottom: insets.bottom + 30 }}
+              style={{ alignItems: "center", zIndex: 20, marginTop: 16, paddingBottom: safeBottomPadding }}
             >
-              {/* İKONLAR */}
-              <View className="flex-row flex-wrap justify-center gap-5 px-3 mb-4">
-                <SocialButton
-                  icon={Call02Icon}
-                  color="#bef264"
-                  onPress={() => openLink("tel:+905070123018")}
-                />
-                <SocialButton
-                  icon={Globe02Icon}
-                  color="#f472b6"
-                  onPress={() => openLink("https://v3rii.com")}
-                />
-                <SocialButton
-                  icon={Mail02Icon}
-                  color="#fb923c"
-                  onPress={() => openLink("mailto:info@v3rii.com")}
-                />
-                <SocialButton
-                  icon={WhatsappIcon}
-                  color="#34d399"
-                  onPress={() => openLink("https://wa.me/905070123018")}
-                />
-                <SocialButton
-                  icon={TelegramIcon}
-                  color="#38bdf8"
-                 onPress={() => Toast.show("Yakında...", Toast.SHORT)}
-                />
-                <SocialButton
-                  icon={InstagramIcon}
-                  color="#e879f9"
-                  onPress={() => Toast.show("Yakında...", Toast.SHORT)}
-                />
-                <SocialButton
-                  icon={NewTwitterIcon}
-                  color="#ffffff"
-                  onPress={() => Toast.show("Yakında...", Toast.SHORT)}
-                />
+              <View style={{ flexDirection: "row", flexWrap: "wrap", justifyContent: "center", gap: 16, paddingHorizontal: 16, marginBottom: 20 }}>
+                <SocialButton icon={Call02Icon} color="#bef264" onPress={() => openLink("tel:+905070123018")} />
+                <SocialButton icon={Globe02Icon} color="#f472b6" onPress={() => openLink("https://v3rii.com")} />
+                <SocialButton icon={Mail02Icon} color="#fb923c" onPress={() => openLink("mailto:info@v3rii.com")} />
+                <SocialButton icon={WhatsappIcon} color="#34d399" onPress={() => openLink("https://wa.me/905070123018")} />
+                <SocialButton icon={TelegramIcon} color="#38bdf8" onPress={handleComingSoon} />
+                <SocialButton icon={InstagramIcon} color="#e879f9" onPress={handleComingSoon} />
+                <SocialButton icon={NewTwitterIcon} color="#ffffff" onPress={handleComingSoon} />
               </View>
 
-              {/* SLOGAN */}
-              <View className="px-7 mt-1">
-                <Text className="text-[11px] color-slate-200 text-center font-medium tracking-[3px] uppercase leading-5">
+                <View style={{ paddingHorizontal: 28 }}>
+                <Text className="text-[10px] color-slate-400 text-center font-semibold tracking-[2px] uppercase leading-5">
                   <Trans
                     i18nKey="auth.login.slogan"
-                    defaults="İŞİNİZİ TAHMİNLERLE DEĞİL, <1>v3rii</1> 'yle YÖNETİN."
+                    defaults="İŞİNİZİ TAHMİNLERLE DEĞİL, <1>v3rii</1> İLE YÖNETİN."
                     components={{
-                      1: <Text className="font-extrabold text-pink-500 underline" />,
+                      1: <Text className="font-extrabold text-pink-500 tracking-[3px]" />,
                     }}
                   />
                 </Text>

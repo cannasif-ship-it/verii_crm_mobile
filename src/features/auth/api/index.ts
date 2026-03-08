@@ -1,4 +1,5 @@
 import { apiClient } from "../../../lib/axios";
+import i18next from "i18next";
 import type {
   LoginRequest,
   LoginResponse,
@@ -16,35 +17,45 @@ const mapBranch = (branch: BranchErp): Branch => ({
 
 export const authApi = {
   getBranches: async (): Promise<Branch[]> => {
-    const response = await apiClient.get<BranchListResponse>("/api/Erp/getBranches");
+    try {
+      const response = await apiClient.get<BranchListResponse>("/api/Erp/getBranches");
 
-    if (!response.data.success) {
-      const errorMessage =
-        response.data.message ||
-        response.data.exceptionMessage ||
-        (response.data.errors && response.data.errors.length > 0
-          ? response.data.errors.join(", ")
-          : "Şube listesi alınamadı");
-      throw new Error(errorMessage);
+      if (!response.data.success) {
+        const errorMessage =
+          response.data.message ||
+          response.data.exceptionMessage ||
+          (response.data.errors && response.data.errors.length > 0
+            ? response.data.errors.join(", ")
+            : i18next.t("api.errors.branchListFailed", "Şube listesi alınamadı"));
+        throw new Error(errorMessage);
+      }
+
+      return response.data.data.map(mapBranch);
+    } catch (error: any) {
+      const finalMessage = error.message || i18next.t("api.errors.serverConnection", "Sunucu ile bağlantı kurulamadı.");
+      throw new Error(finalMessage);
     }
-
-    return response.data.data.map(mapBranch);
   },
 
   login: async (data: LoginRequest): Promise<LoginResponseData> => {
-    const response = await apiClient.post<LoginResponse>("/api/auth/login", data);
+    try {
+      const response = await apiClient.post<LoginResponse>("/api/auth/login", data);
 
-    if (!response.data.success) {
-      const errorMessage =
-        response.data.message ||
-        response.data.exceptionMessage ||
-        (response.data.errors && response.data.errors.length > 0
-          ? response.data.errors.join(", ")
-          : "Giriş başarısız");
-      throw new Error(errorMessage);
+      if (!response.data.success) {
+        const errorMessage =
+          response.data.message ||
+          response.data.exceptionMessage ||
+          (response.data.errors && response.data.errors.length > 0
+            ? response.data.errors.join(", ")
+            : i18next.t("auth.loginFailed", "Giriş başarısız"));
+        throw new Error(errorMessage);
+      }
+
+      return response.data.data;
+    } catch (error: any) {
+      const finalMessage = error.message || i18next.t("auth.loginFailedMessage", "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.");
+      throw new Error(finalMessage);
     }
-
-    return response.data.data;
   },
 
   logout: async (): Promise<void> => {
