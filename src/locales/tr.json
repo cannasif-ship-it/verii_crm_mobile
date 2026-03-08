@@ -169,10 +169,27 @@
     "english": "English"
   },
   "settings": {
-    "appearance": "Görünüm",
-    "darkMode": "Karanlık Mod",
-    "lightMode": "Aydınlık Mod"
-  },
+  "title": "Profil Ayarları",
+  "uploadPhoto": "Profil Resmi Yükle",
+  "changePassword": "Şifre Değiştir",
+  "currentPassword": "Mevcut Şifre",
+  "newPassword": "Yeni Şifre",
+  "confirmPassword": "Yeni Şifre (Tekrar)",
+  "updatePasswordBtn": "Şifreyi Güncelle",
+  "appearance": "Görünüm",
+  "darkMode": "Karanlık Mod",
+  "lightMode": "Aydınlık Mod",
+  "errorNoUser": "Kullanıcı bilgisi bulunamadı",
+  "successPhoto": "Profil resmi güncellendi",
+  "errorPhoto": "Profil resmi güncellenemedi",
+  "successPassword": "Şifre başarıyla değiştirildi",
+  "errorPassword": "Şifre değiştirilemedi",
+  "errorGallery": "Galeri izni gerekli",
+  "errorEmptyFields": "Lütfen tüm şifre alanlarını doldurun",
+  "errorShortPassword": "Yeni şifre en az 6 karakter olmalı",
+  "errorMismatchPassword": "Yeni şifre ve tekrar şifresi eşleşmiyor",
+  "defaultUser": "Kullanıcı"
+},
   "scan": {
     "alignBarcode": "Barkodu çerçeve içine hizalayın",
     "flash": "Flaş",

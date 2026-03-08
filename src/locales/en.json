@@ -180,10 +180,27 @@
     "english": "English"
   },
   "settings": {
-    "appearance": "Appearance",
-    "darkMode": "Dark Mode",
-    "lightMode": "Light Mode"
-  },
+  "title": "Profile Settings",
+  "uploadPhoto": "Upload Profile Photo",
+  "changePassword": "Change Password",
+  "currentPassword": "Current Password",
+  "newPassword": "New Password",
+  "confirmPassword": "Confirm New Password",
+  "updatePasswordBtn": "Update Password",
+  "appearance": "Appearance",
+  "darkMode": "Dark Mode",
+  "lightMode": "Light Mode",
+  "errorNoUser": "User info not found",
+  "successPhoto": "Profile photo updated",
+  "errorPhoto": "Failed to update profile photo",
+  "successPassword": "Password successfully changed",
+  "errorPassword": "Failed to change password",
+  "errorGallery": "Gallery permission is required",
+  "errorEmptyFields": "Please fill in all password fields",
+  "errorShortPassword": "New password must be at least 6 characters",
+  "errorMismatchPassword": "New passwords do not match",
+  "defaultUser": "User"
+},
   "scan": {
     "alignBarcode": "Align barcode within the frame",
     "flash": "Flash",

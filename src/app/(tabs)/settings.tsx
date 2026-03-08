@@ -8,6 +8,7 @@ import {
   TextInput,
   ActivityIndicator,
   Image,
+  ScrollView,
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
@@ -16,6 +17,18 @@ import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
+import {
+  ArrowLeft01Icon,
+  UserIcon,
+  Camera01Icon,
+  Moon02Icon,
+  Sun01Icon,
+  Logout01Icon,
+  LockPasswordIcon,
+  Tick01Icon
+} from "hugeicons-react-native";
+
 import { Text } from "../../components/ui/text";
 import { useAuthStore } from "../../store/auth";
 import { useUIStore } from "../../store/ui";
@@ -32,7 +45,7 @@ export default function SettingsScreen(): React.ReactElement {
 
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const authUser = useAuthStore((state) => state.user);
-  const { colors, themeMode, toggleTheme } = useUIStore();
+  const { themeMode, toggleTheme } = useUIStore();
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
 
   const [currentPassword, setCurrentPassword] = useState("");
@@ -40,6 +53,25 @@ export default function SettingsScreen(): React.ReactElement {
   const [confirmPassword, setConfirmPassword] = useState("");
 
   const isDarkMode = themeMode === "dark";
+
+  const mainBg = isDarkMode ? "#0c0516" : "#FAFAFA";
+  const gradientColors = (isDarkMode
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)']
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
+  const cardBg = isDarkMode ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.85)";
+  const inputBg = isDarkMode ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.6)";
+  const borderColor = isDarkMode ? "rgba(255,255,255,0.06)" : "rgba(236, 72, 153, 0.25)";
+  const dividerColor = isDarkMode ? "rgba(255,255,255,0.04)" : "rgba(236, 72, 153, 0.12)";
+  const textColor = isDarkMode ? "#F8FAFC" : "#1E293B";
+  const mutedColor = isDarkMode ? "#94A3B8" : "#64748B";
+  const brandColor = isDarkMode ? "#EC4899" : "#DB2777";
+  const errorColor = "#EF4444";
+
+  const SUPPORTED_LANGUAGES = [
+    { id: 'tr', label: t('language.turkish', 'Türkçe'), flag: '🇹🇷' },
+    { id: 'en', label: t('language.english', 'English'), flag: '🇬🇧' },
+  ];
 
   const myProfileQuery = useQuery({
     queryKey: ["profile", "me"],
@@ -56,15 +88,15 @@ export default function SettingsScreen(): React.ReactElement {
 
   const uploadPictureMutation = useMutation({
     mutationFn: async (uri: string) => {
-      if (!userId) throw new Error("Kullanıcı bilgisi bulunamadı");
+      if (!userId) throw new Error(t("settings.errorNoUser"));
       return profileApi.uploadProfilePicture(userId, uri);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["profile", "detail", userId] });
-      showSuccess("Profil resmi güncellendi");
+      showSuccess(t("settings.successPhoto"));
     },
     onError: (error) => {
-      showError(error instanceof Error ? error.message : "Profil resmi güncellenemedi");
+      showError(error instanceof Error ? error.message : t("settings.errorPhoto"));
     },
   });
 
@@ -78,10 +110,10 @@ export default function SettingsScreen(): React.ReactElement {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-      showSuccess("Şifre başarıyla değiştirildi");
+      showSuccess(t("settings.successPassword"));
     },
     onError: (error) => {
-      showError(error instanceof Error ? error.message : "Şifre değiştirilemedi");
+      showError(error instanceof Error ? error.message : t("settings.errorPassword"));
     },
   });
 
@@ -96,7 +128,7 @@ export default function SettingsScreen(): React.ReactElement {
 
   const handleLogout = (): void => {
     Alert.alert(t("common.logout"), "", [
-      { text: t("common.cancel"), style: "cancel" },
+      { text: t("profile.cancel", "İptal"), style: "cancel" },
       {
         text: t("common.logout"),
         style: "destructive",
@@ -111,7 +143,7 @@ export default function SettingsScreen(): React.ReactElement {
   const handlePickProfileImage = async (): Promise<void> => {
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      showError("Galeri izni gerekli");
+      showError(t("settings.errorGallery"));
       return;
     }
 
@@ -123,214 +155,231 @@ export default function SettingsScreen(): React.ReactElement {
     });
 
     if (result.canceled || !result.assets?.length) return;
-
     uploadPictureMutation.mutate(result.assets[0].uri);
   };
 
   const handleChangePassword = (): void => {
     if (!currentPassword || !newPassword || !confirmPassword) {
-      showError("Lütfen tüm şifre alanlarını doldurun");
+      showError(t("settings.errorEmptyFields"));
       return;
     }
-
     if (newPassword.length < 6) {
-      showError("Yeni şifre en az 6 karakter olmalı");
+      showError(t("settings.errorShortPassword"));
       return;
     }
-
     if (newPassword !== confirmPassword) {
-      showError("Yeni şifre ve tekrar şifresi eşleşmiyor");
+      showError(t("settings.errorMismatchPassword"));
       return;
     }
-
     changePasswordMutation.mutate();
   };
-
-  const cardBackground = isDarkMode ? "rgba(20, 10, 30, 0.7)" : "#FFFFFF";
 
   const fullName = useMemo(() => {
     const apiName = myProfileQuery.data?.fullName?.trim();
     if (apiName) return apiName;
-    return authUser?.name || "Kullanıcı";
-  }, [myProfileQuery.data?.fullName, authUser?.name]);
+    return authUser?.name || t("settings.defaultUser");
+  }, [myProfileQuery.data?.fullName, authUser?.name, t]);
 
   const email = myProfileQuery.data?.email || authUser?.email || "-";
   const profileImageUrl = userDetailQuery.data?.profilePictureUrl || undefined;
 
+  const MenuGroup = ({ children }: { children: React.ReactNode }) => (
+    <View style={[styles.menuGroup, { backgroundColor: cardBg, borderColor }]}>
+      {children}
+    </View>
+  );
+
   return (
-    <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header, paddingTop: insets.top }]}> 
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
+
+      <View style={{ flex: 1, paddingTop: insets.top }}>
         <View style={styles.header}>
-          <TouchableOpacity onPress={handleBack} style={styles.backButton}>
-            <Text style={styles.backIcon}>←</Text>
+          <TouchableOpacity onPress={handleBack} style={[styles.backButton, { backgroundColor: cardBg, borderColor }]}>
+            <ArrowLeft01Icon size={20} color={textColor} variant="stroke" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Profil Ayarları</Text>
-          <View style={styles.backButton} />
+          <Text style={[styles.headerTitle, { color: textColor }]}>{t("settings.title")}</Text>
+          <View style={styles.backButtonPlaceholder} />
         </View>
 
         <FlatListScrollView
-          style={[styles.content, { backgroundColor: colors.background }]}
-          contentContainerStyle={[
-            styles.contentContainer,
-            { paddingBottom: insets.bottom + 28 },
-          ]}
+          style={styles.content}
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 40 }]}
+          showsVerticalScrollIndicator={false}
         >
-          <View
-            style={[
-              styles.profileCard,
-              { backgroundColor: cardBackground, borderColor: colors.cardBorder },
-            ]}
-          >
-            <View style={styles.profileRow}>
-              <View style={[styles.avatarWrap, { borderColor: colors.cardBorder }]}> 
+          <View style={styles.profileSection}>
+            <View style={[styles.avatarBorder, { borderColor }]}>
+              <View style={[styles.avatarInner, { backgroundColor: cardBg }]}>
                 {profileImageUrl ? (
                   <Image source={{ uri: profileImageUrl }} style={styles.avatarImage} resizeMode="cover" />
                 ) : (
-                  <Text style={styles.avatarFallback}>👤</Text>
+                  <UserIcon size={32} color={brandColor} variant="stroke" />
                 )}
               </View>
-
-              <View style={styles.profileInfo}>
-                <Text style={[styles.profileName, { color: colors.text }]}>{fullName}</Text>
-                <Text style={[styles.profileMail, { color: colors.textMuted }]}>{email}</Text>
-              </View>
             </View>
+            <Text style={[styles.profileName, { color: textColor }]}>{fullName}</Text>
+            <Text style={[styles.profileMail, { color: mutedColor }]}>{email}</Text>
 
             <TouchableOpacity
-              style={[styles.primaryButton, { backgroundColor: colors.accent }]}
+              style={[
+                styles.uploadButton, 
+                { 
+                  backgroundColor: isDarkMode ? "rgba(236, 72, 153, 0.08)" : "rgba(219, 39, 119, 0.08)",
+                  borderColor: isDarkMode ? "rgba(236, 72, 153, 0.2)" : "rgba(219, 39, 119, 0.3)",
+                  borderWidth: 1
+                }
+              ]}
               onPress={handlePickProfileImage}
               disabled={uploadPictureMutation.isPending}
             >
               {uploadPictureMutation.isPending ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color={brandColor} size="small" />
               ) : (
-                <Text style={styles.primaryButtonText}>Profil Resmi Yükle</Text>
+                <>
+                  <Camera01Icon size={16} color={brandColor} variant="stroke" style={{ marginRight: 8 }} />
+                  <Text style={[styles.uploadButtonText, { color: brandColor }]}>{t("settings.uploadPhoto")}</Text>
+                </>
               )}
             </TouchableOpacity>
           </View>
 
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>Şifre Değiştir</Text>
-            <View style={[styles.optionCard, { backgroundColor: cardBackground, borderColor: colors.cardBorder }]}>
+          <Text style={[styles.groupTitle, { color: mutedColor }]}>{t("settings.changePassword")}</Text>
+          <MenuGroup>
+            <View style={styles.inputContainer}>
               <TextInput
-                style={[styles.input, { borderColor: colors.cardBorder, color: colors.text }]}
-                placeholder="Mevcut Şifre"
-                placeholderTextColor={colors.textMuted}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+                placeholder={t("settings.currentPassword")}
+                placeholderTextColor={mutedColor}
                 secureTextEntry
                 value={currentPassword}
                 onChangeText={setCurrentPassword}
               />
               <TextInput
-                style={[styles.input, { borderColor: colors.cardBorder, color: colors.text }]}
-                placeholder="Yeni Şifre"
-                placeholderTextColor={colors.textMuted}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+                placeholder={t("settings.newPassword")}
+                placeholderTextColor={mutedColor}
                 secureTextEntry
                 value={newPassword}
                 onChangeText={setNewPassword}
               />
               <TextInput
-                style={[styles.input, { borderColor: colors.cardBorder, color: colors.text }]}
-                placeholder="Yeni Şifre (Tekrar)"
-                placeholderTextColor={colors.textMuted}
+                style={[styles.input, { backgroundColor: inputBg, color: textColor, borderColor }]}
+                placeholder={t("settings.confirmPassword")}
+                placeholderTextColor={mutedColor}
                 secureTextEntry
                 value={confirmPassword}
                 onChangeText={setConfirmPassword}
               />
-
               <TouchableOpacity
-                style={[styles.primaryButton, { backgroundColor: colors.accent }]}
+                style={[
+                  styles.primaryButton, 
+                  { 
+                    backgroundColor: isDarkMode ? "rgba(236, 72, 153, 0.1)" : "rgba(219, 39, 119, 0.1)",
+                    borderColor: isDarkMode ? "rgba(236, 72, 153, 0.3)" : "rgba(219, 39, 119, 0.3)",
+                    borderWidth: 1
+                  }
+                ]}
                 onPress={handleChangePassword}
                 disabled={changePasswordMutation.isPending}
               >
                 {changePasswordMutation.isPending ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color={brandColor} size="small" />
                 ) : (
-                  <Text style={styles.primaryButtonText}>Şifreyi Güncelle</Text>
+                  <>
+                    <LockPasswordIcon size={18} color={brandColor} variant="stroke" style={{ marginRight: 8 }} />
+                    <Text style={[styles.primaryButtonText, { color: brandColor }]}>{t("settings.updatePasswordBtn")}</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </View>
-          </View>
+          </MenuGroup>
 
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("settings.appearance")}</Text>
-            <View style={[styles.optionCard, { backgroundColor: cardBackground, borderColor: colors.cardBorder }]}> 
-              <View style={styles.optionRow}>
-                <View style={styles.optionLeft}>
-                  <Text style={styles.optionIcon}>{isDarkMode ? "🌙" : "☀️"}</Text>
-                  <Text style={[styles.optionText, { color: colors.text }]}>{t("settings.darkMode")}</Text>
-                </View>
-                <Switch
-                  value={isDarkMode}
-                  onValueChange={toggleTheme}
-                  trackColor={{ false: "#E5E7EB", true: colors.accent }}
-                  thumbColor="#FFFFFF"
-                />
+          <Text style={[styles.groupTitle, { color: mutedColor }]}>{t("settings.appearance")}</Text>
+          <MenuGroup>
+            <View style={styles.menuRow}>
+              <View style={[styles.iconBox, { backgroundColor: "rgba(245, 158, 11, 0.1)" }]}>
+                {isDarkMode ? <Sun01Icon size={18} color="#F59E0B" variant="stroke" /> : <Moon02Icon size={18} color="#F59E0B" variant="stroke" />}
               </View>
+              <Text style={[styles.menuText, { color: textColor }]}>
+                {isDarkMode ? t("settings.lightMode") : t("settings.darkMode")}
+              </Text>
+              <Switch
+                value={isDarkMode}
+                onValueChange={toggleTheme}
+                trackColor={{ false: "#E2E8F0", true: "#10B981" }}
+                thumbColor="#FFFFFF"
+                style={{ transform: [{ scaleX: 0.8 }, { scaleY: 0.8 }] }}
+              />
             </View>
-          </View>
+          </MenuGroup>
 
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.textSecondary }]}>{t("language.title")}</Text>
-            <View style={[styles.languageOptions, { backgroundColor: cardBackground, borderColor: colors.cardBorder }]}> 
-              <TouchableOpacity
-                style={[
-                  styles.languageOption,
-                  { borderBottomColor: colors.cardBorder },
-                  currentLang === "tr" && { backgroundColor: colors.activeBackground },
-                ]}
-                onPress={() => handleLanguageChange("tr")}
-              >
-                <Text style={styles.languageFlag}>🇹🇷</Text>
-                <Text
-                  style={[
-                    styles.languageText,
-                    { color: colors.text },
-                    currentLang === "tr" && { fontWeight: "600", color: colors.accent },
-                  ]}
-                >
-                  {t("language.turkish")}
-                </Text>
-                {currentLang === "tr" && <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>}
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.languageOption,
-                  { borderBottomWidth: 0 },
-                  currentLang === "en" && { backgroundColor: colors.activeBackground },
-                ]}
-                onPress={() => handleLanguageChange("en")}
-              >
-                <Text style={styles.languageFlag}>🇬🇧</Text>
-                <Text
-                  style={[
-                    styles.languageText,
-                    { color: colors.text },
-                    currentLang === "en" && { fontWeight: "600", color: colors.accent },
-                  ]}
-                >
-                  {t("language.english")}
-                </Text>
-                {currentLang === "en" && <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>}
-              </TouchableOpacity>
-            </View>
-          </View>
+          <Text style={[styles.groupTitle, { color: mutedColor }]}>{t("language.title")}</Text>
+          <MenuGroup>
+            <ScrollView 
+              horizontal 
+              showsHorizontalScrollIndicator={false} 
+              contentContainerStyle={styles.langScrollContainer}
+            >
+              {SUPPORTED_LANGUAGES.map((lang) => {
+                const isActive = currentLang === lang.id;
+                return (
+                  <TouchableOpacity
+                    key={lang.id}
+                    onPress={() => handleLanguageChange(lang.id as "tr" | "en")}
+                    style={[
+                      styles.langPill, 
+                      { 
+                        backgroundColor: isActive 
+                          ? (isDarkMode ? "rgba(236, 72, 153, 0.1)" : "rgba(219, 39, 119, 0.1)") 
+                          : inputBg,
+                        borderColor: isActive 
+                          ? (isDarkMode ? "rgba(236, 72, 153, 0.3)" : "rgba(219, 39, 119, 0.3)") 
+                          : borderColor,
+                        borderWidth: 1
+                      }
+                    ]}
+                  >
+                    <Text style={{ fontSize: 16, marginRight: 6 }}>{lang.flag}</Text>
+                    <Text style={{ 
+                      color: isActive ? brandColor : mutedColor, 
+                      fontWeight: isActive ? "600" : "500", 
+                      fontSize: 13 
+                    }}>
+                      {lang.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+          </MenuGroup>
 
-          <TouchableOpacity
+          <TouchableOpacity 
             style={[
-              styles.logoutButton,
-              {
-                backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.1)" : "#FFFFFF",
-                borderColor: isDarkMode ? "rgba(239, 68, 68, 0.3)" : "#FEE2E2",
-              },
-            ]}
+              styles.logoutButton, 
+              { 
+                backgroundColor: isDarkMode ? "rgba(239, 68, 68, 0.05)" : "rgba(239, 68, 68, 0.08)",
+                borderColor: isDarkMode ? "rgba(239, 68, 68, 0.15)" : "rgba(239, 68, 68, 0.25)",
+                borderWidth: 1
+              }
+            ]} 
             onPress={handleLogout}
           >
-            <Text style={[styles.logoutText, { color: colors.error }]}>{t("common.logout")}</Text>
+            <Logout01Icon size={18} color={errorColor} variant="stroke" style={{ marginRight: 8 }} />
+            <Text style={[styles.logoutText, { color: errorColor }]}>{t("common.logout")}</Text>
           </TouchableOpacity>
+
         </FlatListScrollView>
       </View>
-    </>
+    </View>
   );
 }
 
@@ -342,157 +391,159 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 0,
   },
   backButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: "center",
     justifyContent: "center",
+    borderWidth: 1,
   },
-  backIcon: {
-    fontSize: 24,
-    color: "#FFFFFF",
+  backButtonPlaceholder: {
+    width: 38,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: "600",
-    color: "#FFFFFF",
   },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: "transparent",
   },
   contentContainer: {
-    padding: 20,
-    gap: 20,
+    paddingHorizontal: 20,
+    paddingTop: 10,
   },
-  profileCard: {
-    borderRadius: 12,
-    borderWidth: 1,
-    padding: 16,
-    gap: 14,
-  },
-  profileRow: {
-    flexDirection: "row",
+  profileSection: {
     alignItems: "center",
-    gap: 12,
+    marginBottom: 28,
+    marginTop: 10,
   },
-  avatarWrap: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
+  avatarBorder: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     borderWidth: 1,
-    overflow: "hidden",
-    alignItems: "center",
+    padding: 3,
+    marginBottom: 12,
+  },
+  avatarInner: {
+    flex: 1,
+    borderRadius: 40,
     justifyContent: "center",
-    backgroundColor: "#f1f5f9",
+    alignItems: "center",
+    overflow: "hidden",
   },
   avatarImage: {
     width: "100%",
     height: "100%",
   },
-  avatarFallback: {
-    fontSize: 28,
-  },
-  profileInfo: {
-    flex: 1,
-  },
   profileName: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: "700",
+    marginBottom: 4,
   },
   profileMail: {
     fontSize: 13,
-    marginTop: 4,
+    fontWeight: "500",
+    marginBottom: 16,
   },
-  section: {
-    gap: 12,
+  uploadButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 20,
   },
-  sectionTitle: {
+  uploadButtonText: {
     fontSize: 13,
+    fontWeight: "600",
+  },
+  groupTitle: {
+    fontSize: 12,
     fontWeight: "600",
     textTransform: "uppercase",
     letterSpacing: 0.5,
+    marginBottom: 8,
+    marginLeft: 4,
   },
-  optionCard: {
-    borderRadius: 12,
+  menuGroup: {
+    borderRadius: 20,
     borderWidth: 1,
-    padding: 14,
-    gap: 10,
+    overflow: "hidden",
+    marginBottom: 24,
+  },
+  inputContainer: {
+    padding: 16,
+    gap: 12,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     fontSize: 14,
   },
   primaryButton: {
-    marginTop: 4,
-    borderRadius: 10,
-    paddingVertical: 12,
+    flexDirection: "row",
+    marginTop: 8,
+    borderRadius: 14,
+    paddingVertical: 14,
     alignItems: "center",
     justifyContent: "center",
   },
   primaryButtonText: {
-    color: "#FFFFFF",
-    fontWeight: "700",
+    fontWeight: "600",
     fontSize: 14,
   },
-  optionRow: {
+  menuRow: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
-    paddingVertical: 6,
-  },
-  optionLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  optionIcon: {
-    fontSize: 22,
-    marginRight: 12,
-  },
-  optionText: {
-    fontSize: 16,
-  },
-  languageOptions: {
-    borderRadius: 12,
-    overflow: "hidden",
-    borderWidth: 1,
-  },
-  languageOption: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 12,
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
   },
-  languageFlag: {
-    fontSize: 20,
+  rowDivider: {
+    height: 1,
+    marginLeft: 52,
+  },
+  iconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 12,
   },
-  languageText: {
-    fontSize: 16,
+  menuText: {
     flex: 1,
+    fontSize: 14,
+    fontWeight: "500",
   },
-  checkmark: {
-    fontSize: 18,
-    fontWeight: "700",
+  langScrollContainer: {
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    gap: 10,
+  },
+  langPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 16,
   },
   logoutButton: {
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingVertical: 14,
+    flexDirection: "row",
     alignItems: "center",
+    justifyContent: "center",
+    paddingVertical: 14,
+    borderRadius: 20,
     marginTop: 8,
   },
   logoutText: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
   },
 });
