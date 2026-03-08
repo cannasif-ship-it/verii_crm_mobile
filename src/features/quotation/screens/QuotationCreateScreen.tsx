@@ -18,18 +18,17 @@ import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useAuthStore } from "../../../store/auth";
 import { useToastStore } from "../../../store/toast";
-import { CustomerPicker } from "../../activity/components";
 import { FormField } from "../../activity/components";
 import { useCustomer } from "../../customer/hooks";
 import { useCustomerShippingAddresses } from "../../shipping-address/hooks";
-import { useErpCustomers } from "../../erp-customer/hooks";
-import { useStock } from "../../stocks/hooks";
 import { stockApi } from "../../stocks/api";
 import { quotationApi } from "../api";
 import {
@@ -49,14 +48,19 @@ import {
   PickerModal,
   DocumentSerialTypePicker,
   OfferTypePicker,
-  ProductPicker,
   QuotationNotesModal,
   notesToDto,
   validateNotesMaxLength,
 } from "../components";
-import { CustomerSelectDialog, type CustomerSelectionResult } from "../../customer";
+import {
+  CustomerSelectDialog,
+  type CustomerSelectionResult,
+} from "../../customer";
 import type { CustomerDto } from "../../customer/types";
-import { createQuotationSchema, type CreateQuotationSchema } from "../schemas";
+import {
+  createQuotationSchema,
+  type CreateQuotationSchema,
+} from "../schemas";
 import {
   type QuotationLineFormState,
   type QuotationExchangeRateFormState,
@@ -67,7 +71,7 @@ import type { StockRelationDto } from "../../stocks/types";
 import { calculateLineTotals, calculateTotals } from "../utils";
 import type { ExchangeRateDto } from "../types";
 import { UserIcon } from "hugeicons-react-native";
-import { LinearGradient } from "expo-linear-gradient"; // Bu satırı ekle
+import { LinearGradient } from "expo-linear-gradient";
 
 function findExchangeRateByCurrency(
   currency: string,
@@ -89,34 +93,43 @@ export function QuotationCreateScreen(): React.ReactElement {
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((state) => state.showToast);
 
- 
   const isDark = themeMode === "dark";
-  const mainBg = isDark ? "#0c0516" : "#FFFFFF"; // Zemin rengi
-  // Ambient Gradient Renkleri
-  const gradientColors = (isDark
-    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)']
-    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
-
-  // İçerik artık şeffaf olmalı ki gradyan görünsün
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (
+    isDark
+      ? ["rgba(236, 72, 153, 0.12)", "transparent", "rgba(249, 115, 22, 0.12)"]
+      : ["rgba(255, 235, 240, 0.6)", "#FFFFFF", "rgba(255, 240, 225, 0.6)"]
+  ) as [string, string, ...string[]];
   const contentBackground = "transparent";
 
   const [lines, setLines] = useState<QuotationLineFormState[]>([]);
-  const [exchangeRates, setExchangeRates] = useState<QuotationExchangeRateFormState[]>([]);
-  const [erpRatesForQuotation, setErpRatesForQuotation] = useState<ExchangeRateDto[]>([]);
+  const [exchangeRates, setExchangeRates] = useState<
+    QuotationExchangeRateFormState[]
+  >([]);
+  const [erpRatesForQuotation, setErpRatesForQuotation] = useState<
+    ExchangeRateDto[]
+  >([]);
   const hasFilledErpRates = useRef(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<CustomerDto | undefined>();
+  const [selectedCustomer, setSelectedCustomer] = useState<
+    CustomerDto | undefined
+  >();
   const [deliveryDateModalOpen, setDeliveryDateModalOpen] = useState(false);
   const [offerDateModalOpen, setOfferDateModalOpen] = useState(false);
   const [tempDeliveryDate, setTempDeliveryDate] = useState(new Date());
   const [tempOfferDate, setTempOfferDate] = useState(new Date());
   const [lineFormVisible, setLineFormVisible] = useState(false);
-  const [editingLine, setEditingLine] = useState<QuotationLineFormState | null>(null);
-  const [exchangeRateDialogVisible, setExchangeRateDialogVisible] = useState(false);
+  const [editingLine, setEditingLine] =
+    useState<QuotationLineFormState | null>(null);
+  const [exchangeRateDialogVisible, setExchangeRateDialogVisible] =
+    useState(false);
   const [paymentTypeModalVisible, setPaymentTypeModalVisible] = useState(false);
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
-  const [shippingAddressModalVisible, setShippingAddressModalVisible] = useState(false);
-  const [customerSelectDialogOpen, setCustomerSelectDialogOpen] = useState(false);
-  const [representativeModalVisible, setRepresentativeModalVisible] = useState(false);
+  const [shippingAddressModalVisible, setShippingAddressModalVisible] =
+    useState(false);
+  const [customerSelectDialogOpen, setCustomerSelectDialogOpen] =
+    useState(false);
+  const [representativeModalVisible, setRepresentativeModalVisible] =
+    useState(false);
   const [projectCodeModalVisible, setProjectCodeModalVisible] = useState(false);
   const [salesTypeModalVisible, setSalesTypeModalVisible] = useState(false);
   const [pendingStockForRelated, setPendingStockForRelated] = useState<
@@ -165,8 +178,10 @@ export function QuotationCreateScreen(): React.ReactElement {
   }, [deliveryDateModalOpen, watchedDeliveryDate]);
 
   const { data: customer } = useCustomer(watchedCustomerId ?? undefined);
-  const { data: shippingAddresses } = useCustomerShippingAddresses(watchedCustomerId ?? undefined);
-  const { data: erpCustomers } = useErpCustomers(watchedErpCustomerCode || undefined);
+  const { data: shippingAddresses } = useCustomerShippingAddresses(
+    watchedCustomerId ?? undefined
+  );
+
   const exchangeRateParamsOnce = useMemo(
     () => ({
       tarih: new Date().toISOString().split("T")[0],
@@ -175,7 +190,8 @@ export function QuotationCreateScreen(): React.ReactElement {
     []
   );
 
-  const { data: exchangeRatesData, isLoading: isLoadingErpRates } = useExchangeRate(exchangeRateParamsOnce);
+  const { data: exchangeRatesData, isLoading: isLoadingErpRates } =
+    useExchangeRate(exchangeRateParamsOnce);
   const { data: currencyOptions } = useCurrencyOptions(exchangeRateParamsOnce);
   const { data: paymentTypes } = usePaymentTypes();
   const { data: relatedUsers = [] } = useRelatedUsers(user?.id);
@@ -186,7 +202,11 @@ export function QuotationCreateScreen(): React.ReactElement {
   });
 
   useEffect(() => {
-    if (exchangeRatesData && exchangeRatesData.length > 0 && !hasFilledErpRates.current) {
+    if (
+      exchangeRatesData &&
+      exchangeRatesData.length > 0 &&
+      !hasFilledErpRates.current
+    ) {
       setErpRatesForQuotation(exchangeRatesData);
       hasFilledErpRates.current = true;
     }
@@ -298,8 +318,16 @@ export function QuotationCreateScreen(): React.ReactElement {
         setValue("quotation.currency", newCurrency);
         return;
       }
-      const oldRate = findExchangeRateByCurrency(oldCurrency, exchangeRates, erpRatesForQuotation);
-      const newRate = findExchangeRateByCurrency(newCurrency, exchangeRates, erpRatesForQuotation);
+      const oldRate = findExchangeRateByCurrency(
+        oldCurrency,
+        exchangeRates,
+        erpRatesForQuotation
+      );
+      const newRate = findExchangeRateByCurrency(
+        newCurrency,
+        exchangeRates,
+        erpRatesForQuotation
+      );
       if (oldRate == null || newRate == null || newRate <= 0) {
         setValue("quotation.currency", newCurrency);
         setLines((prev) => prev);
@@ -331,7 +359,11 @@ export function QuotationCreateScreen(): React.ReactElement {
         "Kur Değişikliği",
         "Para birimi değişikliği tüm satırları etkileyecektir. Devam etmek istiyor musunuz?",
         [
-          { text: "Vazgeç", style: "cancel", onPress: () => setCurrencyModalVisible(false) },
+          {
+            text: "Vazgeç",
+            style: "cancel",
+            onPress: () => setCurrencyModalVisible(false),
+          },
           {
             text: "Onayla",
             onPress: () => {
@@ -346,22 +378,29 @@ export function QuotationCreateScreen(): React.ReactElement {
   );
 
   const handleAddLine = useCallback(() => {
-    if ((!watchedCustomerId && !watchedErpCustomerCode) || !watchedRepresentativeId || !watchedCurrency) {
+    if (
+      (!watchedCustomerId && !watchedErpCustomerCode) ||
+      !watchedRepresentativeId ||
+      !watchedCurrency
+    ) {
       showToast("error", t("common.selectCustomerRepresentativeCurrency"));
       return;
     }
-
     setEditingLine(null);
     setLineFormVisible(true);
-  }, [watchedCustomerId, watchedErpCustomerCode, watchedRepresentativeId, watchedCurrency, showToast]);
+  }, [
+    watchedCustomerId,
+    watchedErpCustomerCode,
+    watchedRepresentativeId,
+    watchedCurrency,
+    showToast,
+    t,
+  ]);
 
-  const handleEditLine = useCallback(
-    (line: QuotationLineFormState) => {
-      setEditingLine(line);
-      setLineFormVisible(true);
-    },
-    []
-  );
+  const handleEditLine = useCallback((line: QuotationLineFormState) => {
+    setEditingLine(line);
+    setLineFormVisible(true);
+  }, []);
 
   const handleSaveLine = useCallback(
     (savedLine: QuotationLineFormState) => {
@@ -372,7 +411,9 @@ export function QuotationCreateScreen(): React.ReactElement {
           const hasRelated = (savedLine.relatedLines?.length ?? 0) > 0;
           if (hasRelated && savedLine.relatedLines) {
             const others = prev.filter(
-              (l) => l.id !== editingLine.id && l.relatedProductKey !== editingLine.relatedProductKey
+              (l) =>
+                l.id !== editingLine.id &&
+                l.relatedProductKey !== editingLine.relatedProductKey
             );
             return [savedLine, ...savedLine.relatedLines, ...others];
           }
@@ -385,14 +426,17 @@ export function QuotationCreateScreen(): React.ReactElement {
             return prev.map((line) => {
               if (line.id === editingLine.id) return savedLine;
               if (line.relatedProductKey === editingLine.relatedProductKey) {
-                const newQty = Math.max(0, Math.round(line.quantity * ratio * 10000) / 10000);
+                const newQty =
+                  Math.max(0, Math.round(line.quantity * ratio * 10000) / 10000);
                 const updated = { ...line, quantity: newQty };
                 return calculateLineTotals(updated);
               }
               return line;
             });
           }
-          return prev.map((line) => (line.id === editingLine.id ? savedLine : line));
+          return prev.map((line) =>
+            line.id === editingLine.id ? savedLine : line
+          );
         });
       } else {
         const toAdd = savedLine.relatedLines?.length
@@ -412,24 +456,45 @@ export function QuotationCreateScreen(): React.ReactElement {
 
       const applyCurrencyToPrice = (listPrice: number, priceCurrency: string): number => {
         if (!watchedCurrency || priceCurrency === watchedCurrency) return listPrice;
-        const oldRate = findExchangeRateByCurrency(priceCurrency, exchangeRates, erpRatesForQuotation);
-        const newRate = findExchangeRateByCurrency(watchedCurrency, exchangeRates, erpRatesForQuotation);
-        if (oldRate == null || oldRate <= 0 || newRate == null || newRate <= 0) return listPrice;
+        const oldRate = findExchangeRateByCurrency(
+          priceCurrency,
+          exchangeRates,
+          erpRatesForQuotation
+        );
+        const newRate = findExchangeRateByCurrency(
+          watchedCurrency,
+          exchangeRates,
+          erpRatesForQuotation
+        );
+        if (oldRate == null || oldRate <= 0 || newRate == null || newRate <= 0) {
+          return listPrice;
+        }
         return (listPrice * newRate) / oldRate;
       };
 
       let filteredRelations = (stock.parentRelations || []).filter(
         (r) => r.relatedStockId && r.relatedStockCode
       );
+
       if (relatedStockIds != null && relatedStockIds.length >= 0) {
         const idSet = new Set(relatedStockIds);
-        filteredRelations = filteredRelations.filter((r) => idSet.has(r.relatedStockId));
+        filteredRelations = filteredRelations.filter((r) =>
+          idSet.has(r.relatedStockId)
+        );
         filteredRelations = relatedStockIds
           .map((id) => filteredRelations.find((r) => r.relatedStockId === id))
           .filter((r): r is NonNullable<typeof r> => r != null);
       }
-      const products = [{ productCode: stock.erpStockCode, groupCode: stock.grupKodu || "" }];
-      let relatedStocks: Array<{ erpStockCode: string; stockName: string; grupKodu?: string }> = [];
+
+      const products = [
+        { productCode: stock.erpStockCode, groupCode: stock.grupKodu || "" },
+      ];
+
+      let relatedStocks: Array<{
+        erpStockCode: string;
+        stockName: string;
+        grupKodu?: string;
+      }> = [];
 
       if (filteredRelations.length > 0) {
         try {
@@ -442,7 +507,10 @@ export function QuotationCreateScreen(): React.ReactElement {
             grupKodu: s.grupKodu,
           }));
           relatedStocks.forEach((s) =>
-            products.push({ productCode: s.erpStockCode, groupCode: s.grupKodu || "" })
+            products.push({
+              productCode: s.erpStockCode,
+              groupCode: s.grupKodu || "",
+            })
           );
         } catch {
           relatedStocks = filteredRelations.map((r) => ({
@@ -452,22 +520,36 @@ export function QuotationCreateScreen(): React.ReactElement {
           }));
           products.length = 1;
           relatedStocks.forEach((s) =>
-            products.push({ productCode: s.erpStockCode, groupCode: s.grupKodu || "" })
+            products.push({
+              productCode: s.erpStockCode,
+              groupCode: s.grupKodu || "",
+            })
           );
         }
       }
 
-      let priceData: Array<{ listPrice: number; currency: string; discount1?: number | null; discount2?: number | null; discount3?: number | null }> = [];
+      let priceData: Array<{
+        listPrice: number;
+        currency: string;
+        discount1?: number | null;
+        discount2?: number | null;
+        discount3?: number | null;
+      }> = [];
+
       try {
         priceData = await quotationApi.getPriceOfProduct(products);
       } catch {
-        priceData = products.map(() => ({ listPrice: 0, currency: watchedCurrency || "" }));
+        priceData = products.map(() => ({
+          listPrice: 0,
+          currency: watchedCurrency || "",
+        }));
       }
 
       const mainPrice = priceData[0];
       const mainUnitPrice = mainPrice
         ? applyCurrencyToPrice(mainPrice.listPrice, mainPrice.currency)
         : 0;
+
       const mainLine: QuotationLineFormState = calculateLineTotals({
         id: `temp-${Date.now()}`,
         productId: stock.id,
@@ -493,37 +575,40 @@ export function QuotationCreateScreen(): React.ReactElement {
       });
 
       if (filteredRelations.length > 0 && relatedStocks.length > 0) {
-        const relatedLines: QuotationLineFormState[] = filteredRelations.map((relation, idx) => {
-          const relStock = relatedStocks[idx];
-          const price = priceData[idx + 1];
-          const unitPrice =
-            price && relStock
-              ? applyCurrencyToPrice(price.listPrice, price.currency)
-              : 0;
-          return calculateLineTotals({
-            id: `temp-${Date.now()}-${relation.id}`,
-            productId: relation.relatedStockId,
-            productCode: relation.relatedStockCode!,
-            productName: relStock?.stockName ?? relation.relatedStockName ?? "",
-            quantity: relation.quantity,
-            unitPrice,
-            discountRate1: price?.discount1 ?? 0,
-            discountAmount1: 0,
-            discountRate2: price?.discount2 ?? 0,
-            discountAmount2: 0,
-            discountRate3: price?.discount3 ?? 0,
-            discountAmount3: 0,
-            vatRate: 18,
-            vatAmount: 0,
-            lineTotal: 0,
-            lineGrandTotal: 0,
-            relatedStockId: stock.id,
-            relatedProductKey: `main-${stock.id}`,
-            isMainRelatedProduct: false,
-            isEditing: false,
-            relationQuantity: relation.quantity,
-          });
-        });
+        const relatedLines: QuotationLineFormState[] = filteredRelations.map(
+          (relation, idx) => {
+            const relStock = relatedStocks[idx];
+            const price = priceData[idx + 1];
+            const unitPrice =
+              price && relStock
+                ? applyCurrencyToPrice(price.listPrice, price.currency)
+                : 0;
+
+            return calculateLineTotals({
+              id: `temp-${Date.now()}-${relation.id}`,
+              productId: relation.relatedStockId,
+              productCode: relation.relatedStockCode!,
+              productName: relStock?.stockName ?? relation.relatedStockName ?? "",
+              quantity: relation.quantity,
+              unitPrice,
+              discountRate1: price?.discount1 ?? 0,
+              discountAmount1: 0,
+              discountRate2: price?.discount2 ?? 0,
+              discountAmount2: 0,
+              discountRate3: price?.discount3 ?? 0,
+              discountAmount3: 0,
+              vatRate: 18,
+              vatAmount: 0,
+              lineTotal: 0,
+              lineGrandTotal: 0,
+              relatedStockId: stock.id,
+              relatedProductKey: `main-${stock.id}`,
+              isMainRelatedProduct: false,
+              isEditing: false,
+              relationQuantity: relation.quantity,
+            });
+          }
+        );
         mainLine.relatedLines = relatedLines;
         setEditingLine(mainLine);
       } else {
@@ -545,12 +630,16 @@ export function QuotationCreateScreen(): React.ReactElement {
               const lineToDelete = prev.find((line) => line.id === lineId);
               if (lineToDelete?.relatedProductKey) {
                 return prev.filter(
-                  (line) => line.id !== lineId && line.relatedProductKey !== lineToDelete.relatedProductKey
+                  (line) =>
+                    line.id !== lineId &&
+                    line.relatedProductKey !== lineToDelete.relatedProductKey
                 );
               }
               if (lineToDelete?.relatedLines && lineToDelete.relatedLines.length > 0) {
                 const relatedIds = lineToDelete.relatedLines.map((rl) => rl.id);
-                return prev.filter((line) => line.id !== lineId && !relatedIds.includes(line.id));
+                return prev.filter(
+                  (line) => line.id !== lineId && !relatedIds.includes(line.id)
+                );
               }
               return prev.filter((line) => line.id !== lineId);
             });
@@ -564,9 +653,13 @@ export function QuotationCreateScreen(): React.ReactElement {
   const onSubmit = useCallback(
     async (formData: CreateQuotationSchema) => {
       if (lines.length === 0) {
-        setError("root", { type: "manual", message: "En az 1 satır eklenmelidir." });
+        setError("root", {
+          type: "manual",
+          message: "En az 1 satır eklenmelidir.",
+        });
         return;
       }
+
       const notesError = validateNotesMaxLength(notes);
       if (notesError) {
         setError("root", { type: "manual", message: notesError });
@@ -586,7 +679,9 @@ export function QuotationCreateScreen(): React.ReactElement {
               ? rest.pricingRuleHeaderId
               : null,
           relatedStockId:
-            rest.relatedStockId != null && rest.relatedStockId > 0 ? rest.relatedStockId : null,
+            rest.relatedStockId != null && rest.relatedStockId > 0
+              ? rest.relatedStockId
+              : null,
           erpProjectCode: rest.erpProjectCode ?? null,
           approvalStatus: rest.approvalStatus ?? 0,
         };
@@ -617,7 +712,8 @@ export function QuotationCreateScreen(): React.ReactElement {
       createQuotation.mutate({
         quotation: quotationPayload,
         lines: cleanedLines,
-        exchangeRates: cleanedExchangeRates.length > 0 ? cleanedExchangeRates : undefined,
+        exchangeRates:
+          cleanedExchangeRates.length > 0 ? cleanedExchangeRates : undefined,
         quotationNotes: hasNotes ? quotationNotes : undefined,
       });
     },
@@ -636,1003 +732,1535 @@ export function QuotationCreateScreen(): React.ReactElement {
             style={StyleSheet.absoluteFill}
           />
         </View>
-      <KeyboardAvoidingView
-          style={{ flex: 1 }} // Arka plan rengini buradan kaldırdık
+
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
           behavior={Platform.OS === "ios" ? "padding" : "height"}
           keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
         >
-       <ScreenHeader title={t("quotation.createNew")} showBackButton />
-        <FlatListScrollView
-          style={[styles.content, { backgroundColor: contentBackground }]}
-          contentContainerStyle={[
-            styles.contentContainer,
-            { paddingBottom: insets.bottom + 100 },
-          ]}
-          showsVerticalScrollIndicator={false}
-        >
-          {(() => {
-            const msg = (e: { message?: string } | undefined) => (e && typeof e.message === "string" ? e.message : null);
-            const list: string[] = [];
-            const q = errors.quotation as Record<string, { message?: string }> | undefined;
-            if (q) {
-              ["potentialCustomerId", "paymentTypeId", "deliveryDate", "offerType", "currency"].forEach((key) => {
-                const m = msg(q[key]);
-                if (m && !list.includes(m)) list.push(m);
-              });
-            }
-            const rootMsg = msg(errors.root as { message?: string } | undefined);
-            if (rootMsg) list.push(rootMsg);
-            return list.length > 0 ? (
-              <View style={[styles.errorSummary, { backgroundColor: colors.error + "18", borderColor: colors.error }]}>
-                <Text style={[styles.errorSummaryTitle, { color: colors.error }]}>Lütfen aşağıdaki hataları düzeltin:</Text>
-                {list.map((text, i) => (
-                  <Text key={i} style={[styles.errorSummaryItem, { color: colors.error }]}>• {text}</Text>
-                ))}
-              </View>
-            ) : null;
-          })()}
+          <ScreenHeader title={t("quotation.createNew")} showBackButton />
 
-          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Müşteri Bilgileri</Text>
+          <FlatListScrollView
+            style={[styles.content, { backgroundColor: contentBackground }]}
+            contentContainerStyle={[
+              styles.contentContainer,
+              { paddingBottom: insets.bottom + 100 },
+            ]}
+            showsVerticalScrollIndicator={false}
+          >
+            {(() => {
+              const msg = (e: { message?: string } | undefined) =>
+                e && typeof e.message === "string" ? e.message : null;
+              const list: string[] = [];
+              const q = errors.quotation as
+                | Record<string, { message?: string }>
+                | undefined;
 
+              if (q) {
+                [
+                  "potentialCustomerId",
+                  "paymentTypeId",
+                  "deliveryDate",
+                  "offerType",
+                  "currency",
+                ].forEach((key) => {
+                  const m = msg(q[key]);
+                  if (m && !list.includes(m)) list.push(m);
+                });
+              }
 
-<TouchableOpacity
-  style={[
-    styles.customerSelectButton,
-    { 
-      backgroundColor: colors.card, 
-      borderColor: errors.quotation?.potentialCustomerId ? colors.error : colors.border 
-    },
-  ]}
-  onPress={() => setCustomerSelectDialogOpen(true)}
->
-  <View style={styles.customerSelectContent}>
-    {/* İkon Konteynırı */}
-    <View style={[styles.iconContainer, { backgroundColor: colors.accent + "15" }]}>
-       <UserIcon 
-         size={22} 
-         color={colors.accent} 
-         variant="stroke" // veya "twotone" crm diline çok yakışır
-       />
-    </View>
+              const rootMsg = msg(errors.root as { message?: string } | undefined);
+              if (rootMsg) list.push(rootMsg);
 
-    <View style={styles.customerSelectTextContainer}>
-      <Text style={[styles.customerSelectLabel, { color: colors.textMuted }]}>
-        MÜŞTERİ SEÇİMİ
-      </Text>
-      <Text style={[styles.customerSelectValue, { color: colors.text }]}>
-        {selectedCustomer?.name || (watchedErpCustomerCode ? `ERP: ${watchedErpCustomerCode}` : "Lütfen seçiniz...")}
-      </Text>
-    </View>
-  </View>
-  
-  {/* Sağ ok için de HugeIcons: ArrowRight01Icon kullanabilirsin */}
-  <Text style={{ color: colors.textMuted, fontSize: 20 }}>›</Text>
-</TouchableOpacity>
-            {errors.quotation?.potentialCustomerId?.message && (
-              <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.potentialCustomerId.message}</Text>
-            )}
+              return list.length > 0 ? (
+                <View
+                  style={[
+                    styles.errorSummary,
+                    {
+                      backgroundColor: colors.error + "18",
+                      borderColor: colors.error,
+                    },
+                  ]}
+                >
+                  <Text
+                    style={[styles.errorSummaryTitle, { color: colors.error }]}
+                  >
+                    Lütfen aşağıdaki hataları düzeltin:
+                  </Text>
+                  {list.map((text, i) => (
+                    <Text
+                      key={i}
+                      style={[styles.errorSummaryItem, { color: colors.error }]}
+                    >
+                      • {text}
+                    </Text>
+                  ))}
+                </View>
+              ) : null;
+            })()}
 
-            {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
+            <View
+              style={[
+                styles.section,
+                { backgroundColor: colors.card, borderColor: colors.cardBorder },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Müşteri Bilgileri
+              </Text>
+
+              <TouchableOpacity
+                style={[
+                  styles.customerSelectButton,
+                  {
+                    backgroundColor: colors.card,
+                    borderColor: errors.quotation?.potentialCustomerId
+                      ? colors.error
+                      : colors.border,
+                  },
+                ]}
+                onPress={() => setCustomerSelectDialogOpen(true)}
+              >
+                <View style={styles.customerSelectContent}>
+                  <View
+                    style={[
+                      styles.iconContainer,
+                      { backgroundColor: colors.accent + "15" },
+                    ]}
+                  >
+                    <UserIcon
+                      size={22}
+                      color={colors.accent}
+                      variant="stroke"
+                    />
+                  </View>
+
+                  <View style={styles.customerSelectTextContainer}>
+                    <Text
+                      style={[
+                        styles.customerSelectLabel,
+                        { color: colors.textMuted },
+                      ]}
+                    >
+                      MÜŞTERİ SEÇİMİ
+                    </Text>
+                    <Text
+                      style={[
+                        styles.customerSelectValue,
+                        { color: colors.text },
+                      ]}
+                    >
+                      {selectedCustomer?.name ||
+                        (watchedErpCustomerCode
+                          ? `ERP: ${watchedErpCustomerCode}`
+                          : "Lütfen seçiniz...")}
+                    </Text>
+                  </View>
+                </View>
+
+                <Text style={{ color: colors.textMuted, fontSize: 20 }}>›</Text>
+              </TouchableOpacity>
+
+              {errors.quotation?.potentialCustomerId?.message && (
+                <Text style={[styles.fieldError, { color: colors.error }]}>
+                  {errors.quotation.potentialCustomerId.message}
+                </Text>
+              )}
+
+              {watchedCustomerId &&
+                shippingAddresses &&
+                shippingAddresses.length > 0 && (
+                  <Controller
+                    control={control}
+                    name="quotation.shippingAddressId"
+                    render={({ field: { value } }) => (
+                      <View style={styles.fieldContainer}>
+                        <Text
+                          style={[styles.label, { color: colors.textSecondary }]}
+                        >
+                          Teslimat Adresi
+                        </Text>
+                        <TouchableOpacity
+                          style={[
+                            styles.pickerButton,
+                            {
+                              backgroundColor: colors.backgroundSecondary,
+                              borderColor: colors.border,
+                            },
+                          ]}
+                          onPress={() => setShippingAddressModalVisible(true)}
+                        >
+                          <Text style={[styles.pickerText, { color: colors.text }]}>
+                            {shippingAddresses.find((addr) => addr.id === value)
+                              ?.address || "Seçiniz"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  />
+                )}
+            </View>
+
+            <View
+              style={[
+                styles.section,
+                { backgroundColor: colors.card, borderColor: colors.cardBorder },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                Teklif Bilgileri
+              </Text>
+
+              <OfferTypePicker control={control} />
+
               <Controller
                 control={control}
-                name="quotation.shippingAddressId"
-                render={({ field: { onChange, value } }) => (
+                name="quotation.representativeId"
+                render={({ field: { value } }) => (
                   <View style={styles.fieldContainer}>
                     <Text style={[styles.label, { color: colors.textSecondary }]}>
-                      Teslimat Adresi
+                      Satış Temsilcisi
                     </Text>
                     <TouchableOpacity
                       style={[
                         styles.pickerButton,
-                        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                        {
+                          backgroundColor: colors.backgroundSecondary,
+                          borderColor: colors.border,
+                        },
                       ]}
-                      onPress={() => setShippingAddressModalVisible(true)}
+                      onPress={() => setRepresentativeModalVisible(true)}
                     >
                       <Text style={[styles.pickerText, { color: colors.text }]}>
-                        {shippingAddresses.find((addr) => addr.id === value)?.address || "Seçiniz"}
+                        {value
+                          ? relatedUsers.find((u) => u.userId === value)
+                            ? `${
+                                relatedUsers.find((u) => u.userId === value)
+                                  ?.firstName
+                              } ${
+                                relatedUsers.find((u) => u.userId === value)
+                                  ?.lastName
+                              }`
+                            : String(value)
+                          : "Seçiniz"}
                       </Text>
                     </TouchableOpacity>
                   </View>
                 )}
               />
-            )}
-          </View>
 
-          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Teklif Bilgileri</Text>
-
-            <OfferTypePicker control={control} />
-
-            <Controller
-              control={control}
-              name="quotation.representativeId"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>Satış Temsilcisi</Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.pickerButton,
-                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-                    ]}
-                    onPress={() => setRepresentativeModalVisible(true)}
-                  >
-                    <Text style={[styles.pickerText, { color: colors.text }]}>
-                      {value
-                        ? relatedUsers.find((u) => u.userId === value)
-                          ? `${relatedUsers.find((u) => u.userId === value)?.firstName} ${relatedUsers.find((u) => u.userId === value)?.lastName}`
-                          : String(value)
-                        : "Seçiniz"}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="quotation.paymentTypeId"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    Ödeme Tipi <Text style={{ color: colors.error }}>*</Text>
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.pickerButton,
-                      { backgroundColor: colors.backgroundSecondary, borderColor: errors.quotation?.paymentTypeId ? colors.error : colors.border },
-                    ]}
-                    onPress={() => setPaymentTypeModalVisible(true)}
-                  >
-                    <Text style={[styles.pickerText, { color: colors.text }]}>
-                      {paymentTypes?.find((pt) => pt.id === value)?.name || "Seçiniz"}
-                    </Text>
-                  </TouchableOpacity>
-                  {errors.quotation?.paymentTypeId?.message && (
-                    <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.paymentTypeId.message}</Text>
-                  )}
-                </View>
-              )}
-            />
-
-            <View style={styles.fieldContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.dateButton,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: errors.quotation?.deliveryDate ? colors.error : colors.border },
-                ]}
-                onPress={() => setDeliveryDateModalOpen(true)}
-              >
-                <Text style={[styles.dateButtonText, { color: colors.text }]}>
-                  Teslimat Tarihi: {watchedDeliveryDate || "Seçiniz"}
-                </Text>
-              </TouchableOpacity>
-              {errors.quotation?.deliveryDate?.message && (
-                <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.deliveryDate.message}</Text>
-              )}
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.dateButton,
-                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-              ]}
-              onPress={() => setOfferDateModalOpen(true)}
-            >
-              <Text style={[styles.dateButtonText, { color: colors.text }]}>
-                Teklif Tarihi: {watchedOfferDate || "Seçiniz"}
-              </Text>
-            </TouchableOpacity>
-
-            <Controller
-              control={control}
-              name="quotation.currency"
-              render={({ field: { value } }) => (
-                <View style={styles.fieldContainer}>
-                  <View style={styles.currencyHeader}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>
-                      Para Birimi <Text style={{ color: colors.error }}>*</Text>
-                    </Text>
-                    {value && (
-                      <TouchableOpacity
-                        style={[styles.exchangeRateButton, { backgroundColor: colors.accent }]}
-                        onPress={() => setExchangeRateDialogVisible(true)}
-                      >
-                        <Text style={styles.exchangeRateButtonText}>💱 Kurlar</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.pickerButton,
-                      { backgroundColor: colors.backgroundSecondary, borderColor: errors.quotation?.currency ? colors.error : colors.border },
-                    ]}
-                    onPress={() => setCurrencyModalVisible(true)}
-                  >
-                    <Text style={[styles.pickerText, { color: colors.text }]}>
-                      {currencyOptions?.find((c) => c.code === value)?.dovizIsmi ?? "Seçiniz"}
-                    </Text>
-                  </TouchableOpacity>
-                  {errors.quotation?.currency?.message && (
-                    <Text style={[styles.fieldError, { color: colors.error }]}>{errors.quotation.currency.message}</Text>
-                  )}
-                </View>
-              )}
-            />
-
-            <DocumentSerialTypePicker
-              control={control}
-              customerTypeId={customerTypeId}
-              representativeId={watchedRepresentativeId || undefined}
-              disabled={customerTypeId === undefined || !watchedRepresentativeId}
-            />
-
-            {watchedOfferType && (
               <Controller
                 control={control}
-                name="quotation.salesTypeDefinitionId"
-                render={({ field: { onChange, value } }) => (
+                name="quotation.paymentTypeId"
+                render={({ field: { value } }) => (
                   <View style={styles.fieldContainer}>
                     <Text style={[styles.label, { color: colors.textSecondary }]}>
-                      {t("quotation.deliveryMethod")}
+                      Ödeme Tipi <Text style={{ color: colors.error }}>*</Text>
                     </Text>
                     <TouchableOpacity
                       style={[
                         styles.pickerButton,
-                        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                        {
+                          backgroundColor: colors.backgroundSecondary,
+                          borderColor: errors.quotation?.paymentTypeId
+                            ? colors.error
+                            : colors.border,
+                        },
                       ]}
-                      onPress={() => setSalesTypeModalVisible(true)}
+                      onPress={() => setPaymentTypeModalVisible(true)}
+                    >
+                      <Text style={[styles.pickerText, { color: colors.text }]}>
+                        {paymentTypes?.find((pt) => pt.id === value)?.name ||
+                          "Seçiniz"}
+                      </Text>
+                    </TouchableOpacity>
+                    {errors.quotation?.paymentTypeId?.message && (
+                      <Text style={[styles.fieldError, { color: colors.error }]}>
+                        {errors.quotation.paymentTypeId.message}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              />
+
+              <View style={styles.fieldContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.dateButton,
+                    {
+                      backgroundColor: colors.backgroundSecondary,
+                      borderColor: errors.quotation?.deliveryDate
+                        ? colors.error
+                        : colors.border,
+                    },
+                  ]}
+                  onPress={() => setDeliveryDateModalOpen(true)}
+                >
+                  <Text style={[styles.dateButtonText, { color: colors.text }]}>
+                    Teslimat Tarihi: {watchedDeliveryDate || "Seçiniz"}
+                  </Text>
+                </TouchableOpacity>
+                {errors.quotation?.deliveryDate?.message && (
+                  <Text style={[styles.fieldError, { color: colors.error }]}>
+                    {errors.quotation.deliveryDate.message}
+                  </Text>
+                )}
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.dateButton,
+                  {
+                    backgroundColor: colors.backgroundSecondary,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => setOfferDateModalOpen(true)}
+              >
+                <Text style={[styles.dateButtonText, { color: colors.text }]}>
+                  Teklif Tarihi: {watchedOfferDate || "Seçiniz"}
+                </Text>
+              </TouchableOpacity>
+
+              <Controller
+                control={control}
+                name="quotation.currency"
+                render={({ field: { value } }) => (
+                  <View style={styles.fieldContainer}>
+                    <View style={styles.currencyHeader}>
+                      <Text
+                        style={[styles.label, { color: colors.textSecondary }]}
+                      >
+                        Para Birimi <Text style={{ color: colors.error }}>*</Text>
+                      </Text>
+                      {value && (
+                        <TouchableOpacity
+                          style={[
+                            styles.exchangeRateButton,
+                            { backgroundColor: colors.accent },
+                          ]}
+                          onPress={() => setExchangeRateDialogVisible(true)}
+                        >
+                          <Text style={styles.exchangeRateButtonText}>
+                            💱 Kurlar
+                          </Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.pickerButton,
+                        {
+                          backgroundColor: colors.backgroundSecondary,
+                          borderColor: errors.quotation?.currency
+                            ? colors.error
+                            : colors.border,
+                        },
+                      ]}
+                      onPress={() => setCurrencyModalVisible(true)}
+                    >
+                      <Text style={[styles.pickerText, { color: colors.text }]}>
+                        {currencyOptions?.find((c) => c.code === value)
+                          ?.dovizIsmi ?? "Seçiniz"}
+                      </Text>
+                    </TouchableOpacity>
+                    {errors.quotation?.currency?.message && (
+                      <Text style={[styles.fieldError, { color: colors.error }]}>
+                        {errors.quotation.currency.message}
+                      </Text>
+                    )}
+                  </View>
+                )}
+              />
+
+              <DocumentSerialTypePicker
+                control={control}
+                customerTypeId={customerTypeId}
+                representativeId={watchedRepresentativeId || undefined}
+                disabled={customerTypeId === undefined || !watchedRepresentativeId}
+              />
+
+              {watchedOfferType && (
+                <Controller
+                  control={control}
+                  name="quotation.salesTypeDefinitionId"
+                  render={({ field: { value } }) => (
+                    <View style={styles.fieldContainer}>
+                      <Text style={[styles.label, { color: colors.textSecondary }]}>
+                        {t("quotation.deliveryMethod")}
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.pickerButton,
+                          {
+                            backgroundColor: colors.backgroundSecondary,
+                            borderColor: colors.border,
+                          },
+                        ]}
+                        onPress={() => setSalesTypeModalVisible(true)}
+                      >
+                        <Text style={[styles.pickerText, { color: colors.text }]}>
+                          {value
+                            ? salesTypeList.find((s) => s.id === value)?.name ??
+                              t("common.select")
+                            : t("common.select")}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                />
+              )}
+
+              <Controller
+                control={control}
+                name="quotation.erpProjectCode"
+                render={({ field: { value } }) => (
+                  <View style={styles.fieldContainer}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>
+                      {t("quotation.projectCode")}
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.pickerButton,
+                        {
+                          backgroundColor: colors.backgroundSecondary,
+                          borderColor: colors.border,
+                        },
+                      ]}
+                      onPress={() => setProjectCodeModalVisible(true)}
                     >
                       <Text style={[styles.pickerText, { color: colors.text }]}>
                         {value
-                          ? salesTypeList.find((s) => s.id === value)?.name ?? t("common.select")
+                          ? (() => {
+                              const p = projects.find((pr) => pr.projeKod === value);
+                              return p
+                                ? p.projeAciklama
+                                  ? `${p.projeKod} - ${p.projeAciklama}`
+                                  : p.projeKod
+                                : value;
+                            })()
                           : t("common.select")}
                       </Text>
                     </TouchableOpacity>
                   </View>
                 )}
               />
-            )}
 
-            <Controller
-              control={control}
-              name="quotation.erpProjectCode"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t("quotation.projectCode")}
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.pickerButton,
-                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-                    ]}
-                    onPress={() => setProjectCodeModalVisible(true)}
-                  >
-                    <Text style={[styles.pickerText, { color: colors.text }]}>
-                      {value
-                        ? (() => {
-                            const p = projects.find((pr) => pr.projeKod === value);
-                            return p ? (p.projeAciklama ? `${p.projeKod} - ${p.projeAciklama}` : p.projeKod) : value;
-                          })()
-                        : t("common.select")}
+              <Controller
+                control={control}
+                name="quotation.generalDiscountRate"
+                render={({ field: { onChange, value } }) => (
+                  <View style={styles.fieldContainer}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>
+                      {t("quotation.generalDiscountRate")}
                     </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="quotation.generalDiscountRate"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t("quotation.generalDiscountRate")}
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: colors.backgroundSecondary,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    value={value != null ? String(value) : ""}
-                    onChangeText={(v) => onChange(v === "" ? null : parseFloat(v) || 0)}
-                    placeholder="0"
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              )}
-            />
-
-            <Controller
-              control={control}
-              name="quotation.generalDiscountAmount"
-              render={({ field: { onChange, value } }) => (
-                <View style={styles.fieldContainer}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t("quotation.generalDiscountAmount")}
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: colors.backgroundSecondary,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    value={value != null ? String(value) : ""}
-                    onChangeText={(v) => onChange(v === "" ? null : parseFloat(v) || 0)}
-                    placeholder="0"
-                    keyboardType="decimal-pad"
-                  />
-                </View>
-              )}
-            />
-
-            <FormField
-              label="Açıklama"
-              value={watch("quotation.description") || ""}
-              onChangeText={(text) => setValue("quotation.description", text || null)}
-              placeholder="Teklif açıklaması"
-              multiline
-              numberOfLines={3}
-              maxLength={500}
-            />
-
-            <TouchableOpacity
-              style={[styles.notesButton, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
-              onPress={() => setNotesModalVisible(true)}
-            >
-              <Text style={[styles.notesButtonText, { color: colors.text }]}>
-                📝 {t("quotation.notesSection")}
-                {notes.some((n) => n.trim()) ? ` (${notes.filter((n) => n.trim()).length})` : ""}
-              </Text>
-            </TouchableOpacity>
-
-            <QuotationNotesModal
-              visible={notesModalVisible}
-              notes={notes}
-              onSave={(n) => {
-                setNotes(n);
-                setNotesModalVisible(false);
-              }}
-              onClose={() => setNotesModalVisible(false)}
-            />
-          </View>
-
-          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Satırlar</Text>
-              <TouchableOpacity
-                style={[styles.addButton, { backgroundColor: colors.accent }]}
-                onPress={handleAddLine}
-              >
-                <Text style={styles.addButtonText}>+ Satır Ekle</Text>
-              </TouchableOpacity>
-            </View>
-            {errors.root?.message && (
-              <Text style={[styles.fieldError, { color: colors.error }]}>{errors.root.message}</Text>
-            )}
-
-            {lines.length === 0 ? (
-              <Text style={[styles.emptyText, { color: colors.textMuted }]}>
-                Henüz satır eklenmedi
-              </Text>
-            ) : (
-              <FlatList
-                data={lines.filter((line) => !line.relatedProductKey || line.isMainRelatedProduct === true)}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                renderItem={({ item: line }) => (
-                  <View style={styles.lineCardWrapper}>
-                    <View
+                    <TextInput
                       style={[
-                        styles.lineCard,
-                        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-                        line.approvalStatus === 1 && {
-                          borderColor: colors.warning,
-                          borderWidth: 2,
+                        styles.input,
+                        {
+                          backgroundColor: colors.backgroundSecondary,
+                          borderColor: colors.border,
+                          color: colors.text,
                         },
                       ]}
-                    >
-                      <View style={styles.lineCardHeader}>
-                        <View style={styles.lineCardContent}>
-                          <View style={styles.lineCardTitleRow}>
-                            <Text style={[styles.lineProductName, { color: colors.text }]} numberOfLines={2}>
-                              {line.productName || t("quotation.productNotSelected")}
-                            </Text>
-                            <View style={[styles.mainBadge, { backgroundColor: colors.activeBackground }]}>
-                              <Text style={[styles.mainBadgeText, { color: colors.accent }]}>
-                                {t("quotation.main")}
+                      value={value != null ? String(value) : ""}
+                      onChangeText={(v) =>
+                        onChange(v === "" ? null : parseFloat(v) || 0)
+                      }
+                      placeholder="0"
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                )}
+              />
+
+              <Controller
+                control={control}
+                name="quotation.generalDiscountAmount"
+                render={({ field: { onChange, value } }) => (
+                  <View style={styles.fieldContainer}>
+                    <Text style={[styles.label, { color: colors.textSecondary }]}>
+                      {t("quotation.generalDiscountAmount")}
+                    </Text>
+                    <TextInput
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: colors.backgroundSecondary,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
+                      value={value != null ? String(value) : ""}
+                      onChangeText={(v) =>
+                        onChange(v === "" ? null : parseFloat(v) || 0)
+                      }
+                      placeholder="0"
+                      keyboardType="decimal-pad"
+                    />
+                  </View>
+                )}
+              />
+
+              <FormField
+                label="Açıklama"
+                value={watch("quotation.description") || ""}
+                onChangeText={(text) =>
+                  setValue("quotation.description", text || null)
+                }
+                placeholder="Teklif açıklaması"
+                multiline
+                numberOfLines={3}
+                maxLength={500}
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.notesButton,
+                  {
+                    backgroundColor: colors.backgroundSecondary,
+                    borderColor: colors.border,
+                  },
+                ]}
+                onPress={() => setNotesModalVisible(true)}
+              >
+                <Text style={[styles.notesButtonText, { color: colors.text }]}>
+                  📝 {t("quotation.notesSection")}
+                  {notes.some((n) => n.trim())
+                    ? ` (${notes.filter((n) => n.trim()).length})`
+                    : ""}
+                </Text>
+              </TouchableOpacity>
+
+              <QuotationNotesModal
+                visible={notesModalVisible}
+                notes={notes}
+                onSave={(n) => {
+                  setNotes(n);
+                  setNotesModalVisible(false);
+                }}
+                onClose={() => setNotesModalVisible(false)}
+              />
+            </View>
+
+            <View
+              style={[
+                styles.section,
+                { backgroundColor: colors.card, borderColor: colors.cardBorder },
+              ]}
+            >
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Satırlar
+                </Text>
+                <TouchableOpacity
+                  style={[styles.addButton, { backgroundColor: colors.accent }]}
+                  onPress={handleAddLine}
+                >
+                  <Text style={styles.addButtonText}>+ Satır Ekle</Text>
+                </TouchableOpacity>
+              </View>
+
+              {errors.root?.message && (
+                <Text style={[styles.fieldError, { color: colors.error }]}>
+                  {errors.root.message}
+                </Text>
+              )}
+
+              {lines.length === 0 ? (
+                <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+                  Henüz satır eklenmedi
+                </Text>
+              ) : (
+                <FlatList
+                  data={lines.filter(
+                    (line) =>
+                      !line.relatedProductKey || line.isMainRelatedProduct === true
+                  )}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                  renderItem={({ item: line }) => (
+                    <View style={styles.lineCardWrapper}>
+                      <View
+                        style={[
+                          styles.lineCard,
+                          {
+                            backgroundColor: colors.backgroundSecondary,
+                            borderColor: colors.border,
+                          },
+                          line.approvalStatus === 1 && {
+                            borderColor: colors.warning,
+                            borderWidth: 2,
+                          },
+                        ]}
+                      >
+                        <View style={styles.lineCardHeader}>
+                          <View style={styles.lineCardContent}>
+                            <View style={styles.lineCardTitleRow}>
+                              <Text
+                                style={[
+                                  styles.lineProductName,
+                                  { color: colors.text },
+                                ]}
+                                numberOfLines={2}
+                              >
+                                {line.productName ||
+                                  t("quotation.productNotSelected")}
                               </Text>
-                            </View>
-                          </View>
-                          {line.productCode ? (
-                            <Text style={[styles.lineProductCode, { color: colors.textMuted }]}>
-                              {line.productCode}
-                            </Text>
-                          ) : null}
-                          <View style={styles.lineDetailRows}>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                {t("quotation.quantity")}:
-                              </Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.quantity.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                {t("quotation.unitPrice")}:
-                              </Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.unitPrice.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                {t("quotation.discount1")}:
-                              </Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.discountRate1.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                                % · {line.discountAmount1.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                {t("quotation.discount2")}:
-                              </Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.discountRate2.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                                % · {line.discountAmount2.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                {t("quotation.discount3")}:
-                              </Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.discountRate3.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                                % · {line.discountAmount3.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                {t("quotation.lineTotal")}:
-                              </Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.lineTotal.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                {t("quotation.vatRate")}:
-                              </Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.vatRate.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}%
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                {t("quotation.vatAmount")}:
-                              </Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.vatAmount.toLocaleString("tr-TR", {
-                                  minimumFractionDigits: 2,
-                                  maximumFractionDigits: 2,
-                                })}
-                              </Text>
-                            </View>
-                          </View>
-                          <View style={[styles.lineGrandTotalRow, { borderTopColor: colors.border }]}>
-                            <Text style={[styles.lineGrandTotalLabel, { color: colors.text }]}>
-                              {t("quotation.lineGrandTotalLabel")}:
-                            </Text>
-                            <Text style={[styles.lineGrandTotalValue, { color: colors.accent }]}>
-                              {line.lineGrandTotal.toLocaleString("tr-TR", {
-                                minimumFractionDigits: 2,
-                                maximumFractionDigits: 2,
-                              })}
-                            </Text>
-                          </View>
-                          {line.approvalStatus === 1 && (
-                            <View style={[styles.approvalBadge, { backgroundColor: colors.warning + "20" }]}>
-                              <Text style={[styles.approvalBadgeText, { color: colors.warning }]}>
-                                ⚠️ {t("quotation.approvalRequired")}
-                              </Text>
-                            </View>
-                          )}
-                        </View>
-                        <View style={styles.lineActions}>
-                          <TouchableOpacity
-                            style={[styles.editButton, { backgroundColor: colors.accent }]}
-                            onPress={() => handleEditLine(line)}
-                          >
-                            <Text style={styles.editButtonText}>✏️</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity
-                            style={[styles.deleteButton, { backgroundColor: colors.error }]}
-                            onPress={() => handleDeleteLine(line.id)}
-                          >
-                            <Text style={styles.deleteButtonText}>🗑️</Text>
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                      {line.relatedLines && line.relatedLines.length > 0 && (
-                        <View style={[styles.relatedLinesContainer, { borderTopColor: colors.border }]}>
-                          <Text style={[styles.relatedLinesTitle, { color: colors.textMuted }]}>
-                            {t("quotation.relatedStocks")}
-                          </Text>
-                          {line.relatedLines.map((relatedLine) => (
-                            <View
-                              key={relatedLine.id}
-                              style={[
-                                styles.relatedLineCard,
-                                { backgroundColor: colors.card, borderColor: colors.border },
-                              ]}
-                            >
-                              <Text style={[styles.relatedLineProductName, { color: colors.text }]} numberOfLines={2}>
-                                {relatedLine.productName}
-                              </Text>
-                              {relatedLine.productCode ? (
-                                <Text style={[styles.relatedLineProductCode, { color: colors.textMuted }]}>
-                                  {relatedLine.productCode}
+                              <View
+                                style={[
+                                  styles.mainBadge,
+                                  { backgroundColor: colors.activeBackground },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.mainBadgeText,
+                                    { color: colors.accent },
+                                  ]}
+                                >
+                                  {t("quotation.main")}
                                 </Text>
-                              ) : null}
-                              <View style={styles.relatedLineDetailRows}>
-                                <View style={styles.lineDetailRow}>
-                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                    {t("quotation.quantity")}:
-                                  </Text>
-                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                    {relatedLine.quantity.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </Text>
-                                </View>
-                                <View style={styles.lineDetailRow}>
-                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                    {t("quotation.unitPrice")}:
-                                  </Text>
-                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                    {relatedLine.unitPrice.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </Text>
-                                </View>
-                                <View style={styles.lineDetailRow}>
-                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                    {t("quotation.discount1")}:
-                                  </Text>
-                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                    {relatedLine.discountRate1.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                    % · {relatedLine.discountAmount1.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </Text>
-                                </View>
-                                <View style={styles.lineDetailRow}>
-                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                    {t("quotation.discount2")}:
-                                  </Text>
-                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                    {relatedLine.discountRate2.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                    % · {relatedLine.discountAmount2.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </Text>
-                                </View>
-                                <View style={styles.lineDetailRow}>
-                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                    {t("quotation.discount3")}:
-                                  </Text>
-                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                    {relatedLine.discountRate3.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                    % · {relatedLine.discountAmount3.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </Text>
-                                </View>
-                                <View style={styles.lineDetailRow}>
-                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                    {t("quotation.lineTotal")}:
-                                  </Text>
-                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                    {relatedLine.lineTotal.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </Text>
-                                </View>
-                                <View style={styles.lineDetailRow}>
-                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                    {t("quotation.vatRate")}:
-                                  </Text>
-                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                    {relatedLine.vatRate.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}%
-                                  </Text>
-                                </View>
-                                <View style={styles.lineDetailRow}>
-                                  <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>
-                                    {t("quotation.vatAmount")}:
-                                  </Text>
-                                  <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                    {relatedLine.vatAmount.toLocaleString("tr-TR", {
-                                      minimumFractionDigits: 2,
-                                      maximumFractionDigits: 2,
-                                    })}
-                                  </Text>
-                                </View>
                               </View>
-                              <View style={[styles.lineGrandTotalRow, { borderTopColor: colors.border }]}>
-                                <Text style={[styles.lineGrandTotalLabel, { color: colors.text }]}>
-                                  {t("quotation.lineGrandTotalLabel")}:
+                            </View>
+
+                            {line.productCode ? (
+                              <Text
+                                style={[
+                                  styles.lineProductCode,
+                                  { color: colors.textMuted },
+                                ]}
+                              >
+                                {line.productCode}
+                              </Text>
+                            ) : null}
+
+                            <View style={styles.lineDetailRows}>
+                              <View style={styles.lineDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.lineDetailLabel,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {t("quotation.quantity")}:
                                 </Text>
-                                <Text style={[styles.lineGrandTotalValue, { color: colors.accent }]}>
-                                  {relatedLine.lineGrandTotal.toLocaleString("tr-TR", {
+                                <Text
+                                  style={[
+                                    styles.lineDetailValue,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {line.quantity.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </Text>
+                              </View>
+
+                              <View style={styles.lineDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.lineDetailLabel,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {t("quotation.unitPrice")}:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.lineDetailValue,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {line.unitPrice.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </Text>
+                              </View>
+
+                              <View style={styles.lineDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.lineDetailLabel,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {t("quotation.discount1")}:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.lineDetailValue,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {line.discountRate1.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                  % ·{" "}
+                                  {line.discountAmount1.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </Text>
+                              </View>
+
+                              <View style={styles.lineDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.lineDetailLabel,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {t("quotation.discount2")}:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.lineDetailValue,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {line.discountRate2.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                  % ·{" "}
+                                  {line.discountAmount2.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </Text>
+                              </View>
+
+                              <View style={styles.lineDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.lineDetailLabel,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {t("quotation.discount3")}:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.lineDetailValue,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {line.discountRate3.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                  % ·{" "}
+                                  {line.discountAmount3.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </Text>
+                              </View>
+
+                              <View style={styles.lineDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.lineDetailLabel,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {t("quotation.lineTotal")}:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.lineDetailValue,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {line.lineTotal.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                </Text>
+                              </View>
+
+                              <View style={styles.lineDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.lineDetailLabel,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {t("quotation.vatRate")}:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.lineDetailValue,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {line.vatRate.toLocaleString("tr-TR", {
+                                    minimumFractionDigits: 2,
+                                    maximumFractionDigits: 2,
+                                  })}
+                                  %
+                                </Text>
+                              </View>
+
+                              <View style={styles.lineDetailRow}>
+                                <Text
+                                  style={[
+                                    styles.lineDetailLabel,
+                                    { color: colors.textMuted },
+                                  ]}
+                                >
+                                  {t("quotation.vatAmount")}:
+                                </Text>
+                                <Text
+                                  style={[
+                                    styles.lineDetailValue,
+                                    { color: colors.text },
+                                  ]}
+                                >
+                                  {line.vatAmount.toLocaleString("tr-TR", {
                                     minimumFractionDigits: 2,
                                     maximumFractionDigits: 2,
                                   })}
                                 </Text>
                               </View>
                             </View>
-                          ))}
-                        </View>
-                      )}
-                    </View>
-                  </View>
-                )}
-              />
-            )}
-          </View>
 
-          {lines.length > 0 && (
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>Özet</Text>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Ara Toplam:</Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {totals.subtotal.toFixed(2)}
+                            <View
+                              style={[
+                                styles.lineGrandTotalRow,
+                                { borderTopColor: colors.border },
+                              ]}
+                            >
+                              <Text
+                                style={[
+                                  styles.lineGrandTotalLabel,
+                                  { color: colors.text },
+                                ]}
+                              >
+                                {t("quotation.lineGrandTotalLabel")}:
+                              </Text>
+                              <Text
+                                style={[
+                                  styles.lineGrandTotalValue,
+                                  { color: colors.accent },
+                                ]}
+                              >
+                                {line.lineGrandTotal.toLocaleString("tr-TR", {
+                                  minimumFractionDigits: 2,
+                                  maximumFractionDigits: 2,
+                                })}
+                              </Text>
+                            </View>
+
+                            {line.approvalStatus === 1 && (
+                              <View
+                                style={[
+                                  styles.approvalBadge,
+                                  { backgroundColor: colors.warning + "20" },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.approvalBadgeText,
+                                    { color: colors.warning },
+                                  ]}
+                                >
+                                  ⚠️ {t("quotation.approvalRequired")}
+                                </Text>
+                              </View>
+                            )}
+                          </View>
+
+                          <View style={styles.lineActions}>
+                            <TouchableOpacity
+                              style={[
+                                styles.editButton,
+                                { backgroundColor: colors.accent },
+                              ]}
+                              onPress={() => handleEditLine(line)}
+                            >
+                              <Text style={styles.editButtonText}>✏️</Text>
+                            </TouchableOpacity>
+                            <TouchableOpacity
+                              style={[
+                                styles.deleteButton,
+                                { backgroundColor: colors.error },
+                              ]}
+                              onPress={() => handleDeleteLine(line.id)}
+                            >
+                              <Text style={styles.deleteButtonText}>🗑️</Text>
+                            </TouchableOpacity>
+                          </View>
+                        </View>
+
+                        {line.relatedLines && line.relatedLines.length > 0 && (
+                          <View
+                            style={[
+                              styles.relatedLinesContainer,
+                              { borderTopColor: colors.border },
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.relatedLinesTitle,
+                                { color: colors.textMuted },
+                              ]}
+                            >
+                              {t("quotation.relatedStocks")}
+                            </Text>
+
+                            {line.relatedLines.map((relatedLine) => (
+                              <View
+                                key={relatedLine.id}
+                                style={[
+                                  styles.relatedLineCard,
+                                  {
+                                    backgroundColor: colors.card,
+                                    borderColor: colors.border,
+                                  },
+                                ]}
+                              >
+                                <Text
+                                  style={[
+                                    styles.relatedLineProductName,
+                                    { color: colors.text },
+                                  ]}
+                                  numberOfLines={2}
+                                >
+                                  {relatedLine.productName}
+                                </Text>
+
+                                {relatedLine.productCode ? (
+                                  <Text
+                                    style={[
+                                      styles.relatedLineProductCode,
+                                      { color: colors.textMuted },
+                                    ]}
+                                  >
+                                    {relatedLine.productCode}
+                                  </Text>
+                                ) : null}
+
+                                <View style={styles.relatedLineDetailRows}>
+                                  <View style={styles.lineDetailRow}>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailLabel,
+                                        { color: colors.textMuted },
+                                      ]}
+                                    >
+                                      {t("quotation.quantity")}:
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailValue,
+                                        { color: colors.text },
+                                      ]}
+                                    >
+                                      {relatedLine.quantity.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </Text>
+                                  </View>
+
+                                  <View style={styles.lineDetailRow}>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailLabel,
+                                        { color: colors.textMuted },
+                                      ]}
+                                    >
+                                      {t("quotation.unitPrice")}:
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailValue,
+                                        { color: colors.text },
+                                      ]}
+                                    >
+                                      {relatedLine.unitPrice.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </Text>
+                                  </View>
+
+                                  <View style={styles.lineDetailRow}>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailLabel,
+                                        { color: colors.textMuted },
+                                      ]}
+                                    >
+                                      {t("quotation.discount1")}:
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailValue,
+                                        { color: colors.text },
+                                      ]}
+                                    >
+                                      {relatedLine.discountRate1.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                      % ·{" "}
+                                      {relatedLine.discountAmount1.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </Text>
+                                  </View>
+
+                                  <View style={styles.lineDetailRow}>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailLabel,
+                                        { color: colors.textMuted },
+                                      ]}
+                                    >
+                                      {t("quotation.discount2")}:
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailValue,
+                                        { color: colors.text },
+                                      ]}
+                                    >
+                                      {relatedLine.discountRate2.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                      % ·{" "}
+                                      {relatedLine.discountAmount2.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </Text>
+                                  </View>
+
+                                  <View style={styles.lineDetailRow}>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailLabel,
+                                        { color: colors.textMuted },
+                                      ]}
+                                    >
+                                      {t("quotation.discount3")}:
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailValue,
+                                        { color: colors.text },
+                                      ]}
+                                    >
+                                      {relatedLine.discountRate3.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                      % ·{" "}
+                                      {relatedLine.discountAmount3.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </Text>
+                                  </View>
+
+                                  <View style={styles.lineDetailRow}>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailLabel,
+                                        { color: colors.textMuted },
+                                      ]}
+                                    >
+                                      {t("quotation.lineTotal")}:
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailValue,
+                                        { color: colors.text },
+                                      ]}
+                                    >
+                                      {relatedLine.lineTotal.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </Text>
+                                  </View>
+
+                                  <View style={styles.lineDetailRow}>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailLabel,
+                                        { color: colors.textMuted },
+                                      ]}
+                                    >
+                                      {t("quotation.vatRate")}:
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailValue,
+                                        { color: colors.text },
+                                      ]}
+                                    >
+                                      {relatedLine.vatRate.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                      %
+                                    </Text>
+                                  </View>
+
+                                  <View style={styles.lineDetailRow}>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailLabel,
+                                        { color: colors.textMuted },
+                                      ]}
+                                    >
+                                      {t("quotation.vatAmount")}:
+                                    </Text>
+                                    <Text
+                                      style={[
+                                        styles.lineDetailValue,
+                                        { color: colors.text },
+                                      ]}
+                                    >
+                                      {relatedLine.vatAmount.toLocaleString(
+                                        "tr-TR",
+                                        {
+                                          minimumFractionDigits: 2,
+                                          maximumFractionDigits: 2,
+                                        }
+                                      )}
+                                    </Text>
+                                  </View>
+                                </View>
+
+                                <View
+                                  style={[
+                                    styles.lineGrandTotalRow,
+                                    { borderTopColor: colors.border },
+                                  ]}
+                                >
+                                  <Text
+                                    style={[
+                                      styles.lineGrandTotalLabel,
+                                      { color: colors.text },
+                                    ]}
+                                  >
+                                    {t("quotation.lineGrandTotalLabel")}:
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.lineGrandTotalValue,
+                                      { color: colors.accent },
+                                    ]}
+                                  >
+                                    {relatedLine.lineGrandTotal.toLocaleString(
+                                      "tr-TR",
+                                      {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                      }
+                                    )}
+                                  </Text>
+                                </View>
+                              </View>
+                            ))}
+                          </View>
+                        )}
+                      </View>
+                    </View>
+                  )}
+                />
+              )}
+            </View>
+
+            {lines.length > 0 && (
+              <View
+                style={[
+                  styles.section,
+                  { backgroundColor: colors.card, borderColor: colors.cardBorder },
+                ]}
+              >
+                <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                  Özet
                 </Text>
+                <View style={styles.summaryRow}>
+                  <Text
+                    style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                  >
+                    Ara Toplam:
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>
+                    {totals.subtotal.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text
+                    style={[styles.summaryLabel, { color: colors.textSecondary }]}
+                  >
+                    KDV Toplamı:
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>
+                    {totals.totalVat.toFixed(2)}
+                  </Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={[styles.summaryLabel, { color: colors.text }]}>
+                    Genel Toplam:
+                  </Text>
+                  <Text
+                    style={[
+                      styles.summaryValue,
+                      { color: colors.accent, fontWeight: "600" },
+                    ]}
+                  >
+                    {totals.grandTotal.toFixed(2)}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>KDV Toplamı:</Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>
-                  {totals.totalVat.toFixed(2)}
+            )}
+
+            <View style={styles.submitRow}>
+              <TouchableOpacity
+                style={[styles.cancelButton, { borderColor: colors.border }]}
+                onPress={() => router.back()}
+              >
+                <Text style={[styles.cancelButtonText, { color: colors.text }]}>
+                  İptal
                 </Text>
-              </View>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.text }]}>Genel Toplam:</Text>
-                <Text style={[styles.summaryValue, { color: colors.accent, fontWeight: "600" }]}>
-                  {totals.grandTotal.toFixed(2)}
-                </Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.submitButton,
+                  { backgroundColor: colors.accent },
+                  (isSubmitting || createQuotation.isPending) &&
+                    styles.submitButtonDisabled,
+                ]}
+                onPress={handleSubmit(onSubmit)}
+                disabled={isSubmitting || createQuotation.isPending}
+              >
+                {isSubmitting || createQuotation.isPending ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.submitButtonText}>Teklifi Kaydet</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </FlatListScrollView>
+
+          <Modal
+            visible={deliveryDateModalOpen}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setDeliveryDateModalOpen(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity
+                style={styles.modalBackdrop}
+                onPress={() => setDeliveryDateModalOpen(false)}
+              />
+              <View
+                style={[
+                  styles.modalContent,
+                  {
+                    backgroundColor: colors.card,
+                    paddingBottom: insets.bottom + 16,
+                  },
+                ]}
+              >
+                <View
+                  style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+                >
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                    Teslimat Tarihi
+                  </Text>
+                </View>
+                <DateTimePicker
+                  value={tempDeliveryDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDeliveryDateChange}
+                  locale="tr-TR"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.dateModalTamamButton,
+                    { backgroundColor: colors.accent },
+                  ]}
+                  onPress={() => {
+                    setValue(
+                      "quotation.deliveryDate",
+                      tempDeliveryDate.toISOString().split("T")[0]
+                    );
+                    setDeliveryDateModalOpen(false);
+                  }}
+                >
+                  <Text style={styles.dateModalTamamButtonText}>Tamam</Text>
+                </TouchableOpacity>
               </View>
             </View>
+          </Modal>
+
+          <Modal
+            visible={offerDateModalOpen}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setOfferDateModalOpen(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity
+                style={styles.modalBackdrop}
+                onPress={() => setOfferDateModalOpen(false)}
+              />
+              <View
+                style={[
+                  styles.modalContent,
+                  {
+                    backgroundColor: colors.card,
+                    paddingBottom: insets.bottom + 16,
+                  },
+                ]}
+              >
+                <View
+                  style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+                >
+                  <Text style={[styles.modalTitle, { color: colors.text }]}>
+                    Teklif Tarihi
+                  </Text>
+                </View>
+                <DateTimePicker
+                  value={tempOfferDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleOfferDateChange}
+                  locale="tr-TR"
+                />
+                <TouchableOpacity
+                  style={[
+                    styles.dateModalTamamButton,
+                    { backgroundColor: colors.accent },
+                  ]}
+                  onPress={() => setOfferDateModalOpen(false)}
+                >
+                  <Text style={styles.dateModalTamamButtonText}>Tamam</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </Modal>
+
+          <QuotationLineForm
+            visible={lineFormVisible}
+            line={editingLine}
+            onClose={() => {
+              setLineFormVisible(false);
+              setEditingLine(null);
+            }}
+            onSave={handleSaveLine}
+            onAddWithRelatedStocks={
+              !editingLine
+                ? (stock, relatedStockIds) => {
+                    handleProductSelectWithRelatedStocks(stock, relatedStockIds);
+                    setLineFormVisible(false);
+                    setEditingLine(null);
+                  }
+                : undefined
+            }
+            onRequestRelatedStocksSelection={
+              !editingLine
+                ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }) => {
+                    setPendingStockForRelated(stock);
+                  }
+                : undefined
+            }
+            onCancelRelatedSelection={
+              !editingLine ? () => setPendingStockForRelated(null) : undefined
+            }
+            onApplyRelatedSelection={
+              !editingLine
+                ? (
+                    stock: StockGetDto & { parentRelations: StockRelationDto[] },
+                    selectedIds: number[]
+                  ) => {
+                    handleProductSelectWithRelatedStocks(stock, selectedIds);
+                    setPendingStockForRelated(null);
+                  }
+                : undefined
+            }
+            pendingRelatedStock={pendingStockForRelated}
+            currency={watchedCurrency || ""}
+            currencyOptions={currencyOptions?.map((c) => ({
+              code: c.code,
+              dovizTipi: c.dovizTipi,
+              dovizIsmi: c.dovizIsmi ?? c.code,
+            }))}
+            pricingRules={pricingRules}
+            userDiscountLimits={userDiscountLimits}
+            exchangeRates={effectiveRatesForLines}
+          />
+
+          <ExchangeRateDialog
+            visible={exchangeRateDialogVisible}
+            exchangeRates={exchangeRates}
+            currencyOptions={currencyOptions}
+            erpExchangeRates={erpRatesForQuotation}
+            isLoadingErpRates={isLoadingErpRates && erpRatesForQuotation.length === 0}
+            currencyInUse={lines.length > 0 ? watchedCurrency || undefined : undefined}
+            onClose={() => setExchangeRateDialogVisible(false)}
+            onSave={(rates) => {
+              setExchangeRates(rates);
+              setExchangeRateDialogVisible(false);
+            }}
+            offerDate={watchedOfferDate || undefined}
+          />
+
+          <CustomerSelectDialog
+            open={customerSelectDialogOpen}
+            onOpenChange={setCustomerSelectDialogOpen}
+            onSelect={handleCustomerSelect}
+          />
+
+          <PickerModal
+            visible={paymentTypeModalVisible}
+            options={paymentTypes?.map((pt) => ({ id: pt.id, name: pt.name })) || []}
+            selectedValue={watch("quotation.paymentTypeId") ?? undefined}
+            onSelect={(option) => {
+              setValue("quotation.paymentTypeId", option.id as number);
+              setPaymentTypeModalVisible(false);
+            }}
+            onClose={() => setPaymentTypeModalVisible(false)}
+            title="Ödeme Tipi Seçiniz"
+            searchPlaceholder="Ödeme tipi ara..."
+          />
+
+          <PickerModal
+            visible={currencyModalVisible}
+            options={
+              currencyOptions?.map((c) => ({
+                id: c.code,
+                name: c.dovizIsmi ?? c.code,
+                code: c.code,
+              })) || []
+            }
+            selectedValue={watch("quotation.currency")}
+            onSelect={(option) => handleCurrencySelect(option.id as string)}
+            onClose={() => setCurrencyModalVisible(false)}
+            title="Para Birimi Seçiniz"
+            searchPlaceholder="Para birimi ara..."
+          />
+
+          <PickerModal
+            visible={projectCodeModalVisible}
+            options={projects.map((p) => ({
+              id: p.projeKod,
+              name: p.projeAciklama
+                ? `${p.projeKod} - ${p.projeAciklama}`
+                : p.projeKod,
+              code: p.projeKod,
+            }))}
+            selectedValue={watch("quotation.erpProjectCode") ?? undefined}
+            onSelect={(option) => {
+              setValue(
+                "quotation.erpProjectCode",
+                ((option.code ?? option.id) as string) ?? null
+              );
+              setProjectCodeModalVisible(false);
+            }}
+            onClose={() => setProjectCodeModalVisible(false)}
+            title={t("quotation.projectCode")}
+            searchPlaceholder={t("quotation.projectCodeSearch")}
+          />
+
+          {watchedOfferType && (
+            <PickerModal
+              visible={salesTypeModalVisible}
+              options={salesTypeList.map((s) => ({
+                id: s.id,
+                name: s.name,
+              }))}
+              selectedValue={watch("quotation.salesTypeDefinitionId") ?? undefined}
+              onSelect={(option) => {
+                setValue("quotation.salesTypeDefinitionId", option.id as number);
+                setSalesTypeModalVisible(false);
+              }}
+              onClose={() => setSalesTypeModalVisible(false)}
+              title={t("quotation.deliveryMethod")}
+              searchPlaceholder={t("common.search")}
+            />
           )}
 
-          <View style={styles.submitRow}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
-              onPress={() => router.back()}
-            >
-              <Text style={[styles.cancelButtonText, { color: colors.text }]}>İptal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.submitButton,
-                { backgroundColor: colors.accent },
-                (isSubmitting || createQuotation.isPending) && styles.submitButtonDisabled,
-              ]}
-              onPress={handleSubmit(onSubmit)}
-              disabled={isSubmitting || createQuotation.isPending}
-            >
-              {isSubmitting || createQuotation.isPending ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text style={styles.submitButtonText}>
-                  {isSubmitting || createQuotation.isPending ? "Kaydediliyor..." : "Teklifi Kaydet"}
-                </Text>
-              )}
-            </TouchableOpacity>
-          </View>
-        </FlatListScrollView>
-
-        <Modal
-          visible={deliveryDateModalOpen}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setDeliveryDateModalOpen(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              style={styles.modalBackdrop}
-              onPress={() => setDeliveryDateModalOpen(false)}
-            />
-            <View
-              style={[
-                styles.modalContent,
-                { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
-              ]}
-            >
-              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>Teslimat Tarihi</Text>
-              </View>
-              <DateTimePicker
-                value={tempDeliveryDate}
-                mode="date"
-                display="spinner"
-                onChange={handleDeliveryDateChange}
-                locale="tr-TR"
-              />
-              <TouchableOpacity
-                style={[styles.dateModalTamamButton, { backgroundColor: colors.accent }]}
-                onPress={() => {
-                  setValue("quotation.deliveryDate", tempDeliveryDate.toISOString().split("T")[0]);
-                  setDeliveryDateModalOpen(false);
-                }}
-              >
-                <Text style={styles.dateModalTamamButtonText}>Tamam</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        <Modal
-          visible={offerDateModalOpen}
-          transparent
-          animationType="slide"
-          onRequestClose={() => setOfferDateModalOpen(false)}
-        >
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity
-              style={styles.modalBackdrop}
-              onPress={() => setOfferDateModalOpen(false)}
-            />
-            <View
-              style={[
-                styles.modalContent,
-                { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
-              ]}
-            >
-              <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>Teklif Tarihi</Text>
-              </View>
-              <DateTimePicker
-                value={tempOfferDate}
-                mode="date"
-                display="spinner"
-                onChange={handleOfferDateChange}
-                locale="tr-TR"
-              />
-              <TouchableOpacity
-                style={[styles.dateModalTamamButton, { backgroundColor: colors.accent }]}
-                onPress={() => setOfferDateModalOpen(false)}
-              >
-                <Text style={styles.dateModalTamamButtonText}>Tamam</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        <QuotationLineForm
-          visible={lineFormVisible}
-          line={editingLine}
-          onClose={() => {
-            setLineFormVisible(false);
-            setEditingLine(null);
-          }}
-          onSave={handleSaveLine}
-          onAddWithRelatedStocks={
-            !editingLine
-              ? (stock, relatedStockIds) => {
-                  handleProductSelectWithRelatedStocks(stock, relatedStockIds);
-                  setLineFormVisible(false);
-                  setEditingLine(null);
-                }
-              : undefined
-          }
-          onRequestRelatedStocksSelection={
-            !editingLine
-              ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }) => {
-                  setPendingStockForRelated(stock);
-                }
-              : undefined
-          }
-          onCancelRelatedSelection={!editingLine ? () => setPendingStockForRelated(null) : undefined}
-          onApplyRelatedSelection={
-            !editingLine
-              ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }, selectedIds: number[]) => {
-                  handleProductSelectWithRelatedStocks(stock, selectedIds);
-                  setPendingStockForRelated(null);
-                }
-              : undefined
-          }
-          pendingRelatedStock={pendingStockForRelated}
-          currency={watchedCurrency || ""}
-          currencyOptions={currencyOptions?.map((c) => ({
-            code: c.code,
-            dovizTipi: c.dovizTipi,
-            dovizIsmi: c.dovizIsmi ?? c.code,
-          }))}
-          pricingRules={pricingRules}
-          userDiscountLimits={userDiscountLimits}
-          exchangeRates={effectiveRatesForLines}
-        />
-
-        <ExchangeRateDialog
-          visible={exchangeRateDialogVisible}
-          exchangeRates={exchangeRates}
-          currencyOptions={currencyOptions}
-          erpExchangeRates={erpRatesForQuotation}
-          isLoadingErpRates={isLoadingErpRates && erpRatesForQuotation.length === 0}
-          currencyInUse={lines.length > 0 ? (watchedCurrency || undefined) : undefined}
-          onClose={() => setExchangeRateDialogVisible(false)}
-          onSave={(rates) => {
-            setExchangeRates(rates);
-            setExchangeRateDialogVisible(false);
-          }}
-          offerDate={watchedOfferDate || undefined}
-        />
-
-        <CustomerSelectDialog
-          open={customerSelectDialogOpen}
-          onOpenChange={setCustomerSelectDialogOpen}
-          onSelect={handleCustomerSelect}
-        />
-
-        <PickerModal
-          visible={paymentTypeModalVisible}
-          options={
-            paymentTypes?.map((pt) => ({ id: pt.id, name: pt.name })) || []
-          }
-          selectedValue={watch("quotation.paymentTypeId") ?? undefined}
-          onSelect={(option) => {
-            setValue("quotation.paymentTypeId", option.id as number);
-            setPaymentTypeModalVisible(false);
-          }}
-          onClose={() => setPaymentTypeModalVisible(false)}
-          title="Ödeme Tipi Seçiniz"
-          searchPlaceholder="Ödeme tipi ara..."
-        />
-
-        <PickerModal
-          visible={currencyModalVisible}
-          options={
-            currencyOptions?.map((c) => ({
-              id: c.code,
-              name: c.dovizIsmi ?? c.code,
-              code: c.code,
-            })) || []
-          }
-          selectedValue={watch("quotation.currency")}
-          onSelect={(option) => handleCurrencySelect(option.id as string)}
-          onClose={() => setCurrencyModalVisible(false)}
-          title="Para Birimi Seçiniz"
-          searchPlaceholder="Para birimi ara..."
-        />
-
-        <PickerModal
-          visible={projectCodeModalVisible}
-          options={projects.map((p) => ({
-            id: p.projeKod,
-            name: p.projeAciklama ? `${p.projeKod} - ${p.projeAciklama}` : p.projeKod,
-            code: p.projeKod,
-          }))}
-          selectedValue={watch("quotation.erpProjectCode") ?? undefined}
-          onSelect={(option) => {
-            setValue("quotation.erpProjectCode", (option.code ?? option.id) as string ?? null);
-            setProjectCodeModalVisible(false);
-          }}
-          onClose={() => setProjectCodeModalVisible(false)}
-          title={t("quotation.projectCode")}
-          searchPlaceholder={t("quotation.projectCodeSearch")}
-        />
-
-        {watchedOfferType && (
           <PickerModal
-            visible={salesTypeModalVisible}
-            options={salesTypeList.map((s) => ({
-              id: s.id,
-              name: s.name,
+            visible={representativeModalVisible}
+            options={relatedUsers.map((u) => ({
+              id: u.userId,
+              name: `${u.firstName} ${u.lastName}`.trim(),
             }))}
-            selectedValue={watch("quotation.salesTypeDefinitionId") ?? undefined}
+            selectedValue={watch("quotation.representativeId") ?? undefined}
             onSelect={(option) => {
-              setValue("quotation.salesTypeDefinitionId", option.id as number);
-              setSalesTypeModalVisible(false);
+              setValue("quotation.representativeId", option.id as number);
+              setRepresentativeModalVisible(false);
             }}
-            onClose={() => setSalesTypeModalVisible(false)}
-            title={t("quotation.deliveryMethod")}
-            searchPlaceholder={t("common.search")}
+            onClose={() => setRepresentativeModalVisible(false)}
+            title="Satış Temsilcisi Seçiniz"
+            searchPlaceholder="Temsilci ara..."
           />
-        )}
 
-        <PickerModal
-          visible={representativeModalVisible}
-          options={relatedUsers.map((u) => ({
-            id: u.userId,
-            name: `${u.firstName} ${u.lastName}`.trim(),
-          }))}
-          selectedValue={watch("quotation.representativeId") ?? undefined}
-          onSelect={(option) => {
-            setValue("quotation.representativeId", option.id as number);
-            setRepresentativeModalVisible(false);
-          }}
-          onClose={() => setRepresentativeModalVisible(false)}
-          title="Satış Temsilcisi Seçiniz"
-          searchPlaceholder="Temsilci ara..."
-        />
-
-        {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
-          <PickerModal
-            visible={shippingAddressModalVisible}
-            options={shippingAddresses.map((addr) => ({
-              id: addr.id,
-              name: addr.address || "",
-            }))}
-            selectedValue={watch("quotation.shippingAddressId") ?? undefined}
-            onSelect={(option) => {
-              setValue("quotation.shippingAddressId", option.id as number);
-              setShippingAddressModalVisible(false);
-            }}
-            onClose={() => setShippingAddressModalVisible(false)}
-            title="Teslimat Adresi Seçiniz"
-            searchPlaceholder="Adres ara..."
-          />
-        )}
-
-      </KeyboardAvoidingView>
+          {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
+            <PickerModal
+              visible={shippingAddressModalVisible}
+              options={shippingAddresses.map((addr) => ({
+                id: addr.id,
+                name: addr.address || "",
+              }))}
+              selectedValue={watch("quotation.shippingAddressId") ?? undefined}
+              onSelect={(option) => {
+                setValue("quotation.shippingAddressId", option.id as number);
+                setShippingAddressModalVisible(false);
+              }}
+              onClose={() => setShippingAddressModalVisible(false)}
+              title="Teslimat Adresi Seçiniz"
+              searchPlaceholder="Adres ara..."
+            />
+          )}
+        </KeyboardAvoidingView>
       </View>
     </>
   );
@@ -1674,7 +2302,6 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 20,
-    // Modern CRM kart efekti
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.05,
@@ -1692,7 +2319,7 @@ const styles = StyleSheet.create({
   iconContainer: {
     width: 44,
     height: 44,
-    borderRadius: 12, // Modern CRM dili: Çok yuvarlak değil, yumuşak kare
+    borderRadius: 12,
     justifyContent: "center",
     alignItems: "center",
     marginRight: 14,
@@ -1712,7 +2339,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 14,
     fontWeight: "700",
-    textTransform: "uppercase", // Daha kurumsal bir görünüm
+    textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 16,
     opacity: 0.8,
@@ -1762,12 +2389,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "600",
   },
- lineCard: {
+  lineCard: {
     padding: 16,
     borderRadius: 16,
     borderWidth: 1,
     marginBottom: 16,
-    backgroundColor: 'white',
+    backgroundColor: "white",
   },
   lineCardHeader: {
     flexDirection: "row",
@@ -1793,7 +2420,7 @@ const styles = StyleSheet.create({
   mainBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 20, // Tam yuvarlak (pill)
+    borderRadius: 20,
   },
   mainBadgeText: {
     fontSize: 11,
@@ -1922,7 +2549,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1.5, // Biraz daha belirgin
+    borderWidth: 1.5,
     borderRadius: 14,
     paddingHorizontal: 16,
     paddingVertical: 14,
@@ -1989,7 +2616,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
- summaryRow: {
+  summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -1999,12 +2626,12 @@ const styles = StyleSheet.create({
   summaryLabel: {
     fontSize: 14,
   },
- summaryValue: {
+  summaryValue: {
     fontSize: 15,
     fontWeight: "700",
   },
   submitButton: {
-    flex: 2, // Kaydet butonu daha geniş
+    flex: 2,
     height: 56,
     borderRadius: 16,
     alignItems: "center",

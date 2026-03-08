@@ -16,7 +16,7 @@ import { ScreenHeader } from "../../../components/navigation";
 import { useUIStore } from "../../../store/ui"; 
 import { useCustomer, useDeleteCustomer } from "../hooks";
 import { CustomerDetailContent } from "../components/CustomerDetailContent";
-import { Edit02Icon, Delete02Icon, AlertCircleIcon, RefreshIcon, Add01Icon } from "hugeicons-react-native";
+import { Edit02Icon, Delete02Icon, AlertCircleIcon, RefreshIcon } from "hugeicons-react-native";
 
 export function CustomerDetailScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -53,7 +53,6 @@ export function CustomerDetailScreen(): React.ReactElement {
     }
   }, [router, customer]);
 
-  // YENİ EKLENEN FONKSİYON: 360 Sayfasına yönlendirme
   const handleCustomer360Press = useCallback(() => {
     if (customerId) {
       router.push(`/(tabs)/customers/360/${customerId}`);
@@ -121,13 +120,6 @@ export function CustomerDetailScreen(): React.ReactElement {
                     >
                       <Edit02Icon size={20} color={headerBtnStyle.text} variant="stroke" />
                     </TouchableOpacity>
-
-                    <TouchableOpacity
-                      onPress={handleQuickQuotationPress}
-                      style={[styles.headerButton, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.12)" }]}
-                    >
-                      <Add01Icon size={20} color="#0ea5e9" variant="stroke" />
-                    </TouchableOpacity>
                     
                     <TouchableOpacity
                       onPress={handleDeletePress}
@@ -163,8 +155,8 @@ export function CustomerDetailScreen(): React.ReactElement {
               customer={customer}
               insets={insets}
               t={t}
-              on360Press={handleCustomer360Press} // YENİ EKLENEN PROP: TS hatasını çözen kahraman!
-              onQuickQuotationPress={handleQuickQuotationPress}
+              on360Press={handleCustomer360Press}
+              onQuickQuotationPress={handleQuickQuotationPress} 
             />
           ) : null}
         </View>

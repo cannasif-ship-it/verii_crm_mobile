@@ -11,6 +11,17 @@ import {
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { LinearGradient } from "expo-linear-gradient";
+import { StatusBar } from "expo-status-bar";
+import { 
+  Add01Icon, 
+  Edit02Icon, 
+  Delete02Icon, 
+  UserIcon, 
+  Note01Icon, 
+  Coins01Icon 
+} from "hugeicons-react-native";
+
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
@@ -115,7 +126,7 @@ function mapRateToUpdateDto(
 export function TempQuickQuotationCreateScreen(): React.ReactElement {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { colors } = useUIStore();
+  const { colors, themeMode } = useUIStore();
   const { showError, showSuccess } = useToast();
   const params = useLocalSearchParams<{
     id?: string;
@@ -123,6 +134,21 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     customerName?: string;
     customerCode?: string;
   }>();
+
+  const isDark = themeMode === "dark";
+  const mainBg = isDark ? "#0c0516" : "#FAFAFA";
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)']
+    : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
+
+  const cardBg = isDark ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.85)";
+  const inputBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.6)";
+  const borderColor = isDark ? "rgba(255,255,255,0.06)" : "rgba(236, 72, 153, 0.25)";
+  const textColor = isDark ? "#F8FAFC" : "#1E293B";
+  const mutedColor = isDark ? "#94A3B8" : "#64748B";
+  const brandColor = isDark ? "#EC4899" : "#DB2777";
+  const errorColor = "#EF4444";
+
   const editId = params.id ? Number(params.id) : undefined;
   const isEdit = !!editId;
   const preselectedCustomerId = params.customerId ? Number(params.customerId) : undefined;
@@ -168,7 +194,6 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
 
   useEffect(() => {
     if (!detailQuery.data) return;
-
     setCustomerId(String(detailQuery.data.customerId ?? ""));
     setCurrencyCode(detailQuery.data.currencyCode || "TRY");
     setExchangeRate(String(detailQuery.data.exchangeRate ?? 1));
@@ -186,7 +211,6 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     if (isEdit) return;
     if (!currencyOptions || currencyOptions.length === 0) return;
     if (currencyCode && currencyOptions.some((x) => x.code === currencyCode)) return;
-
     const tryOption = currencyOptions.find((x) => x.code === "TRY");
     setCurrencyCode((tryOption?.code || currencyOptions[0]?.code || "TRY").toUpperCase());
   }, [currencyOptions, currencyCode, isEdit]);
@@ -198,13 +222,11 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
       setExchangeRate("1.00");
       return;
     }
-
     const lineRate = exchangeRates.find((x) => x.currency === normalized)?.exchangeRate;
     if (lineRate && lineRate > 0) {
       setExchangeRate(String(lineRate));
       return;
     }
-
     const erpRate = erpExchangeRates.find((x) => String(x.dovizTipi) === normalized)?.kurDegeri;
     if (erpRate && erpRate > 0) {
       setExchangeRate(String(erpRate));
@@ -213,7 +235,6 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
 
   useEffect(() => {
     if (!linesQuery.data) return;
-
     const mapped: QuotationLineFormState[] = linesQuery.data.map((line) => ({
       id: `db-${line.id}`,
       productId: null,
@@ -239,13 +260,11 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
       isMainRelatedProduct: true,
       approvalStatus: 0,
     }));
-
     setLines(mapped);
   }, [linesQuery.data]);
 
   useEffect(() => {
     if (!exchangeLinesQuery.data) return;
-
     const mapped: QuotationExchangeRateFormState[] = exchangeLinesQuery.data.map((line) => ({
       id: `dbx-${line.id}`,
       currency: line.currency,
@@ -254,7 +273,6 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
       isOfficial: !line.isManual,
       dovizTipi: Number(line.currency),
     }));
-
     setExchangeRates(mapped);
   }, [exchangeLinesQuery.data]);
 
@@ -263,10 +281,8 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     if (validRates.length > 0) {
       return validRates;
     }
-
     const normalizedCurrency = currencyCode.trim().toUpperCase() || "TRY";
     const normalizedExchangeRate = numberValue(exchangeRate) > 0 ? numberValue(exchangeRate) : 1;
-
     return [
       {
         id: "auto-default",
@@ -283,19 +299,16 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     mutationFn: async (payload: TempQuotattionCreateDto) => {
       const created = await tempQuickQuotationRepository.create(payload);
       const headerId = created.id;
-
       if (lines.length > 0) {
         const createLinesPayload = lines.map((line) => mapFormLineToCreateDto(line, headerId));
         await tempQuickQuotationRepository.createLines(createLinesPayload);
       }
-
       for (const rate of effectiveExchangeRates) {
         if (!rate.currency || !rate.exchangeRate) continue;
         await tempQuickQuotationRepository.createExchangeLine(
           mapRateToCreateDto(rate, headerId, offerDate)
         );
       }
-
       return created;
     },
     onSuccess: () => {
@@ -439,223 +452,260 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
   const loading = detailQuery.isLoading || linesQuery.isLoading || exchangeLinesQuery.isLoading;
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
-      <ScreenHeader
-        title={isEdit ? "Hızlı Teklif Revize Et" : "Hızlı Teklif Oluştur"}
-        showBackButton
-      />
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
+        />
+      </View>
 
-      {loading ? (
-        <View style={styles.center}>
-          <ActivityIndicator size="large" color="#db2777" />
-        </View>
-      ) : (
-        <ScrollView
-          contentContainerStyle={[
-            styles.content,
-            { paddingBottom: Math.max(insets.bottom, 16) + 140 },
-          ]}
-          keyboardShouldPersistTaps="handled"
-        >
-          {hasPreselectedCustomer ? (
-            <View style={[styles.customerInfoCard, { borderColor: colors.cardBorder, backgroundColor: colors.card }]}>
-              <Text style={[styles.customerInfoTitle, { color: colors.text }]}>Cari Bilgisi</Text>
-              <Text style={[styles.customerInfoLine, { color: colors.textSecondary }]}>
-                ID: {preselectedCustomerId}
-              </Text>
-              <Text style={[styles.customerInfoLine, { color: colors.textSecondary }]}>
-                Ad: {preselectedCustomerName || "-"}
-              </Text>
-              <Text style={[styles.customerInfoLine, { color: colors.textSecondary }]}>
-                Kod: {preselectedCustomerCode || "-"}
-              </Text>
-            </View>
-          ) : (
+      <View style={{ flex: 1 }}>
+        <ScreenHeader
+          title={isEdit ? "Hızlı Teklif Revize Et" : "Hızlı Teklif Oluştur"}
+          showBackButton
+        />
+
+        {loading ? (
+          <View style={styles.center}>
+            <ActivityIndicator size="large" color={brandColor} />
+          </View>
+        ) : (
+          <ScrollView
+            contentContainerStyle={[
+              styles.content,
+              { paddingBottom: Math.max(insets.bottom, 24) + 60 }, 
+            ]}
+            showsVerticalScrollIndicator={false}
+            keyboardShouldPersistTaps="handled"
+          >
+            {hasPreselectedCustomer ? (
+              <View style={[styles.customerInfoCard, { borderColor, backgroundColor: cardBg }]}>
+                <View style={styles.customerHeaderRow}>
+                  <UserIcon size={20} color={brandColor} variant="stroke" />
+                  <Text style={[styles.customerInfoTitle, { color: textColor }]}>Cari Bilgisi</Text>
+                </View>
+                <Text style={[styles.customerInfoLine, { color: mutedColor }]}>
+                  ID: <Text style={{ color: textColor, fontWeight: "600" }}>{preselectedCustomerId}</Text>
+                </Text>
+                <Text style={[styles.customerInfoLine, { color: mutedColor }]}>
+                  Ad: <Text style={{ color: textColor, fontWeight: "600" }}>{preselectedCustomerName || "-"}</Text>
+                </Text>
+                <Text style={[styles.customerInfoLine, { color: mutedColor }]}>
+                  Kod: <Text style={{ color: textColor, fontWeight: "600" }}>{preselectedCustomerCode || "-"}</Text>
+                </Text>
+              </View>
+            ) : (
+              <View style={styles.field}>
+                <Text style={[styles.label, { color: mutedColor }]}>Customer ID</Text>
+                <TextInput
+                  style={[styles.input, { borderColor, backgroundColor: inputBg, color: textColor }]}
+                  value={customerId}
+                  onChangeText={setCustomerId}
+                  placeholder="Örn: 12"
+                  placeholderTextColor={mutedColor}
+                  keyboardType="numeric"
+                />
+              </View>
+            )}
+
             <View style={styles.field}>
-              <Text style={[styles.label, { color: colors.text }]}>Customer ID</Text>
+              <Text style={[styles.label, { color: mutedColor }]}>Para Birimi</Text>
+              <TouchableOpacity
+                style={[styles.input, styles.pickerButton, { borderColor, backgroundColor: inputBg }]}
+                onPress={() => setCurrencyModalVisible(true)}
+              >
+                <Text style={[styles.pickerText, { color: textColor }]}>
+                  {currencyOptions.find((c) => c.code === currencyCode)?.dovizIsmi ?? currencyCode}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.field}>
+              <Text style={[styles.label, { color: mutedColor }]}>Açıklama</Text>
               <TextInput
-                style={[styles.input, { borderColor: colors.cardBorder, color: colors.text }]}
-                value={customerId}
-                onChangeText={setCustomerId}
-                placeholder="Örn: 12"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numeric"
+                style={[styles.input, styles.textArea, { borderColor, backgroundColor: inputBg, color: textColor }]}
+                value={description}
+                onChangeText={setDescription}
+                multiline
+                numberOfLines={4}
+                placeholder="Teklif açıklaması..."
+                placeholderTextColor={mutedColor}
               />
             </View>
-          )}
 
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.text }]}>Para Birimi</Text>
-            <TouchableOpacity
-              style={[styles.input, styles.pickerButton, { borderColor: colors.cardBorder }]}
-              onPress={() => setCurrencyModalVisible(true)}
-            >
-              <Text style={[styles.pickerText, { color: colors.text }]}>
-                {currencyOptions.find((c) => c.code === currencyCode)?.dovizIsmi ?? currencyCode}
-              </Text>
-            </TouchableOpacity>
-          </View>
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionHeaderLeft}>
+                <Note01Icon size={18} color={brandColor} variant="stroke" />
+                <Text style={[styles.sectionTitle, { color: textColor }]}>Stok Satırları</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.sectionButton, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.15)" : "rgba(14, 165, 233, 0.1)", borderColor: "rgba(14, 165, 233, 0.3)" }]}
+                onPress={() => {
+                  setEditingLine(null);
+                  setLineFormVisible(true);
+                }}
+              >
+                <Add01Icon size={16} color="#0ea5e9" variant="stroke" style={{ marginRight: 4 }} />
+                <Text style={[styles.sectionButtonText, { color: "#0ea5e9" }]}>Stok Ekle</Text>
+              </TouchableOpacity>
+            </View>
 
-          <View style={styles.field}>
-            <Text style={[styles.label, { color: colors.text }]}>Açıklama</Text>
-            <TextInput
-              style={[styles.input, styles.textArea, { borderColor: colors.cardBorder, color: colors.text }]}
-              value={description}
-              onChangeText={setDescription}
-              multiline
-              numberOfLines={4}
-              placeholderTextColor={colors.textMuted}
-            />
-          </View>
-
-          <View style={styles.sectionHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Stok Satırları</Text>
-            <TouchableOpacity
-              style={[styles.sectionButton, { backgroundColor: "#0ea5e9" }]}
-              onPress={() => {
-                setEditingLine(null);
-                setLineFormVisible(true);
-              }}
-            >
-              <Text style={styles.sectionButtonText}>Stok Ekle</Text>
-            </TouchableOpacity>
-          </View>
-
-          {lines.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Henüz stok satırı yok</Text>
-          ) : (
-            <View style={styles.listGroup}>
-              {lines.map((line) => (
-                <View key={line.id} style={[styles.lineCard, { borderColor: colors.cardBorder, backgroundColor: colors.card }]}> 
-                  <Text style={[styles.lineTitle, { color: colors.text }]}>{line.productCode} - {line.productName}</Text>
-                  <Text style={[styles.lineText, { color: colors.textSecondary }]}>Miktar: {line.quantity}</Text>
-                  <Text style={[styles.lineText, { color: colors.textSecondary }]}>Birim Fiyat: {line.unitPrice}</Text>
-                  <Text style={[styles.lineText, { color: colors.textSecondary }]}>Kur: {exchangeRate}</Text>
-                  <Text style={[styles.lineText, { color: colors.textSecondary }]}>İskonto 1: %{line.discountRate1 ?? 0}</Text>
-                  <Text style={[styles.lineText, { color: colors.textSecondary }]}>İskonto 2: %{line.discountRate2 ?? 0}</Text>
-                  <Text style={[styles.lineText, { color: colors.textSecondary }]}>İskonto 3: %{line.discountRate3 ?? 0}</Text>
-                  <View style={styles.lineActions}>
-                    <TouchableOpacity
-                      style={[styles.smallButton, { backgroundColor: "#0284c7" }]}
-                      onPress={() => {
-                        setEditingLine(line);
-                        setLineFormVisible(true);
-                      }}
-                    >
-                      <Text style={styles.smallButtonText}>Düzenle</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[styles.smallButton, { backgroundColor: "#dc2626" }]}
-                      onPress={() =>
-                        Alert.alert("Sil", "Bu stok satırını silmek istiyor musun?", [
-                          { text: "Vazgeç", style: "cancel" },
-                          { text: "Sil", style: "destructive", onPress: () => handleDeleteLine(line.id) },
-                        ])
-                      }
-                    >
-                      <Text style={styles.smallButtonText}>Sil</Text>
-                    </TouchableOpacity>
+            {lines.length === 0 ? (
+              <View style={[styles.emptyContainer, { borderColor, backgroundColor: cardBg }]}>
+                <Text style={[styles.emptyText, { color: mutedColor }]}>Henüz stok satırı eklenmedi.</Text>
+              </View>
+            ) : (
+              <View style={styles.listGroup}>
+                {lines.map((line) => (
+                  <View key={line.id} style={[styles.lineCard, { borderColor, backgroundColor: cardBg }]}> 
+                    <Text style={[styles.lineTitle, { color: textColor }]}>{line.productCode} - {line.productName}</Text>
+                    <View style={styles.lineDetailsGrid}>
+                      <Text style={[styles.lineText, { color: mutedColor }]}>Miktar: <Text style={{ color: textColor }}>{line.quantity}</Text></Text>
+                      <Text style={[styles.lineText, { color: mutedColor }]}>Fiyat: <Text style={{ color: textColor }}>{line.unitPrice}</Text></Text>
+                      <Text style={[styles.lineText, { color: mutedColor }]}>Kur: <Text style={{ color: textColor }}>{exchangeRate}</Text></Text>
+                      <Text style={[styles.lineText, { color: mutedColor }]}>İsk. 1: <Text style={{ color: textColor }}>%{line.discountRate1 ?? 0}</Text></Text>
+                    </View>
+                    <View style={styles.lineActions}>
+                      <TouchableOpacity
+                        style={[styles.actionPill, { backgroundColor: isDark ? "rgba(14, 165, 233, 0.1)" : "rgba(14, 165, 233, 0.08)", borderColor: "rgba(14, 165, 233, 0.2)" }]}
+                        onPress={() => {
+                          setEditingLine(line);
+                          setLineFormVisible(true);
+                        }}
+                      >
+                        <Edit02Icon size={16} color="#0ea5e9" variant="stroke" style={{ marginRight: 6 }} />
+                        <Text style={[styles.actionPillText, { color: "#0ea5e9" }]}>Düzenle</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[styles.actionPill, { backgroundColor: isDark ? "rgba(239, 68, 68, 0.1)" : "rgba(239, 68, 68, 0.08)", borderColor: "rgba(239, 68, 68, 0.2)" }]}
+                        onPress={() =>
+                          Alert.alert("Sil", "Bu stok satırını silmek istiyor musun?", [
+                            { text: "Vazgeç", style: "cancel" },
+                            { text: "Sil", style: "destructive", onPress: () => handleDeleteLine(line.id) },
+                          ])
+                        }
+                      >
+                        <Delete02Icon size={16} color={errorColor} variant="stroke" style={{ marginRight: 6 }} />
+                        <Text style={[styles.actionPillText, { color: errorColor }]}>Sil</Text>
+                      </TouchableOpacity>
+                    </View>
                   </View>
-                </View>
-              ))}
+                ))}
+              </View>
+            )}
+
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionHeaderLeft}>
+                <Coins01Icon size={18} color={brandColor} variant="stroke" />
+                <Text style={[styles.sectionTitle, { color: textColor }]}>Kur Satırları</Text>
+              </View>
+              <TouchableOpacity
+                style={[styles.sectionButton, { backgroundColor: isDark ? "rgba(16, 185, 129, 0.15)" : "rgba(16, 185, 129, 0.1)", borderColor: "rgba(16, 185, 129, 0.3)" }]}
+                onPress={() => setExchangeDialogVisible(true)}
+              >
+                <Edit02Icon size={16} color="#10B981" variant="stroke" style={{ marginRight: 4 }} />
+                <Text style={[styles.sectionButtonText, { color: "#10B981" }]}>Kur Yönet</Text>
+              </TouchableOpacity>
             </View>
-          )}
 
-          <View style={styles.sectionHeaderRow}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>Kur Satırları</Text>
-            <TouchableOpacity
-              style={[styles.sectionButton, { backgroundColor: "#16a34a" }]}
-              onPress={() => setExchangeDialogVisible(true)}
-            >
-              <Text style={styles.sectionButtonText}>Kur Yönet</Text>
-            </TouchableOpacity>
-          </View>
+            {exchangeRates.length === 0 ? (
+              <View style={[styles.emptyContainer, { borderColor, backgroundColor: cardBg }]}>
+                <Text style={[styles.emptyText, { color: mutedColor }]}>Kur satırı bulunmuyor.</Text>
+              </View>
+            ) : (
+              <View style={styles.listGroup}>
+                {exchangeRates.map((rate) => (
+                  <View key={rate.id} style={[styles.exchangeCard, { borderColor, backgroundColor: cardBg }]}> 
+                    <Text style={[styles.lineTitle, { color: textColor }]}>{rate.currency}</Text>
+                    <View style={styles.exchangeRatePill}>
+                      <Text style={[styles.lineText, { color: brandColor, fontWeight: "700" }]}>{rate.exchangeRate}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            )}
 
-          {exchangeRates.length === 0 ? (
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>Kur satırı yok</Text>
-          ) : (
-            <View style={styles.listGroup}>
-              {exchangeRates.map((rate) => (
-                <View key={rate.id} style={[styles.lineCard, { borderColor: colors.cardBorder, backgroundColor: colors.card }]}> 
-                  <Text style={[styles.lineTitle, { color: colors.text }]}>{rate.currency}</Text>
-                  <Text style={[styles.lineText, { color: colors.textSecondary }]}>Kur: {rate.exchangeRate}</Text>
-                </View>
-              ))}
-            </View>
-          )}
+            {!loading && (
+              <View style={styles.submitContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.submitButton, 
+                    { 
+                      backgroundColor: pending ? mutedColor : (isDark ? "rgba(236, 72, 153, 0.15)" : "rgba(219, 39, 119, 0.1)"),
+                      borderColor: pending ? "transparent" : (isDark ? "rgba(236, 72, 153, 0.4)" : "rgba(219, 39, 119, 0.3)"),
+                      borderWidth: pending ? 0 : 1
+                    }
+                  ]}
+                  onPress={submit}
+                  disabled={pending}
+                >
+                  {pending ? (
+                    <ActivityIndicator color="#FFFFFF" size="small" />
+                  ) : (
+                    <Text style={[styles.submitButtonText, { color: pending ? "#FFFFFF" : brandColor }]}>
+                      {isEdit ? "Revize Kaydet" : "Hızlı Teklif Oluştur"}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+            )}
+          </ScrollView>
+        )}
 
-        </ScrollView>
-      )}
+        <QuotationLineForm
+          visible={lineFormVisible}
+          line={editingLine}
+          onClose={() => {
+            setEditingLine(null);
+            setLineFormVisible(false);
+          }}
+          onSave={handleSaveLine}
+          currency={currencyCode}
+          currencyOptions={(currencyOptions ?? []).map((x) => ({
+            code: x.code,
+            dovizTipi: x.dovizTipi,
+            dovizIsmi: x.dovizIsmi ?? "",
+          }))}
+          exchangeRates={erpExchangeRates.map((x) => ({ dovizTipi: x.dovizTipi, kurDegeri: x.kurDegeri }))}
+        />
 
-      {!loading ? (
-        <View
-          style={[
-            styles.footer,
-            {
-              borderTopColor: colors.cardBorder,
-              backgroundColor: colors.background,
-              paddingBottom: Math.max(insets.bottom, 10) + 64,
-            },
-          ]}
-        >
-          <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: pending ? "#9ca3af" : "#db2777" }]}
-            onPress={submit}
-            disabled={pending}
-          >
-            <Text style={styles.submitButtonText}>{isEdit ? "Revize Kaydet" : "Hızlı Teklif Oluştur"}</Text>
-          </TouchableOpacity>
-        </View>
-      ) : null}
+        <ExchangeRateDialog
+          visible={exchangeDialogVisible}
+          exchangeRates={exchangeRates}
+          currencyOptions={currencyOptions ?? []}
+          erpExchangeRates={erpExchangeRates}
+          isLoadingErpRates={isLoadingErpRates}
+          currencyInUse={currencyCode}
+          onClose={() => setExchangeDialogVisible(false)}
+          onSave={(rates) => {
+            setExchangeRates(rates);
+            setExchangeDialogVisible(false);
+          }}
+          offerDate={offerDate}
+        />
 
-      <QuotationLineForm
-        visible={lineFormVisible}
-        line={editingLine}
-        onClose={() => {
-          setEditingLine(null);
-          setLineFormVisible(false);
-        }}
-        onSave={handleSaveLine}
-        currency={currencyCode}
-        currencyOptions={(currencyOptions ?? []).map((x) => ({
-          code: x.code,
-          dovizTipi: x.dovizTipi,
-          dovizIsmi: x.dovizIsmi ?? "",
-        }))}
-        exchangeRates={erpExchangeRates.map((x) => ({ dovizTipi: x.dovizTipi, kurDegeri: x.kurDegeri }))}
-      />
-
-      <ExchangeRateDialog
-        visible={exchangeDialogVisible}
-        exchangeRates={exchangeRates}
-        currencyOptions={currencyOptions ?? []}
-        erpExchangeRates={erpExchangeRates}
-        isLoadingErpRates={isLoadingErpRates}
-        currencyInUse={currencyCode}
-        onClose={() => setExchangeDialogVisible(false)}
-        onSave={(rates) => {
-          setExchangeRates(rates);
-          setExchangeDialogVisible(false);
-        }}
-        offerDate={offerDate}
-      />
-
-      <PickerModal
-        visible={currencyModalVisible}
-        options={(currencyOptions ?? []).map((c) => ({
-          id: c.code,
-          name: c.dovizIsmi ?? c.code,
-          code: c.code,
-        }))}
-        selectedValue={currencyCode}
-        onSelect={(option) => {
-          setCurrencyCode(String(option.id).toUpperCase());
-          setCurrencyModalVisible(false);
-        }}
-        onClose={() => setCurrencyModalVisible(false)}
-        title="Para Birimi Seçiniz"
-        searchPlaceholder="Para birimi ara..."
-      />
+        <PickerModal
+          visible={currencyModalVisible}
+          options={(currencyOptions ?? []).map((c) => ({
+            id: c.code,
+            name: c.dovizIsmi ?? c.code,
+            code: c.code,
+          }))}
+          selectedValue={currencyCode}
+          onSelect={(option) => {
+            setCurrencyCode(String(option.id).toUpperCase());
+            setCurrencyModalVisible(false);
+          }}
+          onClose={() => setCurrencyModalVisible(false)}
+          title="Para Birimi Seçiniz"
+          searchPlaceholder="Para birimi ara..."
+        />
+      </View>
     </View>
   );
 }
@@ -669,127 +719,160 @@ const styles = StyleSheet.create({
   },
   content: {
     padding: 16,
-    gap: 10,
+    gap: 16,
   },
   field: {
-    gap: 6,
-  },
-  fieldRow: {
-    flexDirection: "row",
     gap: 8,
   },
-  fieldHalf: {
-    flex: 1,
-  },
   label: {
-    fontSize: 13,
-    fontWeight: "600",
+    fontSize: 12,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginLeft: 4,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 14,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    fontWeight: "500",
   },
   pickerButton: {
-    minHeight: 44,
+    minHeight: 48,
     justifyContent: "center",
   },
   pickerText: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 15,
+    fontWeight: "600",
   },
   textArea: {
-    minHeight: 90,
+    minHeight: 100,
     textAlignVertical: "top",
   },
   customerInfoCard: {
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 12,
-    gap: 4,
+    borderRadius: 16,
+    padding: 16,
+    gap: 6,
+  },
+  customerHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    marginBottom: 8,
   },
   customerInfoTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
-    marginBottom: 4,
   },
   customerInfoLine: {
-    fontSize: 12,
-    fontWeight: "500",
+    fontSize: 13,
   },
   sectionHeaderRow: {
-    marginTop: 8,
+    marginTop: 12,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
+  sectionHeaderLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
   sectionTitle: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: "700",
   },
   sectionButton: {
-    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    borderRadius: 12,
+    borderWidth: 1,
     paddingHorizontal: 12,
     paddingVertical: 8,
   },
   sectionButtonText: {
-    color: "#fff",
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
   },
+  emptyContainer: {
+    borderWidth: 1,
+    borderRadius: 16,
+    borderStyle: "dashed",
+    padding: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   emptyText: {
-    fontSize: 13,
+    fontSize: 14,
+    fontWeight: "500",
   },
   listGroup: {
-    gap: 8,
+    gap: 10,
   },
   lineCard: {
     borderWidth: 1,
-    borderRadius: 10,
-    padding: 10,
-    gap: 4,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
   },
   lineTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: "700",
   },
+  lineDetailsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
   lineText: {
-    fontSize: 12,
+    fontSize: 13,
+    minWidth: "45%",
   },
   lineActions: {
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
     marginTop: 6,
   },
-  smallButton: {
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
+  actionPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
   },
-  smallButtonText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "700",
+  actionPillText: {
+    fontSize: 13,
+    fontWeight: "600",
   },
-  footer: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    bottom: 0,
-    borderTopWidth: 1,
-    paddingHorizontal: 16,
-    paddingTop: 10,
+  exchangeCard: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+  },
+  exchangeRatePill: {
+    backgroundColor: "rgba(236, 72, 153, 0.1)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 10,
+  },
+  submitContainer: {
+    marginTop: 20,
+    marginBottom: 20,
   },
   submitButton: {
-    borderRadius: 10,
-    paddingVertical: 12,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: "center",
   },
   submitButtonText: {
-    color: "#fff",
     fontWeight: "700",
-    fontSize: 14,
+    fontSize: 15,
   },
 });

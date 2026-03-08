@@ -41,9 +41,17 @@ export function ExchangeRateDialog({
   useQuotationRatesAsPrimary = false,
 }: ExchangeRateDialogProps): React.ReactElement {
   const { t } = useTranslation();
-  const { colors } = useUIStore();
+  const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.showToast);
+
+  // KARANLIK MOD RENKLERİ (Sadece renkler eklendi)
+  const isDark = themeMode === "dark";
+  const mainBg = isDark ? "#161224" : colors.card;
+  const inputBg = isDark ? "rgba(255,255,255,0.03)" : colors.backgroundSecondary;
+  const borderColor = isDark ? "rgba(255,255,255,0.08)" : colors.border;
+  const textColor = isDark ? "#F8FAFC" : colors.text;
+  const textMuted = isDark ? "#94A3B8" : colors.textSecondary;
 
   const [rates, setRates] = useState<QuotationExchangeRateFormState[]>([]);
 
@@ -157,23 +165,23 @@ export function ExchangeRateDialog({
         <View
           style={[
             styles.modalContent,
-            { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+            { backgroundColor: mainBg, paddingBottom: insets.bottom + 16 },
           ]}
         >
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <View style={[styles.handle, { backgroundColor: colors.border }]} />
+          <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+            <View style={[styles.handle, { backgroundColor: borderColor }]} />
             <View style={styles.headerRow}>
               <View style={[styles.dollarIcon, { backgroundColor: "#10B981" }]}>
                 <Text style={styles.dollarIconText}>$</Text>
               </View>
               <View style={styles.headerTitles}>
-                <Text style={[styles.modalTitle, { color: colors.text }]}>Döviz Kurları</Text>
-                <Text style={[styles.modalSubtitle, { color: colors.textSecondary }]}>
+                <Text style={[styles.modalTitle, { color: textColor }]}>Döviz Kurları</Text>
+                <Text style={[styles.modalSubtitle, { color: textMuted }]}>
                   Güncel kur değerlerini yönetin
                 </Text>
               </View>
               <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-                <Text style={[styles.closeButtonText, { color: colors.text }]}>✕</Text>
+                <Text style={[styles.closeButtonText, { color: textColor }]}>✕</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -182,7 +190,7 @@ export function ExchangeRateDialog({
           {visible && isLoadingErpRates && rates.length === 0 ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator size="large" color={colors.accent} />
-              <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              <Text style={[styles.loadingText, { color: textMuted }]}>
                 Kurlar yükleniyor...
               </Text>
             </View>
@@ -194,7 +202,7 @@ export function ExchangeRateDialog({
           >
                 {rates.length === 0 ? (
               <View style={styles.emptyContainer}>
-                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>
+                <Text style={[styles.emptyText, { color: textMuted }]}>
                   {isLoadingErpRates
                     ? "Kurlar yükleniyor..."
                     : "Kur listesi boş. Teklif tarihi seçili mi kontrol edin veya daha sonra tekrar deneyin."}
@@ -202,18 +210,18 @@ export function ExchangeRateDialog({
               </View>
             ) : (
               <>
-                <View style={[styles.tableHeader, { borderBottomColor: colors.border }]}>
-                  <Text style={[styles.tableHeaderCell, styles.cellPara, { color: colors.textSecondary }]}>
+                <View style={[styles.tableHeader, { borderBottomColor: borderColor }]}>
+                  <Text style={[styles.tableHeaderCell, styles.cellPara, { color: textMuted }]}>
                     PARA BIRIMI
                   </Text>
-                  <Text style={[styles.tableHeaderCell, styles.cellKur, { color: colors.textSecondary }]}>
+                  <Text style={[styles.tableHeaderCell, styles.cellKur, { color: textMuted }]}>
                     KUR
                   </Text>
-                  <Text style={[styles.tableHeaderCell, styles.cellDurum, { color: colors.textSecondary }]}>
+                  <Text style={[styles.tableHeaderCell, styles.cellDurum, { color: textMuted }]}>
                     DURUM
                   </Text>
                   <View style={styles.cellIslem}>
-                    <Text style={[styles.tableHeaderCellText, { color: colors.textSecondary }]}>
+                    <Text style={[styles.tableHeaderCellText, { color: textMuted }]}>
                       İŞLEMLER
                     </Text>
                   </View>
@@ -226,10 +234,10 @@ export function ExchangeRateDialog({
                   return (
                     <View
                       key={rate.id}
-                      style={[styles.tableRow, { borderBottomColor: colors.border }]}
+                      style={[styles.tableRow, { borderBottomColor: borderColor }]}
                     >
                       <View style={[styles.tableCell, styles.cellPara]}>
-                        <Text style={[styles.cellText, { color: colors.text }]} numberOfLines={1}>
+                        <Text style={[styles.cellText, { color: textColor }]} numberOfLines={1}>
                           {getCurrencyName(rate.currency)}
                         </Text>
                       </View>
@@ -238,9 +246,9 @@ export function ExchangeRateDialog({
                           style={[
                             styles.tableInput,
                             {
-                              backgroundColor: colors.backgroundSecondary,
-                              borderColor: colors.border,
-                              color: colors.text,
+                              backgroundColor: inputBg,
+                              borderColor: borderColor,
+                              color: textColor,
                               opacity: isInUse ? 0.7 : 1,
                             },
                           ]}
@@ -254,6 +262,7 @@ export function ExchangeRateDialog({
                           }
                           onFocus={isInUse ? handleFocusInUseField : undefined}
                           placeholder="0.0000"
+                          placeholderTextColor={textMuted}
                           keyboardType="decimal-pad"
                           editable={!isInUse}
                         />
@@ -278,23 +287,23 @@ export function ExchangeRateDialog({
                       <View style={[styles.tableCell, styles.cellIslem]}>
                         {!isInUse && erpRate !== undefined ? (
                           <TouchableOpacity
-                            style={[styles.editButton, { borderColor: colors.border }]}
+                            style={[styles.editButton, { borderColor: borderColor }]}
                             onPress={() => handleApplyErpRate(rate.id, erpRate)}
                           >
-                            <Text style={[styles.editButtonText, { color: colors.text }]}>✎</Text>
+                            <Text style={[styles.editButtonText, { color: textColor }]}>✎</Text>
                           </TouchableOpacity>
                         ) : isInUse ? (
-                          <View style={[styles.editButton, styles.editButtonDisabled, { borderColor: colors.border }]}>
-                            <Text style={[styles.editButtonText, { color: colors.textSecondary }]}>✎</Text>
+                          <View style={[styles.editButton, styles.editButtonDisabled, { borderColor: borderColor }]}>
+                            <Text style={[styles.editButtonText, { color: textMuted }]}>✎</Text>
                           </View>
                         ) : null}
                       </View>
                     </View>
                   );
                 })}
-                <View style={[styles.infoBox, { backgroundColor: "#3B82F620" }]}>
-                  <Text style={styles.infoBoxIcon}>$</Text>
-                  <Text style={[styles.infoBoxText, { color: colors.text }]}>
+                <View style={[styles.infoBox, { backgroundColor: isDark ? "rgba(59, 130, 246, 0.15)" : "#3B82F620" }]}>
+                  <Text style={[styles.infoBoxIcon, { color: isDark ? "#60A5FA" : "#3B82F6" }]}>$</Text>
+                  <Text style={[styles.infoBoxText, { color: textColor }]}>
                     Burada yapılan değişiklikler sadece bu teklif için geçerlidir ve genel sistem kurlarını etkilemez. Değiştirilen kurlar "Özel" olarak işaretlenir.
                   </Text>
                 </View>
@@ -304,12 +313,12 @@ export function ExchangeRateDialog({
           )}
           </View>
 
-          <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
+          <View style={[styles.modalFooter, { borderTopColor: borderColor }]}>
             <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
+              style={[styles.cancelButton, { borderColor: borderColor }]}
               onPress={onClose}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.text }]}>İptal</Text>
+              <Text style={[styles.cancelButtonText, { color: textColor }]}>İptal</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.saveButton, { backgroundColor: colors.accent }]}
@@ -331,7 +340,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)",
   },
   modalContent: {
     height: "90%",
@@ -351,7 +360,8 @@ const styles = StyleSheet.create({
   handle: {
     position: "absolute",
     top: 8,
-    alignSelf: "center",
+    left: "50%",
+    transform: [{ translateX: -20 }],
     width: 40,
     height: 4,
     borderRadius: 2,
@@ -509,7 +519,6 @@ const styles = StyleSheet.create({
   },
   infoBoxIcon: {
     fontSize: 18,
-    color: "#3B82F6",
     fontWeight: "700",
   },
   infoBoxText: {

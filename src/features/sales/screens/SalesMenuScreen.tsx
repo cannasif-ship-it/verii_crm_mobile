@@ -19,7 +19,8 @@ import {
   ShoppingBag01Icon,
   NoteIcon,
   ChartLineData01Icon,
-  ArrowRight01Icon 
+  ArrowRight01Icon,
+  FlashIcon // Hızlı teklifleri temsil etmesi için eklendi (Eğer yoksa yerine ZapIcon veya Invoice01Icon kullanabilirsin)
 } from "hugeicons-react-native";
 
 export function SalesMenuScreen(): React.ReactElement {
@@ -40,10 +41,16 @@ export function SalesMenuScreen(): React.ReactElement {
     ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)']
     : ['rgba(255, 235, 240, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']) as [string, string, ...string[]];
 
+  // --- TEKLİF YÖNLENDİRMELERİ ---
   const handleCreateQuotationPress = useCallback(() => router.push("/(tabs)/sales/quotations/create"), [router]);
   const handleQuotationListPress = useCallback(() => router.push("/(tabs)/sales/quotations"), [router]);
   const handleWaitingApprovalsPress = useCallback(() => router.push("/(tabs)/sales/quotations/waiting-approvals"), [router]);
+  
+  // --- HIZLI TEKLİF YÖNLENDİRMELERİ (YENİ) ---
+  const handleCreateQuickQuotationPress = useCallback(() => router.push("/(tabs)/sales/quotations/quick/create"), [router]);
+  const handleQuickQuotationListPress = useCallback(() => router.push("/(tabs)/sales/quotations/quick/list"), [router]);
 
+  // --- DİĞER YÖNLENDİRMELER ---
   const handleCreateDemandPress = useCallback(() => router.push("/(tabs)/sales/demands/create"), [router]);
   const handleDemandListPress = useCallback(() => router.push("/(tabs)/sales/demands"), [router]);
   const handleDemandWaitingApprovalsPress = useCallback(() => router.push("/(tabs)/sales/demands/waiting-approvals"), [router]);
@@ -105,6 +112,23 @@ export function SalesMenuScreen(): React.ReactElement {
             rightIcon={<ArrowRight01Icon size={20} color={arrowColor} />}
             onPress={handleQuotationListPress}
           />
+
+          {/* --- BÖLÜM: HIZLI TEKLİFLER (YENİ EKLENEN KISIM) --- */}
+          <MenuCard
+            title={t("sales.createQuickQuotation") || "Hızlı Teklif Oluştur"} 
+            description={t("sales.createQuickQuotationDesc") || "Pratik şablonlarla hızlıca teklif hazırlayın"}
+            icon={renderIcon(PlusSignIcon)} 
+            rightIcon={<ArrowRight01Icon size={20} color={arrowColor} />}
+            onPress={handleCreateQuickQuotationPress}
+          />
+          <MenuCard
+            title={t("sales.quickQuotationList") || "Hızlı Teklif Listesi"}
+            description={t("sales.quickQuotationListDesc") || "Oluşturduğunuz hızlı teklifleri yönetin"}
+            icon={renderIcon(Files01Icon)} // İsteğe bağlı olarak FlashIcon ile değiştirebilirsin
+            rightIcon={<ArrowRight01Icon size={20} color={arrowColor} />}
+            onPress={handleQuickQuotationListPress}
+          />
+          
           <MenuCard
             title={t("sales.waitingApprovals")}
             description={t("sales.waitingApprovalsDesc")}

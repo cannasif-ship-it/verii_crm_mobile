@@ -591,7 +591,11 @@
     "orderWaitingApprovalsDesc": "View and manage order requests awaiting approval",
     "quotations": "Offers",
     "orders": "Orders",
-    "demands": "Requests"
+    "demands": "Requests",
+    "createQuickQuotation": "Create Quick Quotation",
+    "createQuickQuotationDesc": "Quickly prepare quotes with practical templates",
+    "quickQuotationList": "Quick Quotation List",
+    "quickQuotationListDesc": "Manage your quick quotations easily"
   },
   "quotation": {
     "list": "Quotation List",

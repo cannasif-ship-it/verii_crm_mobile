@@ -23,7 +23,6 @@ import type {
   QuotationLineFormState,
   PricingRuleLineGetDto,
   UserDiscountLimitDto,
-  PriceOfProductDto,
   StockGetDto,
 } from "../types";
 import { calculateLineTotals } from "../utils";
@@ -64,8 +63,18 @@ export function QuotationLineForm({
   exchangeRates,
 }: QuotationLineFormProps): React.ReactElement {
   const { t } = useTranslation();
-  const { colors } = useUIStore();
+  const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
+
+  const isDark = themeMode === "dark";
+  const mainBg = isDark ? "#161224" : "#FFFFFF";
+  const inputBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.6)";
+  const cardBg = isDark ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.85)";
+  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const textColor = isDark ? "#F8FAFC" : "#1E293B";
+  const mutedColor = isDark ? "#94A3B8" : "#64748B";
+  const brandColor = isDark ? "#EC4899" : "#DB2777";
+  const warningColor = "#F59E0B";
 
   const [selectedStock, setSelectedStock] = useState<StockGetDto | undefined>();
   const [quantity, setQuantity] = useState<string>("1");
@@ -441,16 +450,16 @@ export function QuotationLineForm({
         <View
           style={[
             styles.modalContent,
-            { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+            { backgroundColor: mainBg, paddingBottom: insets.bottom + 16 },
           ]}
         >
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-            <View style={[styles.handle, { backgroundColor: colors.border }]} />
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+            <View style={[styles.handle, { backgroundColor: borderColor }]} />
+            <Text style={[styles.modalTitle, { color: textColor }]}>
               {line ? "Satır Düzenle" : "Yeni Satır"}
             </Text>
             <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-              <Text style={[styles.closeButtonText, { color: colors.text }]}>✕</Text>
+              <Text style={[styles.closeButtonText, { color: textColor }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
@@ -484,118 +493,124 @@ export function QuotationLineForm({
 
             {isLoadingPrice && (
               <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={colors.accent} />
-                <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                <ActivityIndicator size="small" color={brandColor} />
+                <Text style={[styles.loadingText, { color: mutedColor }]}>
                   Fiyat bilgisi yükleniyor...
                 </Text>
               </View>
             )}
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Miktar <Text style={{ color: colors.error }}>*</Text>
+              <Text style={[styles.label, { color: mutedColor }]}>
+                Miktar <Text style={{ color: "#ef4444" }}>*</Text>
               </Text>
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
                 ]}
                 value={quantity}
                 onChangeText={setQuantity}
                 placeholder="Miktar"
+                placeholderTextColor={mutedColor}
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
-                Birim Fiyat <Text style={{ color: colors.error }}>*</Text>
+              <Text style={[styles.label, { color: mutedColor }]}>
+                Birim Fiyat <Text style={{ color: "#ef4444" }}>*</Text>
               </Text>
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
                   styles.inputReadOnly,
                 ]}
                 value={unitPrice}
                 editable={false}
                 placeholder="Birim fiyat"
+                placeholderTextColor={mutedColor}
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 1 (%) (0-100)</Text>
+              <Text style={[styles.label, { color: mutedColor }]}>İndirim 1 (%) (0-100)</Text>
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
                 ]}
                 value={discountRate1}
                 onChangeText={handleDiscount1Change}
                 onBlur={() => setDiscountRate1(normalizeDiscountOnBlur(discountRate1))}
                 placeholder="0"
+                placeholderTextColor={mutedColor}
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 2 (%) (0-100)</Text>
+              <Text style={[styles.label, { color: mutedColor }]}>İndirim 2 (%) (0-100)</Text>
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
                 ]}
                 value={discountRate2}
                 onChangeText={handleDiscount2Change}
                 onBlur={() => setDiscountRate2(normalizeDiscountOnBlur(discountRate2))}
                 placeholder="0"
+                placeholderTextColor={mutedColor}
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>İndirim 3 (%) (0-100)</Text>
+              <Text style={[styles.label, { color: mutedColor }]}>İndirim 3 (%) (0-100)</Text>
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
                 ]}
                 value={discountRate3}
                 onChangeText={handleDiscount3Change}
                 onBlur={() => setDiscountRate3(normalizeDiscountOnBlur(discountRate3))}
                 placeholder="0"
+                placeholderTextColor={mutedColor}
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>KDV Oranı (%)</Text>
+              <Text style={[styles.label, { color: mutedColor }]}>KDV Oranı (%)</Text>
               <TextInput
                 style={[
                   styles.input,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
                 ]}
                 value={vatRate}
                 onChangeText={setVatRate}
                 placeholder="18"
+                placeholderTextColor={mutedColor}
                 keyboardType="numeric"
               />
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>
+              <Text style={[styles.label, { color: mutedColor }]}>
                 {t("quotation.projectCode")}
               </Text>
               <TouchableOpacity
                 style={[
                   styles.pickerButton,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                  { backgroundColor: inputBg, borderColor: borderColor },
                 ]}
                 onPress={() => setProjectCodeModalVisible(true)}
               >
                 <Text
-                  style={[styles.pickerText, { color: erpProjectCode ? colors.text : colors.textMuted }]}
+                  style={[styles.pickerText, { color: erpProjectCode ? textColor : mutedColor }]}
                   numberOfLines={1}
                 >
                   {erpProjectCode
@@ -613,69 +628,70 @@ export function QuotationLineForm({
             </View>
 
             <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: colors.textSecondary }]}>Açıklama</Text>
+              <Text style={[styles.label, { color: mutedColor }]}>Açıklama</Text>
               <TextInput
                 style={[
                   styles.textArea,
-                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
                 ]}
                 value={description}
                 onChangeText={setDescription}
                 placeholder="Satır açıklaması"
+                placeholderTextColor={mutedColor}
                 multiline
                 numberOfLines={3}
               />
             </View>
 
             {approvalStatus === 1 && approvalMessage && (
-              <View style={[styles.approvalWarning, { backgroundColor: colors.warning + "20" }]}>
-                <Text style={[styles.approvalWarningText, { color: colors.warning }]}>
+              <View style={[styles.approvalWarning, { backgroundColor: warningColor + "15", borderColor: warningColor + "30" }]}>
+                <Text style={[styles.approvalWarningText, { color: warningColor }]}>
                   ⚠️ {approvalMessage}
                 </Text>
               </View>
             )}
 
-            <View style={[styles.summaryCard, { backgroundColor: colors.backgroundSecondary }]}>
-              <Text style={[styles.summaryTitle, { color: colors.text }]}>{t("quotation.calculationSummary")}</Text>
+            <View style={[styles.summaryCard, { backgroundColor: cardBg, borderColor: borderColor }]}>
+              <Text style={[styles.summaryTitle, { color: textColor }]}>{t("quotation.calculationSummary")}</Text>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Ara Toplam:</Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>
+                <Text style={[styles.summaryLabel, { color: mutedColor }]}>Ara Toplam:</Text>
+                <Text style={[styles.summaryValue, { color: textColor }]}>
                   {currentLine.lineTotal.toFixed(2)}
                 </Text>
               </View>
               <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>KDV:</Text>
-                <Text style={[styles.summaryValue, { color: colors.text }]}>
+                <Text style={[styles.summaryLabel, { color: mutedColor }]}>KDV:</Text>
+                <Text style={[styles.summaryValue, { color: textColor }]}>
                   {currentLine.vatAmount.toFixed(2)}
                 </Text>
               </View>
-              <View style={[styles.summaryRow, styles.summaryRowTotal]}>
-                <Text style={[styles.summaryLabel, { color: colors.text }]}>Genel Toplam:</Text>
-                <Text style={[styles.summaryValue, { color: colors.accent, fontWeight: "600" }]}>
+              <View style={[styles.summaryRow, styles.summaryRowTotal, { borderTopColor: borderColor }]}>
+                <Text style={[styles.summaryLabel, { color: textColor, fontWeight: "600" }]}>Genel Toplam:</Text>
+                <Text style={[styles.summaryValue, { color: brandColor, fontWeight: "700" }]}>
                   {currentLine.lineGrandTotal.toFixed(2)}
                 </Text>
               </View>
             </View>
 
             {displayedRelatedLines.length > 0 && (
-              <View style={[styles.relatedSummaryCard, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}>
-                <Text style={[styles.relatedSummaryTitle, { color: colors.text }]}>{t("quotation.relatedStocksSummary")}</Text>
+              <View style={[styles.relatedSummaryCard, { backgroundColor: cardBg, borderColor: borderColor }]}>
+                <Text style={[styles.relatedSummaryTitle, { color: textColor }]}>{t("quotation.relatedStocksSummary")}</Text>
                 {displayedRelatedLines.map((rel) => (
-                  <View key={rel.id} style={[styles.relatedSummaryRow, { borderBottomColor: colors.border }]}>
-                    <Text style={[styles.relatedSummaryCode, { color: colors.text }]} numberOfLines={1}>{rel.productCode}</Text>
+                  <View key={rel.id} style={[styles.relatedSummaryRow, { borderBottomColor: borderColor }]}>
+                    <Text style={[styles.relatedSummaryCode, { color: textColor }]} numberOfLines={1}>{rel.productCode}</Text>
                     <View style={styles.relatedSummaryGrid}>
-                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discount1")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>% {rel.discountRate1.toFixed(1)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discountAmount1")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>{rel.discountAmount1.toFixed(2)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discount2")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>% {rel.discountRate2.toFixed(1)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discountAmount2")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>{rel.discountAmount2.toFixed(2)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discount3")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>% {rel.discountRate3.toFixed(1)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: colors.textSecondary }]}>{t("quotation.discountAmount3")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: colors.text }]}>{rel.discountAmount3.toFixed(2)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discount1")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>% {rel.discountRate1.toFixed(1)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discountAmount1")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>{rel.discountAmount1.toFixed(2)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discount2")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>% {rel.discountRate2.toFixed(1)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discountAmount2")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>{rel.discountAmount2.toFixed(2)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discount3")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>% {rel.discountRate3.toFixed(1)}</Text>
+                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discountAmount3")}:</Text>
+                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>{rel.discountAmount3.toFixed(2)}</Text>
                     </View>
                   </View>
                 ))}
@@ -684,17 +700,17 @@ export function QuotationLineForm({
           </FlatListScrollView>
           </View>
 
-          <View style={[styles.modalFooter, { borderTopColor: colors.border }]}>
+          <View style={[styles.modalFooter, { borderTopColor: borderColor, backgroundColor: mainBg }]}>
             <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: colors.border }]}
+              style={[styles.cancelButton, { borderColor: borderColor, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "transparent" }]}
               onPress={handleCancel}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.text }]}>İptal</Text>
+              <Text style={[styles.cancelButtonText, { color: textColor }]}>İptal</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[
                 styles.saveButton,
-                { backgroundColor: colors.accent },
+                { backgroundColor: brandColor },
                 !(selectedStock || (line?.productCode && lineToSave.productCode)) && styles.saveButtonDisabled,
               ]}
               onPress={handleSave}
@@ -734,12 +750,13 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0, 0, 0, 0.6)", 
   },
   modalContent: {
-    height: "90%",
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    height: "92%",
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: "hidden",
   },
   contentWrapper: {
     flex: 1,
@@ -750,30 +767,34 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 20,
-    paddingTop: 12,
+    paddingTop: 14,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
-  handle: {
+ handle: {
     position: "absolute",
-    top: 8,
-    alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 2,
+    top: 10,
+    left: "50%",
+    transform: [{ translateX: -10 }], // Ekranın tam ortasına çiviler (genişliğin yarısı kadar geri çeker)
+    width: 44,
+    height: 5,
+    borderRadius: 3,
+    opacity: 0.5,
   },
   modalTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: "700",
     flex: 1,
     textAlign: "center",
+    letterSpacing: 0.3,
   },
   closeButton: {
-    padding: 4,
+    padding: 6,
   },
   closeButtonText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: "300",
+    opacity: 0.7,
   },
   scrollContent: {
     flex: 1,
@@ -793,138 +814,149 @@ const styles = StyleSheet.create({
   loadingText: {
     marginLeft: 8,
     fontSize: 14,
+    fontWeight: "500",
   },
   fieldContainer: {
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 6,
+    fontSize: 13,
+    fontWeight: "600",
+    marginBottom: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginLeft: 4,
   },
   input: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 15,
+    fontWeight: "500",
   },
   inputReadOnly: {
-    opacity: 0.9,
+    opacity: 0.6,
   },
   pickerButton: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    fontSize: 15,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 52,
+    justifyContent: "center",
   },
   pickerText: {
     fontSize: 15,
+    fontWeight: "500",
   },
   textArea: {
     borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
     fontSize: 15,
-    minHeight: 80,
+    minHeight: 100,
     textAlignVertical: "top",
   },
   approvalWarning: {
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    marginBottom: 20,
   },
   approvalWarningText: {
     fontSize: 13,
-    lineHeight: 18,
+    lineHeight: 20,
+    fontWeight: "600",
   },
   summaryCard: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
+    borderWidth: 1,
     marginTop: 8,
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
+    fontWeight: "700",
+    marginBottom: 16,
+    letterSpacing: 0.5,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 8,
+    marginBottom: 10,
   },
   summaryRowTotal: {
-    marginTop: 8,
-    paddingTop: 8,
+    marginTop: 12,
+    paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "rgba(0, 0, 0, 0.1)",
   },
   summaryLabel: {
     fontSize: 14,
-  },
-  summaryValue: {
-    fontSize: 14,
     fontWeight: "500",
   },
+  summaryValue: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
   relatedSummaryCard: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 20,
+    borderRadius: 16,
     borderWidth: 1,
     marginTop: 16,
   },
   relatedSummaryTitle: {
     fontSize: 15,
-    fontWeight: "600",
-    marginBottom: 12,
+    fontWeight: "700",
+    marginBottom: 14,
   },
   relatedSummaryRow: {
-    paddingVertical: 12,
+    paddingVertical: 14,
     borderBottomWidth: 1,
   },
   relatedSummaryCode: {
     fontSize: 14,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontWeight: "700",
+    marginBottom: 10,
   },
   relatedSummaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 8,
+    gap: 10,
   },
   relatedSummaryLabel: {
-    fontSize: 12,
-    width: "30%",
+    fontSize: 13,
+    width: "35%",
   },
   relatedSummaryValue: {
-    fontSize: 12,
-    fontWeight: "500",
-    width: "65%",
+    fontSize: 13,
+    fontWeight: "600",
+    width: "60%",
   },
   modalFooter: {
     flexDirection: "row",
     paddingHorizontal: 20,
     paddingTop: 16,
-    paddingBottom: 16,
+    paddingBottom: 24, 
     borderTopWidth: 1,
     gap: 12,
   },
   cancelButton: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: "center",
   },
   cancelButtonText: {
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
   },
   saveButton: {
     flex: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 14,
+    paddingVertical: 16,
     alignItems: "center",
   },
   saveButtonDisabled: {
@@ -932,7 +964,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

@@ -23,7 +23,16 @@ export function DocumentSerialTypePicker({
   disabled = false,
 }: DocumentSerialTypePickerProps): React.ReactElement {
   const { t } = useTranslation();
-  const { colors } = useUIStore();
+  const { themeMode } = useUIStore();
+
+  const isDark = themeMode === "dark";
+  const inputBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.6)";
+  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const textColor = isDark ? "#F8FAFC" : "#1E293B";
+  const mutedColor = isDark ? "#94A3B8" : "#64748B";
+  const brandColor = isDark ? "#EC4899" : "#DB2777";
+  const dashedBorderColor = isDark ? "rgba(236, 72, 153, 0.5)" : "rgba(219, 39, 119, 0.5)";
+  const dashedBgColor = isDark ? "rgba(236, 72, 153, 0.05)" : "rgba(219, 39, 119, 0.03)";
 
   const [modalVisible, setModalVisible] = React.useState(false);
 
@@ -48,32 +57,32 @@ export function DocumentSerialTypePicker({
       render={({ field: { onChange, value } }) => (
         <View style={styles.container}>
           <View style={styles.labelContainer}>
-            <Text style={styles.labelIcon}>#</Text>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>Seri No</Text>
+            <Text style={[styles.labelIcon, { color: brandColor }]}>#</Text>
+            <Text style={[styles.label, { color: mutedColor }]}>Seri No</Text>
           </View>
           <TouchableOpacity
             style={[
               styles.pickerButton,
               {
-                backgroundColor: colors.backgroundSecondary,
-                borderColor: isDisabled ? colors.border + "80" : colors.border,
+                backgroundColor: value ? inputBg : dashedBgColor,
+                borderColor: isDisabled ? (isDark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)") : (value ? borderColor : dashedBorderColor),
+                borderWidth: value ? 1 : 1.5,
+                borderStyle: value ? "solid" : "dashed",
               },
               isDisabled && styles.pickerButtonDisabled,
             ]}
             onPress={() => !isDisabled && setModalVisible(true)}
             disabled={isDisabled}
+            activeOpacity={0.7}
           >
             {isLoading ? (
-              <ActivityIndicator size="small" color={colors.accent} />
+              <ActivityIndicator size="small" color={brandColor} />
             ) : (
               <Text
                 style={[
                   styles.pickerText,
-                  {
-                    color: value
-                      ? colors.text
-                      : colors.textMuted,
-                  },
+                  { color: value ? textColor : brandColor },
+                  !value && { fontWeight: "600" }
                 ]}
                 numberOfLines={1}
               >
@@ -83,12 +92,12 @@ export function DocumentSerialTypePicker({
               </Text>
             )}
             {!isLoading && (
-              <Text style={[styles.arrowIcon, { color: colors.textMuted }]}>›</Text>
+              <View style={[styles.chevronDown, { borderTopColor: brandColor }]} />
             )}
           </TouchableOpacity>
 
           {filteredTypes.length === 0 && !isLoading && !isDisabled && (
-            <Text style={[styles.emptyText, { color: colors.textMuted }]}>
+            <Text style={[styles.emptyText, { color: mutedColor }]}>
               Uygun seri yok
             </Text>
           )}
@@ -122,25 +131,28 @@ const styles = StyleSheet.create({
   labelContainer: {
     flexDirection: "row",
     alignItems: "center",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   labelIcon: {
     fontSize: 14,
+    fontWeight: "700",
     marginRight: 6,
+    marginLeft: 4,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 13,
+    fontWeight: "600",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
   pickerButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    minHeight: 48,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    minHeight: 52,
   },
   pickerButtonDisabled: {
     opacity: 0.6,
@@ -149,14 +161,20 @@ const styles = StyleSheet.create({
     fontSize: 15,
     flex: 1,
   },
-  arrowIcon: {
-    fontSize: 20,
-    fontWeight: "300",
+  chevronDown: {
+    width: 0,
+    height: 0,
     marginLeft: 8,
+    borderLeftWidth: 6,
+    borderRightWidth: 6,
+    borderTopWidth: 6,
+    borderLeftColor: "transparent",
+    borderRightColor: "transparent",
   },
   emptyText: {
     fontSize: 12,
-    marginTop: 4,
+    marginTop: 6,
     fontStyle: "italic",
+    marginLeft: 4,
   },
 });

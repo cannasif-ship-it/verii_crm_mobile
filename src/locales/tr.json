@@ -580,7 +580,11 @@
     "orderWaitingApprovalsDesc": "Onayı bekleyen sipariş isteklerini görüntüle ve yönet",
     "quotations": "Teklifler",
     "orders": "Siparişler",
-    "demands": "Talepler"
+    "demands": "Talepler",
+    "createQuickQuotation": "Hızlı Teklif Oluştur",
+    "createQuickQuotationDesc": "Pratik şablonlarla hızlıca teklif hazırlayın",
+    "quickQuotationList": "Hızlı Teklif Listesi",
+    "quickQuotationListDesc": "Oluşturduğunuz hızlı teklifleri yönetin"
   },
   "quotation": {
     "list": "Teklif Listesi",

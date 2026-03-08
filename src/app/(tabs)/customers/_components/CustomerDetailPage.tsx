@@ -29,17 +29,15 @@ import {
   ShippingAddressCard,
   type ShippingAddressDto,
 } from "../../../../features/shipping-address";
-// HugeIcons
 import { 
   Edit02Icon, 
   Delete02Icon, 
   Add01Icon 
-} from "hugeicons-react-native"; // Analytics02Icon silindi
+} from "hugeicons-react-native"; 
 import { LinearGradient } from "expo-linear-gradient";
 
 type TabType = "detail" | "contacts" | "addresses";
 
-// --- TEMA ARAYÜZÜ ---
 interface ThemeColors {
   bg: string;
   primary: string;
@@ -49,13 +47,13 @@ interface ThemeColors {
   glassBtn: string;
   danger: string;
   tabActiveBg: string;
-  pillBorder: string; // Tab aktifken arka planı (opsiyonel)
+  pillBorder: string; 
 }
 
 interface TabBarProps {
   activeTab: TabType;
   onTabPress: (tab: TabType) => void;
-  theme: ThemeColors; // Temayı prop olarak geçiyoruz
+  theme: ThemeColors; 
   t: (key: string) => string;
   contactsCount: number;
   addressesCount: number;
@@ -115,16 +113,13 @@ function CustomerDetailPage(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  
-  // --- DİNAMİK TEMA ---
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
   const isDark = themeMode === "dark";
 
-  // Renkleri moda göre seçiyoruz
   const THEME: ThemeColors = {
-    bg: isDark ? "#1a0b2e" : colors.background, // Koyu mor veya Beyaz
-    primary: "#db2777", // Neon Pembe (Vurgu rengi her iki modda da aynı kalabilir)
+    bg: isDark ? "#1a0b2e" : colors.background, 
+    primary: "#db2777", 
     text: isDark ? "#FFFFFF" : colors.text,
     textMute: isDark ? "#94a3b8" : colors.textMuted,
     borderColor: isDark ? "rgba(255,255,255,0.08)" : colors.border,
@@ -247,18 +242,17 @@ function CustomerDetailPage(): React.ReactElement {
           showsVerticalScrollIndicator={false}
         />
       )}
-      {/* İki tabdaki FAB butonlarını da şu şekilde değiştir: */}
+
       <TouchableOpacity
         style={[
           styles.fab, 
           { 
             backgroundColor: THEME.primary,
-            // Navbar'ın üstüne çıkması için insets.bottom + ek boşluk veriyoruz
             bottom: Math.max(insets.bottom, 20) + 80, 
             shadowColor: THEME.primary 
           }
         ]}
-        onPress={handleAddContactPress} // Adres için handleAddAddressPress
+        onPress={handleAddContactPress} 
       >
         <Add01Icon size={28} color="#FFFFFF" variant="stroke" />
       </TouchableOpacity>
@@ -286,18 +280,16 @@ function CustomerDetailPage(): React.ReactElement {
           showsVerticalScrollIndicator={false}
         />
       )}
-      {/* İki tabdaki FAB butonlarını da şu şekilde değiştir: */}
       <TouchableOpacity
         style={[
           styles.fab, 
           { 
             backgroundColor: THEME.primary,
-            // Navbar'ın üstüne çıkması için insets.bottom + ek boşluk veriyoruz
             bottom: Math.max(insets.bottom, 20) + 80, 
             shadowColor: THEME.primary 
           }
         ]}
-        onPress={handleAddAddressPress} // Adres için handleAddAddressPress
+        onPress={handleAddAddressPress} 
       >
         <Add01Icon size={28} color="#FFFFFF" variant="stroke" />
       </TouchableOpacity>
@@ -316,7 +308,7 @@ function CustomerDetailPage(): React.ReactElement {
             customer={customer}
             insets={insets}
             t={t}
-            on360Press={handleCustomer360Press} // 360 Görünüm fonksiyonunu yavru bileşene yolladık
+            on360Press={handleCustomer360Press} 
             onQuickQuotationPress={handleQuickQuotationPress}
           />
         );
@@ -325,25 +317,22 @@ function CustomerDetailPage(): React.ReactElement {
 
   return (
     <>
-      {/* Transparan StatusBar */}
       <StatusBar style={isDark ? "light" : "dark"} backgroundColor="transparent" translucent />
       
       <View style={styles.container}>
-        {/* 1. ANA ARKA PLAN - DETAY SAYFASI GRADIENT'İ */}
         <View style={StyleSheet.absoluteFill}>
           <LinearGradient 
             colors={isDark 
-              ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.05)'] // Karanlık mod neon pembe-turuncu
-              : ['rgba(255, 240, 225, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']} // Aydınlık mod pastel şeftali
+              ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.05)'] 
+              : ['rgba(255, 240, 225, 0.6)', '#FFFFFF', 'rgba(255, 240, 225, 0.6)']} 
             start={{ x: 0, y: 0 }} 
             end={{ x: 1, y: 1 }} 
             style={StyleSheet.absoluteFill} 
           />
         </View>
 
-        {/* 2. İÇERİK KATMANI */}
         <View style={{ flex: 1, zIndex: 10 }}>
-          {/* HEADER BÖLÜMÜ */}
+
           <View style={{ borderBottomWidth: 1, borderBottomColor: THEME.borderColor }}>
             <ScreenHeader
               title={t("customer.detail")}
@@ -357,26 +346,14 @@ function CustomerDetailPage(): React.ReactElement {
                       borderColor: THEME.pillBorder
                     }
                   ]}>
-                    {/* DÜZENLE BUTONU */}
+  
                     <TouchableOpacity onPress={handleEditPress} style={styles.pillButton}>
                       <Edit02Icon size={18} color={THEME.text} variant="stroke" />
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      onPress={handleQuickQuotationPress}
-                      style={[
-                        styles.pillButton,
-                        {
-                          backgroundColor: isDark ? "rgba(14, 165, 233, 0.2)" : "rgba(14, 165, 233, 0.12)",
-                          borderLeftWidth: 1,
-                          borderLeftColor: THEME.pillBorder,
-                        },
-                      ]}
-                    >
-                      <Add01Icon size={18} color="#0ea5e9" variant="stroke" />
-                    </TouchableOpacity>
+                  
 
-                    {/* SİL BUTONU */}
+
                     <TouchableOpacity
                       onPress={handleDeletePress}
                       style={[
@@ -401,7 +378,7 @@ function CustomerDetailPage(): React.ReactElement {
             />
           </View>
 
-          {/* 3. TABLAR VE İÇERİK - Arka planı tamamen şeffaf yapıyoruz */}
+
           <View style={[styles.content, { backgroundColor: 'transparent' }]}>
             {isLoading ? (
               <View style={styles.loadingContainer}>
@@ -416,7 +393,6 @@ function CustomerDetailPage(): React.ReactElement {
               </View>
             ) : customer ? (
               <>
-                {/* TAB BAR */}
                 <TabBar
                   activeTab={activeTab}
                   onTabPress={setActiveTab}
@@ -425,8 +401,7 @@ function CustomerDetailPage(): React.ReactElement {
                   contactsCount={contacts.length}
                   addressesCount={addresses.length}
                 />
-                
-                {/* İÇERİK */}
+ 
                 {renderTabContent()}
               </>
             ) : null}
@@ -444,7 +419,6 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
-  // --- TAB BAR ---
   tabBar: {
     flexDirection: "row",
     borderBottomWidth: 1,
@@ -473,7 +447,6 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     color: "#FFFFFF",
   },
-  // ----------------
   tabContent: {
     flex: 1,
   },
@@ -519,26 +492,23 @@ const styles = StyleSheet.create({
  fab: {
     position: "absolute",
     right: 20,
-    // bottom değerini buradan sildik, dinamik olarak JSX içinde veriyoruz!
     width: 56,
     height: 56,
-    borderRadius: 20, // Tam yuvarlak yerine modern "squircle" (kapsülmsü) şekil
+    borderRadius: 20, 
     alignItems: "center",
     justifyContent: "center",
-    // Android 3D gölgeyi öldür
     elevation: 0, 
-    // Neon Glow Efekti
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.6,
     shadowRadius: 12,
   },
   headerActions: {
     flexDirection: "row",
-    gap: 8, // İkonların yan yana sığması için 10'dan 8'e düşürdük
-    marginRight:50, // Ekrana yapışmasınlar diye pay bıraktık
+    gap: 8, 
+    marginRight:50, 
   },
   headerButton: {
-    width: 38, // İkonların yan yana sığması için kibar boyut
+    width: 38, 
     height: 38,
     borderRadius: 12,
     alignItems: "center",
@@ -549,26 +519,25 @@ const styles = StyleSheet.create({
     color: "#FFF",
     fontWeight: "600"
   },
-  // YENİ: KAPSÜL (PILL) TASARIMI
   actionPill: {
     flexDirection: "row",
     alignItems: "center",
-    borderWidth: 1.5, // Çerçeveyi biraz daha belirginleştirdik (1'den 1.5'a)
+    borderWidth: 1.5, 
     borderRadius: 20, 
     height: 38, 
     marginRight: 50, 
     overflow: "hidden", 
   },
   pillButton: {
-    width: 45, // Butonları biraz daha genişlettik (44'ten 46'ya)
+    width: 45, 
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
   },
   pillDivider: {
     width: 1,
-    height: 18, // Çizgi butonlardan biraz daha kısa (Premium detay)
-    opacity: 0.5, // Çizgiyi hafif silik yaptık ki göz yormasın
+    height: 18, 
+    opacity: 0.5, 
   },
 });
 
