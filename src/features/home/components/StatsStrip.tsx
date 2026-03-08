@@ -1,123 +1,106 @@
 import React from "react";
-import { View, StyleSheet } from "react-native";
+import { View, StyleSheet, Text } from "react-native";
 import { useTranslation } from "react-i18next";
-import { LinearGradient } from "expo-linear-gradient";
-import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
-import {
-  PackageIcon,
-  TruckIcon,
-  Task01Icon,
-} from "hugeicons-react-native";
+import { UserMultipleIcon, Calendar02Icon, Task01Icon } from "hugeicons-react-native";
 
 interface StatsStripProps {
-  todayReceiving: number;
-  todayShipping: number;
-  pendingTasks: number;
+  totalCustomers?: number;
+  todayActivities?: number;
+  pendingTasks?: number;
 }
 
-interface StatItemProps {
-  icon: React.ElementType;
-  value: number;
-  label: string;
-  color: string;
-  isDark: boolean;
-}
-
-function StatItem({ icon: Icon, value, label, color, isDark }: StatItemProps): React.ReactElement {
-  
-  // Premium Renk Paleti Ayarları
-  const bgColors = isDark 
-    ? ["#161229", "#0F0B1E"] as const // Dark Gradient
-    : ["#FFFFFF", "#FFFFFF"] as const; // Light Solid
-
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.04)";
-  const iconBg = isDark ? "rgba(255,255,255,0.06)" : color + "15";
-
-  return (
-    <LinearGradient
-        colors={[...bgColors]}
-        style={[styles.statCard, { borderColor }]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0, y: 1 }}
-    >
-      <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-        <Icon size={20} color={color} strokeWidth={2.5} />
-      </View>
-      <View>
-        <Text style={[styles.value, { color: isDark ? "#F8FAFC" : "#0F172A" }]}>
-          {value}
-        </Text>
-        <Text style={[styles.label, { color: isDark ? "#94A3B8" : "#64748B" }]} numberOfLines={1}>
-          {label}
-        </Text>
-      </View>
-    </LinearGradient>
-  );
-}
-
-export function StatsStrip({ todayReceiving, todayShipping, pendingTasks }: StatsStripProps): React.ReactElement {
+export function StatsStrip({ 
+  totalCustomers = 0, 
+  todayActivities = 0, 
+  pendingTasks = 0 
+}: StatsStripProps): React.ReactElement {
   const { t } = useTranslation();
   const { themeMode } = useUIStore();
   const isDark = themeMode === "dark";
 
+  const cardBg = isDark ? "rgba(255,255,255,0.02)" : "#FFFFFF";
+  const borderColor = isDark ? "rgba(236, 72, 153, 0.25)" : "rgba(219, 39, 119, 0.15)";
+  const dividerColor = isDark ? "rgba(236, 72, 153, 0.1)" : "rgba(219, 39, 119, 0.08)";
+  const textColor = isDark ? "#F8FAFC" : "#334155"; 
+  const mutedColor = isDark ? "#94A3B8" : "#64748B";
+
+  const StatColumn = ({ icon: Icon, color, value, label, showDivider }: any) => (
+    <View style={[styles.statCol, showDivider && { borderRightWidth: 1, borderRightColor: dividerColor }]}>
+      <Icon size={22} color={color} variant="stroke" style={styles.icon} />
+      <Text style={[styles.statValue, { color: textColor }]} adjustsFontSizeToFit numberOfLines={1}>
+        {value}
+      </Text>
+      <Text style={[styles.statLabel, { color: mutedColor }]} adjustsFontSizeToFit numberOfLines={1}>
+        {label}
+      </Text>
+    </View>
+  );
+
   return (
-    <View style={styles.container}>
-      <StatItem
-        icon={PackageIcon}
-        value={todayReceiving}
-        label={t("home.todayReceiving", "Bugün Giriş")}
-        color="#3B82F6" // Blue
-        isDark={isDark}
+    <View style={[
+      styles.unifiedCard, 
+      { 
+        backgroundColor: cardBg, 
+        borderColor: borderColor,
+        shadowColor: isDark ? "rgba(236, 72, 153, 0.5)" : "#000000",
+        shadowOffset: isDark ? { width: 0, height: 0 } : { width: 0, height: 4 },
+        shadowOpacity: isDark ? 0.15 : 0.03,
+        shadowRadius: isDark ? 10 : 10,
+        elevation: isDark ? 0 : 2, 
+      }
+    ]}>
+      <StatColumn 
+        icon={UserMultipleIcon} 
+        color="#3B82F6" 
+        value={totalCustomers} 
+        label={t("home.statsCustomers")} 
+        showDivider 
       />
-      <StatItem
-        icon={TruckIcon}
-        value={todayShipping}
-        label={t("home.todayShipping", "Bugün Çıkış")}
-        color="#F59E0B" // Amber
-        isDark={isDark}
+      <StatColumn 
+        icon={Calendar02Icon} 
+        color="#EC4899" 
+        value={todayActivities} 
+        label={t("home.statsActivities")} 
+        showDivider 
       />
-      <StatItem
-        icon={Task01Icon}
-        value={pendingTasks}
-        label={t("home.pendingTasks", "Bekleyen")}
-        color="#EC4899" // Pink
-        isDark={isDark}
+      <StatColumn 
+        icon={Task01Icon} 
+        color="#F59E0B" 
+        value={pendingTasks} 
+        label={t("home.statsPending")} 
       />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flexDirection: "row",
-    gap: 12,
+  unifiedCard: { 
+    flexDirection: "row", 
+    alignItems: "center",
+    borderRadius: 20, 
+    borderWidth: 1,
+    paddingVertical: 18,
     marginBottom: 24,
   },
-  statCard: {
+  statCol: {
     flex: 1,
-    padding: 14,
-    borderRadius: 18,
-    borderWidth: 1,
-    minHeight: 105,
-    justifyContent: "space-between",
-    elevation: 1, // Hafif gölge
-  },
-  iconBox: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
+    paddingHorizontal: 6,
+  },
+  icon: {
     marginBottom: 8,
   },
-  value: {
+  statValue: {
     fontSize: 20,
-    fontWeight: "800",
-    marginBottom: 2,
+    fontWeight: "700",
+    letterSpacing: -0.5,
+    marginBottom: 4,
   },
-  label: {
-    fontSize: 11,
-    fontWeight: "600",
-  },
+  statLabel: {
+    fontSize: 12,
+    fontWeight: "500",
+    letterSpacing: 0.2,
+  }
 });

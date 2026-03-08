@@ -1,38 +1,46 @@
 import React, { useCallback, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, View } from "react-native";
+import { ActivityIndicator, FlatList, StyleSheet, View, TouchableOpacity } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
+import { RefreshIcon } from "hugeicons-react-native";
 
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
-import { useDashboard } from "../hooks/useDashboard";
 import { CRM_MODULES } from "../constants/modules";
 import type { Module } from "../types";
 
 import { ModuleCard } from "../components/ModuleCard";
 import { HomeHero } from "../components/HomeHero";
 import { StatsStrip } from "../components/StatsStrip";
+import { RecentActivities } from "../components/RecentActivities";
+
+import { useActivities } from "../../activity/hooks"; 
 
 export function HomeScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { colors, themeMode } = useUIStore();
+  const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
-  const { data, isLoading, error, refetch } = useDashboard();
+  
+  const { 
+    data: activitiesData, 
+    isLoading: isActivitiesLoading, 
+    error: activitiesError, 
+    refetch 
+  } = useActivities({ pageSize: 3, sortDirection: "desc" });
+
   const [refreshing, setRefreshing] = useState(false);
 
-  // Fallback arka plan rengi
-  const mainBg = themeMode === "dark" ? "#0c0516" : "#FFFFFF";
+  const isDark = themeMode === "dark";
+  const mainBg = isDark ? "#0c0516" : "#FAFAFA";
+  const textColor = isDark ? "#F8FAFC" : "#334155"; 
 
-  // DÜZELTME: Renkler biraz daha belirginleştirildi.
-  const gradientColors = (themeMode === "dark"
-    // Dark Mod: Opaklık 0.08'den 0.12'ye çıkarıldı
-    ? ['rgba(236, 72, 153, 0.12)', 'transparent', 'rgba(249, 115, 22, 0.12)']
-    // Light Mod: Opaklık 0.5'ten 0.8'e çıkarıldı (Mevcut pastel tonlar korundu)
-    : ['rgba(255, 235, 240, 0.8)', '#FFFFFF', 'rgba(255, 240, 225, 0.8)']) as [string, string, ...string[]];
+  const gradientColors = (isDark
+    ? ['rgba(236, 72, 153, 0.05)', 'transparent', 'rgba(249, 115, 22, 0.05)']
+    : ['rgba(255, 235, 240, 0.4)', '#FFFFFF', 'rgba(255, 240, 225, 0.4)']) as [string, string, ...string[]];
 
   const onRefresh = useCallback(async (): Promise<void> => {
     setRefreshing(true);
@@ -40,71 +48,86 @@ export function HomeScreen(): React.ReactElement {
     setRefreshing(false);
   }, [refetch]);
 
-  const onOpenModule = useCallback(
-    (route: string): void => {
-      router.push(route as never);
-    },
-    [router]
-  );
+  const onOpenModule = useCallback((route: string): void => {
+    router.push(route as never);
+  }, [router]);
 
   const renderItem = useCallback(
     ({ item }: { item: Module }) => <ModuleCard item={item} onPress={onOpenModule} />,
     [onOpenModule]
   );
 
-  if (isLoading && !data) {
+  if (activitiesError && !activitiesData) {
     return (
       <View style={[styles.center, { backgroundColor: mainBg }]}>
-        <ActivityIndicator size="large" color={colors.accent} />
+        <Text style={{ color: textColor, marginBottom: 12, fontSize: 15 }}>
+          {t("home.error")}
+        </Text>
+        <TouchableOpacity 
+          onPress={() => void onRefresh()} 
+          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1E293B' : '#F1F5F9', padding: 10, borderRadius: 12 }}
+        >
+          <RefreshIcon size={18} color={textColor} />
+          <Text style={{ color: textColor, marginLeft: 8, fontWeight: '600' }}>{t("common.retry")}</Text>
+        </TouchableOpacity>
       </View>
     );
   }
 
+  if (isActivitiesLoading && !activitiesData) {
+    return (
+      <View style={[styles.center, { backgroundColor: mainBg }]}>
+        <ActivityIndicator size="large" color="#db2777" />
+      </View>
+    );
+  }
+
+  const recentActivitiesList = activitiesData?.pages?.[0]?.items?.filter(item => item != null) || [];
+
   return (
     <View style={[styles.root, { backgroundColor: mainBg }]}>
-      <StatusBar style={themeMode === "dark" ? "light" : "dark"} />
+      <StatusBar style={isDark ? "light" : "dark"} />
 
-      {/* AMBIENT BACKGROUND */}
       <View style={StyleSheet.absoluteFill}>
-          <LinearGradient
-              colors={gradientColors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 1 }}
-              style={StyleSheet.absoluteFill}
-          />
+          <LinearGradient colors={gradientColors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
       </View>
 
       <FlatList
         data={CRM_MODULES}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
-        numColumns={2}
-        columnWrapperStyle={styles.column}
+        numColumns={4} 
+        columnWrapperStyle={styles.columnWrapper}
         refreshing={refreshing}
         onRefresh={() => void onRefresh()}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{
           paddingTop: insets.top + 10,
           paddingHorizontal: 20,
-          paddingBottom: insets.bottom + 100,
+          paddingBottom: insets.bottom + 100, 
         }}
         ListHeaderComponent={
           <View style={styles.headerContainer}>
-            <HomeHero themeMode={themeMode} />
-            
-            <Text style={[styles.sectionTitle, { color: themeMode === 'dark' ? '#F8FAFC' : '#1E293B' }]}>
-              {t("home.overview", "Genel Bakış")}
+            <HomeHero />
+            <Text style={[styles.sectionTitle, { color: textColor }]}>
+              {t("home.quickActions")}
+            </Text>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={styles.footerContainer}>
+            <Text style={[styles.sectionTitle, { color: textColor, marginTop: 12 }]}>
+              {t("home.overview")}
             </Text>
             
             <StatsStrip 
-              todayReceiving={data?.stats.todayReceiving ?? 0}
-              todayShipping={data?.stats.todayShipping ?? 0}
-              pendingTasks={data?.stats.pendingTasks ?? 0}
+              totalCustomers={0}
+              todayActivities={0}
+              pendingTasks={0}
             />
 
-            <Text style={[styles.sectionTitle, { color: themeMode === 'dark' ? '#F8FAFC' : '#1E293B', marginTop: 12 }]}>
-              {t("home.modules", "Modüller")}
-            </Text>
+            <RecentActivities activities={recentActivitiesList as any} />
+
           </View>
         }
       />
@@ -113,25 +136,10 @@ export function HomeScreen(): React.ReactElement {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-  },
-  center: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerContainer: {
-    marginBottom: 8,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
-    marginBottom: 16,
-    letterSpacing: -0.5,
-    // fontFamily: "Outfit-Bold", 
-  },
-  column: {
-    gap: 16,
-  },
+  root: { flex: 1 },
+  center: { flex: 1, alignItems: "center", justifyContent: "center" },
+  headerContainer: { marginBottom: 4 },
+  footerContainer: { marginTop: 8 },
+  sectionTitle: { fontSize: 15, fontWeight: "700", marginBottom: 16, letterSpacing: 0.2 },
+  columnWrapper: { justifyContent: "space-between", marginBottom: 12 },
 });

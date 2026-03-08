@@ -1,58 +1,100 @@
 import React from "react";
-import { View, Dimensions } from "react-native";
+import { View, StyleSheet, Text } from "react-native";
 import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
-import { Text } from "../../../components/ui/text";
-import { Rocket01Icon } from "hugeicons-react-native";
+import { useAuthStore } from "../../../store/auth";
+import { useUIStore } from "../../../store/ui";
+import { SparklesIcon } from "hugeicons-react-native";
 
-// Web referansındaki renklere yakın gradientler
-const HERO_GRADIENT = ["#2563EB", "#1E40AF"] as const; // Klasik Mavi Kurumsal
+const formatName = (name?: string, fallback: string = "") => {
+  if (!name) return fallback;
+  return name
+    .toLocaleLowerCase('tr-TR')
+    .split(' ')
+    .map(word => word.charAt(0).toLocaleUpperCase('tr-TR') + word.slice(1))
+    .join(' ');
+};
 
-interface HomeHeroProps {
-  themeMode: "light" | "dark";
-}
-
-export function HomeHero({ themeMode }: HomeHeroProps): React.ReactElement {
+export function HomeHero(): React.ReactElement {
   const { t } = useTranslation();
+  const { user } = useAuthStore();
+  const { themeMode } = useUIStore();
+  const isDark = themeMode === "dark";
+
+  const gradientColors = isDark 
+    ? ['#431A2F', '#1C1117'] 
+    : ['#FFF1F2', '#FFEDD5'];
+
+  const borderColor = isDark ? "rgba(236, 72, 153, 0.25)" : "rgba(236, 72, 153, 0.3)";
+
+  const nameColor = isDark ? "#FDF2F8" : "#4A3041"; 
+  const greetingColor = isDark ? "#F472B6" : "#BE185D";
 
   return (
-    <LinearGradient
-      colors={[...HERO_GRADIENT]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
-      style={{ 
-          borderRadius: 24, 
-          padding: 22, 
-          marginBottom: 24,
-          shadowColor: "#2563EB",
-          shadowOffset: { width: 0, height: 8 },
-          shadowOpacity: 0.25,
-          shadowRadius: 12,
-          elevation: 8 
-      }}
-    >
-      <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-        <View style={{ flex: 1, paddingRight: 16 }}>
-          <Text style={{ color: "rgba(255,255,255,0.7)", fontSize: 11, fontWeight: "700", marginBottom: 6, textTransform: "uppercase", letterSpacing: 1 }}>
-            {t("home.appName", "V3RII CRM")}
+    <View style={styles.shadowWrapper}>
+      <LinearGradient
+        colors={gradientColors as [string, string, ...string[]]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={[styles.card, { borderColor }]}
+      >
+        <View style={styles.contentWrap}>
+          
+          <View style={styles.greetingRow}>
+            <SparklesIcon size={14} color={greetingColor} variant="stroke" />
+            <Text style={[styles.greeting, { color: greetingColor }]}>
+              {t("home.welcome", "Hoş Geldiniz")}
+            </Text>
+            <SparklesIcon size={14} color={greetingColor} variant="stroke" />
+          </View>
+          
+          <Text style={[styles.name, { color: nameColor }]} numberOfLines={1}>
+            {formatName(user?.name, t("common.user", "Kullanıcı"))}
           </Text>
-          <Text style={{ color: "#FFFFFF", fontSize: 22, fontWeight: "800", lineHeight: 30 }}>
-            {t("home.tagline", "İşinize odaklanın, gerisini bize bırakın.")}
-          </Text>
+          
         </View>
-        <View style={{ 
-            width: 52, 
-            height: 52, 
-            borderRadius: 16, 
-            backgroundColor: "rgba(255,255,255,0.15)", 
-            alignItems: "center", 
-            justifyContent: "center", 
-            borderWidth: 1, 
-            borderColor: "rgba(255,255,255,0.2)" 
-        }}>
-          <Rocket01Icon size={26} color="#FFFFFF" strokeWidth={2.5} />
-        </View>
-      </View>
-    </LinearGradient>
+      </LinearGradient>
+    </View>
   );
 }
+
+const styles = StyleSheet.create({
+  shadowWrapper: {
+    marginBottom: 16, 
+    shadowColor: "#EC4899", 
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  card: {
+    borderRadius: 18, 
+    borderWidth: 1,
+    paddingVertical: 10, 
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contentWrap: { 
+    alignItems: "center",
+    justifyContent: "center"
+  },
+  greetingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 2, 
+    gap: 4, 
+  },
+  greeting: { 
+    fontSize: 10, 
+    fontWeight: "700", 
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+  },
+  name: { 
+    fontSize: 18, 
+    fontWeight: "700",
+    letterSpacing: -0.4,
+    textAlign: "center",
+  }
+});
