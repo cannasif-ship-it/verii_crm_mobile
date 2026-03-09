@@ -251,8 +251,8 @@ export function BottomNavBar(): React.ReactElement {
             
             <View style={styles.sheetHeader}>
               <View style={[styles.sheetHandle, { backgroundColor: THEME.sheetBorder }]} />
-              <Text style={[styles.sheetTitle, { color: THEME.text }]}>Hızlı Satış İşlemi</Text>
-              <Text style={[styles.sheetSubtitle, { color: THEME.textMute }]}>Lütfen oluşturmak istediğiniz belgeyi seçin.</Text>
+              <Text style={[styles.sheetTitle, { color: THEME.text }]}>{t("salesActionSheet.title")}</Text>
+              <Text style={[styles.sheetSubtitle, { color: THEME.textMute }]}>{t("salesActionSheet.subtitle")}</Text>
             </View>
 
             <View style={styles.sheetOptions}>
@@ -265,8 +265,8 @@ export function BottomNavBar(): React.ReactElement {
                   <Invoice01Icon size={22} color={THEME.active} variant="stroke" />
                 </View>
                 <View style={styles.sheetOptionTextWrap}>
-                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>Teklif Oluştur</Text>
-                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>Müşteriye yeni bir fiyat teklifi hazırlayın</Text>
+                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>{t("salesActionSheet.quotationTitle")}</Text>
+                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>{t("salesActionSheet.quotationDescription")}</Text>
                 </View>
                 <ArrowRight01Icon size={20} color={THEME.textMute} />
               </TouchableOpacity>
@@ -280,8 +280,8 @@ export function BottomNavBar(): React.ReactElement {
                   <ShoppingBag01Icon size={22} color={THEME.active} variant="stroke" />
                 </View>
                 <View style={styles.sheetOptionTextWrap}>
-                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>Sipariş Oluştur</Text>
-                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>Doğrudan yeni bir satış siparişi girin</Text>
+                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>{t("salesActionSheet.orderTitle")}</Text>
+                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>{t("salesActionSheet.orderDescription")}</Text>
                 </View>
                 <ArrowRight01Icon size={20} color={THEME.textMute} />
               </TouchableOpacity>
@@ -295,8 +295,8 @@ export function BottomNavBar(): React.ReactElement {
                   <NoteIcon size={22} color={THEME.active} variant="stroke" />
                 </View>
                 <View style={styles.sheetOptionTextWrap}>
-                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>Talep Oluştur</Text>
-                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>Müşterinin ürün veya hizmet talebini kaydedin</Text>
+                  <Text style={[styles.sheetOptionTitle, { color: THEME.text }]}>{t("salesActionSheet.demandTitle")}</Text>
+                  <Text style={[styles.sheetOptionDesc, { color: THEME.textMute }]}>{t("salesActionSheet.demandDescription")}</Text>
                 </View>
                 <ArrowRight01Icon size={20} color={THEME.textMute} />
               </TouchableOpacity>

@@ -5,6 +5,7 @@ import { StatusBar } from "expo-status-bar";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui"; 
 import { API_BASE_URL } from "../../../constants/config";
+import i18n from "../../../locales";
 import type { CustomerDto, CustomerImageDto } from "../types";
 import { 
   Call02Icon, 
@@ -41,12 +42,14 @@ const getAvatarColor = (name: string) => {
 function formatDate(dateString?: string | null): string | null {
   if (!dateString) return null;
   const date = new Date(dateString);
-  return date.toLocaleDateString("tr-TR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
+  const locale = i18n.language === "de" ? "de-DE" : i18n.language === "en" ? "en-US" : "tr-TR";
+  return date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
 
 function formatCurrency(value?: number | null): string | null {
   if (value === undefined || value === null) return null;
-  return new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY" }).format(value);
+  const locale = i18n.language === "de" ? "de-DE" : i18n.language === "en" ? "en-US" : "tr-TR";
+  return new Intl.NumberFormat(locale, { style: "currency", currency: "TRY" }).format(value);
 }
 
 function toAbsoluteImageUrl(path: string | null | undefined): string | undefined {
@@ -84,7 +87,7 @@ interface DetailRowProps {
 
 // PROFESYONEL DOKUNUŞ: Veri yoksa alanı gizlemek yerine "Belirtilmemiş" yazıyoruz. CRM standartı budur.
 function DetailRow({ label, value, icon, theme, isLast }: DetailRowProps) {
-  const displayValue = value ? String(value) : "Belirtilmemiş";
+  const displayValue = value ? String(value) : i18n.t("customer.unspecified");
   const isMuted = !value;
 
   return (

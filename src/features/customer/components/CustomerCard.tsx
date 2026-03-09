@@ -15,6 +15,7 @@ import {
 } from "hugeicons-react-native";
 import type { CustomerDto } from "../types"; 
 import { useUIStore } from "../../../store/ui";
+import i18n from "../../../locales";
 
 const { width } = Dimensions.get('window');
 const GAP = 12;
@@ -164,7 +165,7 @@ const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProp
 
               {(!formattedPhone && !email) ? (
                  <Text style={{ color: THEME.textMute, fontSize: 11, fontStyle: 'italic' }}>
-                   İletişim bilgisi yok
+                   {i18n.t("customer.noContactInfo")}
                  </Text>
               ) : null}
             </View>
@@ -175,7 +176,7 @@ const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProp
               <View style={[styles.row, { flex: 1, paddingRight: 8 }]}>
                 <Location01Icon size={14} color={THEME.textSub} variant="stroke" strokeWidth={1.5} />
                 <Text style={[styles.footerText, { color: THEME.textSub }]} numberOfLines={1}>
-                  {locationText || "Konum belirtilmedi"}
+                  {locationText || i18n.t("customer.locationNotSpecified")}
                 </Text>
               </View>
 

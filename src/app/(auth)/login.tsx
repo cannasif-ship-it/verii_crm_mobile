@@ -90,7 +90,7 @@ export default function LoginScreen(): React.ReactElement {
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert(t("common.error", "Hata"), t("auth.linkError", "Bağlantı açılamıyor."));
+        Alert.alert(t("common.error"), t("auth.linkError"));
       }
     } catch (error) {
       console.error(error);
@@ -98,7 +98,7 @@ export default function LoginScreen(): React.ReactElement {
   };
 
   const handleComingSoon = () => {
-    Alert.alert(t("common.info", "Bilgi"), t("common.comingSoon", "Yakında!"));
+    Alert.alert(t("common.info"), t("common.comingSoon"));
   };
 
   const safeBottomPadding = Math.max(insets.bottom + 20, 40);
@@ -197,7 +197,6 @@ export default function LoginScreen(): React.ReactElement {
                 <Text className="text-[10px] color-slate-400 text-center font-semibold tracking-[2px] uppercase leading-5">
                   <Trans
                     i18nKey="auth.login.slogan"
-                    defaults="İŞİNİZİ TAHMİNLERLE DEĞİL, <1>v3rii</1> İLE YÖNETİN."
                     components={{
                       1: <Text className="font-extrabold text-pink-500 tracking-[3px]" />,
                     }}

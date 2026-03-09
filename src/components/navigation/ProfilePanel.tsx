@@ -57,9 +57,9 @@ interface ProfilePanelProps {
 export default function ProfilePanel({
   isOpen,
   onClose,
-  userName = "Misafir",
+  userName,
   email = "demo@v3rii.com",
-  branch = "Merkez Şube",
+  branch,
   profileImageUrl,
   onLogout,
 }: ProfilePanelProps) {
@@ -78,9 +78,9 @@ export default function ProfilePanel({
   const backdropOpacity = useRef(new Animated.Value(0)).current;
 
   const SUPPORTED_LANGUAGES = [
-    { id: 'tr', label: 'Türkçe', flag: '🇹🇷' },
-    { id: 'en', label: 'English', flag: '🇬🇧' },
-    { id: 'de', label: 'Deutsch', flag: '🇩🇪' },
+    { id: 'tr', label: t("language.turkish"), flag: '🇹🇷' },
+    { id: 'en', label: t("language.english"), flag: '🇬🇧' },
+    { id: 'de', label: t("language.german"), flag: '🇩🇪' },
   ];
 
   useEffect(() => {
@@ -182,12 +182,12 @@ export default function ProfilePanel({
                 </View>
               </View>
 
-              <Text style={[styles.userName, { color: colors.text }]}>{userName}</Text>
+              <Text style={[styles.userName, { color: colors.text }]}>{userName || t("profile.guestUser")}</Text>
               <Text style={[styles.userEmail, { color: colors.textMuted }]}>{email}</Text>
 
               <View style={[styles.branchBadge, { backgroundColor: ACTIVE_BG_COLOR }]}>
                 <Store01Icon size={14} color={ACTIVE_COLOR} variant="stroke" style={{ marginRight: 6 }} />
-                <Text style={[styles.branchText, { color: ACTIVE_COLOR }]}>{branch}</Text>
+                <Text style={[styles.branchText, { color: ACTIVE_COLOR }]}>{branch || t("profile.defaultBranch")}</Text>
               </View>
             </View>
 

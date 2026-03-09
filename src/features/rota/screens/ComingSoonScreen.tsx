@@ -5,7 +5,7 @@ import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text"; // Kendi Text bileşeninin yolu
 import { ScreenHeader } from "../../../components/navigation"; // Kendi Header bileşeninin yolu
 import { useUIStore } from "../../../store/ui";
-import { Location01Icon, Time02Icon } from "hugeicons-react-native";
+import { Time02Icon } from "hugeicons-react-native";
 
 export default function ComingSoonScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -28,11 +28,11 @@ export default function ComingSoonScreen(): React.ReactElement {
         </View>
         
         <Text style={[styles.title, { color: colors.text }]}>
-          Çok Yakında!
+          {t("common.comingSoon")}
         </Text>
         
         <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-          Müşterileriniz için en ideal rotaları oluşturabileceğiniz harita ekranı çok yakında hizmetinizde olacak.
+          {t("rota.comingSoonDescription")}
         </Text>
       </View>
     </View>

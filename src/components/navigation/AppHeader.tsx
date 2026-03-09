@@ -99,7 +99,7 @@ export function AppHeader(): React.ReactElement {
       <ProfilePanel 
         isOpen={isProfileOpen} 
         onClose={() => setProfileOpen(false)}
-        userName={user?.name || "Kullanıcı"}
+        userName={user?.name || t("common.user")}
         email={user?.email}
         branch={branch?.name}
         profileImageUrl={profileImageUrl}

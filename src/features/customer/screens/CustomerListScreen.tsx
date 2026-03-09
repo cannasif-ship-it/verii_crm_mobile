@@ -160,8 +160,8 @@ export function CustomerListScreen() {
   const isAnyFilterActive = appliedFilter !== 'all' || appliedCityId !== null || appliedDistrictId !== null;
   
   // Dropdown'da gösterilecek seçili isimler
-  const tempSelectedCityName = cities?.find(c => c.id === tempCityId)?.name || "Tüm İller";
-  const tempSelectedDistrictName = tempDistricts?.find(d => d.id === tempDistrictId)?.name || "Tüm İlçeler";
+  const tempSelectedCityName = cities?.find(c => c.id === tempCityId)?.name || t("customer.allCities");
+  const tempSelectedDistrictName = tempDistricts?.find(d => d.id === tempDistrictId)?.name || t("customer.allDistricts");
 
   return (
     <View style={[styles.container, { backgroundColor: mainBg }]}>
@@ -202,13 +202,13 @@ export function CustomerListScreen() {
           {(!isLoading || data) && (
             <View style={styles.metaRow}>
               <Text style={[styles.metaText, { color: theme.textMute }]}>
-                {totalCount} müşteri bulundu
+                {t("customer.foundCount", { count: totalCount })}
               </Text>
               
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <TouchableOpacity style={[styles.sortBtn, { marginRight: 12, position: 'relative' }]} onPress={openFilterModal}>
                   <Text style={[styles.sortText, { color: isAnyFilterActive ? theme.primary : theme.textMute }]}>
-                    Filtrele
+                    {t("customer.filter")}
                   </Text>
                   <FilterIcon size={16} color={isAnyFilterActive ? theme.primary : theme.textMute} strokeWidth={2.5} style={{ marginLeft: 4 }} />
                   {isAnyFilterActive && <View style={[styles.activeFilterDot, { backgroundColor: theme.primary }]} />}
@@ -216,7 +216,7 @@ export function CustomerListScreen() {
 
                 <TouchableOpacity style={styles.sortBtn} onPress={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}>
                   <Text style={[styles.sortText, { color: theme.primary }]}>
-                    {sortOrder === 'desc' ? 'En Yeniler' : 'En Eskiler'}
+                    {sortOrder === 'desc' ? t("customer.sortNewest") : t("customer.sortOldest")}
                   </Text>
                   {sortOrder === 'desc' ? (
                     <ArrowDown01Icon size={16} color={theme.primary} strokeWidth={2.5} style={{ marginLeft: 4 }} />

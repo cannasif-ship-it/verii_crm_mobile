@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { View, TextInput, StyleSheet, TouchableOpacity } from "react-native";
 import { Search01Icon, Cancel01Icon } from "hugeicons-react-native";
+import i18n from "../../../locales";
 import { useUIStore } from "../../../store/ui";
 
 interface SearchInputProps {
@@ -12,7 +13,7 @@ interface SearchInputProps {
 export function SearchInput({
   value,
   onSearch,
-  placeholder = "Ara...",
+  placeholder = i18n.t("common.search"),
 }: SearchInputProps): React.ReactElement {
   // --- STATE ---
   const [localValue, setLocalValue] = useState(value);

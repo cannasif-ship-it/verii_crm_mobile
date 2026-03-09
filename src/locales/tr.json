@@ -36,8 +36,12 @@
     "back": "Geri",
     "close": "Kapat",
     "user": "Kullanıcı",
+    "info": "Bilgi",
     "networkError": "Bağlantı hatası. Lütfen internet bağlantınızı kontrol edin.",
     "unknownError": "Beklenmeyen bir hata oluştu",
+    "unexpectedAppError": "Uygulama beklenmedik bir hatayla karşılaştı.",
+    "errorDetails": "Hata Detayı:",
+    "comingSoon": "Çok Yakında!",
     "next": "Sonraki",
     "tabDetail": "Detay",
     "tabApprovalFlow": "Onay Akışı",
@@ -97,6 +101,8 @@
   "settings": "Profil Ayarları",
   "preferences": "Tercihler",
   "support": "Destek",
+  "guestUser": "Misafir",
+  "defaultBranch": "Merkez Şube",
   "help": "Yardım Merkezi",
   "contactUs": "Bize Ulaşın",
   "contactMail": "E-Posta Gönder",
@@ -150,6 +156,7 @@
     "login": {
       "slogan": "İşinizi tahminlerle değil, VERII CRM ile yönetin."
     },
+    "linkError": "Bağlantı açılamıyor.",
     "loggingIn": "Giriş yapılıyor...",
     "loginError": "Giriş başarısız. Lütfen bilgilerinizi kontrol edin.",
     "logout": "Çıkış Yap"
@@ -279,6 +286,14 @@
     "defaultShippingAddressPlaceholder": "Seçiniz",
     "noShippingAddress": "Sevk adresi bulunamadı",
     "search": "Müşteri Ara...",
+    "foundCount": "{{count}} müşteri bulundu",
+    "filter": "Filtrele",
+    "sortNewest": "En Yeniler",
+    "sortOldest": "En Eskiler",
+    "allCities": "Tüm İller",
+    "allDistricts": "Tüm İlçeler",
+    "noContactInfo": "İletişim bilgisi yok",
+    "locationNotSpecified": "Konum belirtilmedi",
     "view360": "360 Görünüm",
     "quickQuotation": "Hızlı Teklif Oluştur",
     "images": "Görseller",
@@ -394,6 +409,7 @@
   },
   "rota": {
     "title": "Rota",
+    "comingSoonDescription": "Müşterileriniz için en ideal rotaları oluşturabileceğiniz harita ekranı çok yakında hizmetinizde olacak.",
     "requestingLocation": "Konum alınıyor...",
     "permissionDenied": "Konum izni verilmedi",
     "allowLocation": "Konuma İzin Ver",
@@ -429,6 +445,16 @@
     "quickAddPlaceholder": "Aktivite konusu girin...",
     "addForDate": "Bu tarihe aktivite ekle",
     "quickAddSuccess": "Aktivite başarıyla oluşturuldu"
+  },
+  "salesActionSheet": {
+    "title": "Hızlı Satış İşlemi",
+    "subtitle": "Lütfen oluşturmak istediğiniz belgeyi seçin.",
+    "quotationTitle": "Teklif Oluştur",
+    "quotationDescription": "Müşteriye yeni bir fiyat teklifi hazırlayın",
+    "orderTitle": "Sipariş Oluştur",
+    "orderDescription": "Doğrudan yeni bir satış siparişi girin",
+    "demandTitle": "Talep Oluştur",
+    "demandDescription": "Müşterinin ürün veya hizmet talebini kaydedin"
   },
   "activity": {
     "title": "Aktiviteler",

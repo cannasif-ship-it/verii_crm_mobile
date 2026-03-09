@@ -36,8 +36,12 @@
     "back": "Back",
     "close": "Close",
     "user": "User",
+    "info": "Info",
     "networkError": "Connection error. Please check your internet connection.",
     "unknownError": "An unexpected error occurred",
+    "unexpectedAppError": "The application encountered an unexpected error.",
+    "errorDetails": "Error Details:",
+    "comingSoon": "Coming Soon!",
     "next": "Next",
     "tabDetail": "Detail",
     "tabApprovalFlow": "Approval Flow",
@@ -97,6 +101,8 @@
   "settings": "Profile Settings",
   "preferences": "Preferences",
   "support": "Support",
+  "guestUser": "Guest",
+  "defaultBranch": "Head Office",
   "help": "Help Center",
   "contactUs": "Contact Us",
   "contactMail": "Send Email",
@@ -150,6 +156,7 @@
     "login": {
       "slogan": "Manage your business with VERII CRM, not guesses."
     },
+    "linkError": "Unable to open the link.",
     "loggingIn": "Signing in...",
     "loginError": "Login failed. Please check your credentials.",
     "logout": "Sign Out"
@@ -290,6 +297,14 @@
     "defaultShippingAddressPlaceholder": "Select",
     "noShippingAddress": "No shipping address found",
     "search": "Search Customer...",
+    "foundCount": "{{count}} customers found",
+    "filter": "Filter",
+    "sortNewest": "Newest First",
+    "sortOldest": "Oldest First",
+    "allCities": "All Cities",
+    "allDistricts": "All Districts",
+    "noContactInfo": "No contact information",
+    "locationNotSpecified": "Location not specified",
     "view360": "360 View",
     "quickQuotation": "Create Quick Quote",
     "images": "Images",
@@ -405,6 +420,7 @@
   },
   "rota": {
     "title": "Route",
+    "comingSoonDescription": "The map screen where you can build the best routes for your customers will be available very soon.",
     "requestingLocation": "Getting location...",
     "permissionDenied": "Location permission denied",
     "allowLocation": "Allow Location",
@@ -440,6 +456,16 @@
     "quickAddPlaceholder": "Enter activity subject...",
     "addForDate": "Add activity for this date",
     "quickAddSuccess": "Activity created successfully"
+  },
+  "salesActionSheet": {
+    "title": "Quick Sales Action",
+    "subtitle": "Please choose the document you want to create.",
+    "quotationTitle": "Create Quotation",
+    "quotationDescription": "Prepare a new price quotation for the customer",
+    "orderTitle": "Create Order",
+    "orderDescription": "Enter a new sales order directly",
+    "demandTitle": "Create Demand",
+    "demandDescription": "Record the customer's product or service request"
   },
   "activity": {
     "title": "Activities",

@@ -2,6 +2,7 @@ import React, { Component, ErrorInfo, ReactNode } from "react";
 import { View, StyleSheet, TouchableOpacity } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { Text } from "./ui/text";
+import i18n from "../locales";
 
 interface Props {
   children: ReactNode;
@@ -47,14 +48,14 @@ export class ErrorBoundary extends Component<Props, State> {
         <View style={styles.container}>
           <View style={styles.content}>
             <Text style={styles.icon}>⚠️</Text>
-            <Text style={styles.title}>Bir Hata Oluştu</Text>
+            <Text style={styles.title}>{i18n.t("common.error")}</Text>
             <Text style={styles.subtitle}>
-              Uygulama beklenmedik bir hatayla karşılaştı.
+              {i18n.t("common.unexpectedAppError")}
             </Text>
 
             {__DEV__ && this.state.error && (
               <FlatListScrollView style={styles.errorBox} contentContainerStyle={styles.errorBoxContent}>
-                <Text style={styles.errorTitle}>Hata Detayı:</Text>
+                <Text style={styles.errorTitle}>{i18n.t("common.errorDetails")}</Text>
                 <Text style={styles.errorText}>{this.state.error.toString()}</Text>
                 {this.state.errorInfo && (
                   <Text style={styles.stackText}>
@@ -69,7 +70,7 @@ export class ErrorBoundary extends Component<Props, State> {
               onPress={this.handleReset}
               activeOpacity={0.8}
             >
-              <Text style={styles.buttonText}>Tekrar Dene</Text>
+              <Text style={styles.buttonText}>{i18n.t("common.retry")}</Text>
             </TouchableOpacity>
           </View>
         </View>

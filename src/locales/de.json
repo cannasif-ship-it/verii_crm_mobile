@@ -1,11 +1,16 @@
 {
   "common": {
+    "loading": "Wird geladen...",
     "error": "Ein Fehler ist aufgetreten",
     "retry": "Erneut versuchen",
     "cancel": "Abbrechen",
     "delete": "Löschen",
     "confirm": "Bestätigen",
-    "loading": "Wird geladen..."
+    "user": "Benutzer",
+    "info": "Info",
+    "unexpectedAppError": "Die Anwendung ist auf einen unerwarteten Fehler gestoßen.",
+    "errorDetails": "Fehlerdetails:",
+    "comingSoon": "Demnächst verfügbar!"
   },
   "language": {
     "title": "Sprache",
@@ -22,14 +27,31 @@
     "account": "Konto",
     "settings": "Profileinstellungen",
     "preferences": "Einstellungen",
-    "support": "Support"
+    "support": "Support",
+    "guestUser": "Gast",
+    "defaultBranch": "Hauptfiliale"
   },
   "auth": {
     "welcome": "Willkommen",
     "welcomeSubtitle": "Melden Sie sich an, um fortzufahren",
+    "linkError": "Link konnte nicht geöffnet werden.",
     "login": {
       "slogan": "Verwalten Sie Ihr Unternehmen mit VERII CRM."
     }
+  },
+  "salesActionSheet": {
+    "title": "Schnelle Verkaufsaktion",
+    "subtitle": "Bitte wählen Sie das Dokument aus, das Sie erstellen möchten.",
+    "quotationTitle": "Angebot erstellen",
+    "quotationDescription": "Erstellen Sie ein neues Preisangebot für den Kunden",
+    "orderTitle": "Auftrag erstellen",
+    "orderDescription": "Geben Sie direkt einen neuen Verkaufsauftrag ein",
+    "demandTitle": "Anfrage erstellen",
+    "demandDescription": "Erfassen Sie die Produkt- oder Serviceanfrage des Kunden"
+  },
+  "rota": {
+    "title": "Route",
+    "comingSoonDescription": "Der Kartenbildschirm, mit dem Sie die besten Routen für Ihre Kunden erstellen können, ist bald verfügbar."
   },
   "customer": {
     "detail": "Kundendetail",
@@ -41,6 +63,14 @@
     "creditLimit": "Kreditlimit",
     "taxNumber": "Steuernummer",
     "approvalStatus": "Genehmigungsstatus",
+    "foundCount": "{{count}} Kunden gefunden",
+    "filter": "Filtern",
+    "sortNewest": "Neueste zuerst",
+    "sortOldest": "Älteste zuerst",
+    "allCities": "Alle Städte",
+    "allDistricts": "Alle Bezirke",
+    "noContactInfo": "Keine Kontaktinformationen",
+    "locationNotSpecified": "Standort nicht angegeben",
     "statusCompleted": "Abgeschlossen",
     "statusPending": "Ausstehend",
     "createdBy": "Erstellt von",

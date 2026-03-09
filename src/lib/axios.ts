@@ -5,6 +5,7 @@ import { storage } from "./storage";
 import type { ApiResponse, Branch } from "../features/auth/types";
 import { useAuthStore } from "../store/auth";
 import { router } from "expo-router";
+import i18n from "../locales";
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,
@@ -76,7 +77,7 @@ apiClient.interceptors.response.use(
       router.replace("/(auth)/login");
     }
 
-    let errorMessage = "Bir hata oluştu";
+    let errorMessage = i18n.t("common.error");
 
     if (error.response?.data) {
       const responseData = error.response.data as any;
