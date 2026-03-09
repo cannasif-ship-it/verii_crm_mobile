@@ -71,3 +71,10 @@ export interface StockRelationCreateDto {
   description?: string;
   isMandatory?: boolean;
 }
+
+export interface StockGroupDto {
+  isletmeKodu: number;
+  subeKodu: number;
+  grupKodu?: string;
+  grupAdi?: string;
+}

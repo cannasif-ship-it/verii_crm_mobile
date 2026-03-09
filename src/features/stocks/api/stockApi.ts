@@ -2,6 +2,7 @@ import { apiClient } from "../../../lib/axios";
 import type { ApiResponse } from "../../auth/types";
 import type {
   StockGetDto,
+  StockGroupDto,
   StockRelationDto,
   StockRelationCreateDto,
   PagedParams,
@@ -141,5 +142,21 @@ export const stockApi = {
 
   deleteRelation: async (stockId: number, relationId: number): Promise<void> => {
     await apiClient.delete<ApiResponse<void>>(`/api/Stock/${stockId}/relations/${relationId}`);
+  },
+
+  getGroups: async (): Promise<StockGroupDto[]> => {
+    const response = await apiClient.get<ApiResponse<StockGroupDto[]>>("/api/Erp/getStokGroup");
+    if (!response.data.success) {
+      throw new Error(response.data.message || "Stok gruplari alinamadi");
+    }
+
+    return (response.data.data ?? [])
+      .map((item) => ({
+        isletmeKodu: Number(item.isletmeKodu ?? item.IsletmeKodu ?? 0),
+        subeKodu: Number(item.subeKodu ?? item.SubeKodu ?? 0),
+        grupKodu: (item.grupKodu ?? item.GrupKodu ?? undefined) as string | undefined,
+        grupAdi: (item.grupAdi ?? item.GrupAdi ?? undefined) as string | undefined,
+      }))
+      .filter((item) => Boolean(item.grupKodu || item.grupAdi));
   },
 };
