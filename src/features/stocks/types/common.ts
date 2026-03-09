@@ -12,6 +12,7 @@ export interface PagedParams {
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   filters?: PagedFilter[];
+  filterLogic?: "and" | "or";
 }
 
 export interface PagedResponse<T> {

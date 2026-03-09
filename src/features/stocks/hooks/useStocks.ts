@@ -27,15 +27,36 @@ export function useStocks(params: UseStocksParams = {}, searchQuery?: string) {
     queryFn: ({ pageParam = 1 }) => {
       // Filtre dizisini kopyalıyoruz (State mutation olmasın diye)
       const activeFilters: PagedFilter[] = [...filters];
+      let filterLogic: "and" | "or" | undefined;
 
-      // Eğer arama metni varsa (en az 2 karakter), Backend'in beklediği filtreyi ekle
       if (searchQuery && searchQuery.trim().length >= 2) {
-        activeFilters.push({
-          // DİKKAT: Senin types.ts dosyan 'column' bekliyor!
-          column: "StockName", // Backend'deki veritabanı sütun/property adı
-          operator: "contains",
-          value: searchQuery.trim(),
+        const query = searchQuery.trim();
+        const searchableColumns = [
+          "StockName",
+          "ErpStockCode",
+          "GrupKodu",
+          "GrupAdi",
+          "Kod1",
+          "Kod1Adi",
+          "Kod2",
+          "Kod2Adi",
+          "Kod3",
+          "Kod3Adi",
+          "Kod4",
+          "Kod4Adi",
+          "Kod5",
+          "Kod5Adi",
+          "UreticiKodu",
+        ];
+
+        searchableColumns.forEach((column) => {
+          activeFilters.push({
+            column,
+            operator: "contains",
+            value: query,
+          });
         });
+        filterLogic = "or";
       }
 
       return stockApi.getList({
@@ -44,6 +65,7 @@ export function useStocks(params: UseStocksParams = {}, searchQuery?: string) {
         sortBy,
         sortDirection,
         filters: activeFilters,
+        filterLogic,
       });
     },
     

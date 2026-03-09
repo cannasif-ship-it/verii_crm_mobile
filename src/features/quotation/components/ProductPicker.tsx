@@ -16,7 +16,8 @@ import type { ThemeColors } from "../../../constants/theme";
 import { useUIStore } from "../../../store/ui";
 import { VoiceSearchButton } from "./VoiceSearchButton";
 import { useStocks, useStock, useStockRelations, useStockRelationsAsRelated } from "../../stocks/hooks";
-import type { StockGetDto, StockRelationDto, PagedFilter } from "../../stocks/types";
+import type { StockGetDto, StockRelationDto } from "../../stocks/types";
+import { filterAndRankStocks } from "../../stocks/utils/advancedSearch";
 
 export interface ProductPickerRef {
   close: () => void;
@@ -100,6 +101,11 @@ function StockListItem({
           <Text style={[styles.stockCode, { color: mutedColor }]} numberOfLines={1}>
             {item.erpStockCode}
           </Text>
+          {(item.grupKodu || item.grupAdi) ? (
+            <Text style={[styles.stockMeta, { color: mutedColor }]} numberOfLines={1}>
+              {[item.grupKodu, item.grupAdi].filter(Boolean).join(" · ")}
+            </Text>
+          ) : null}
         </View>
         {isSelected && (
           <View style={[styles.checkmark, { backgroundColor: brandColor }]}>
@@ -207,23 +213,12 @@ function ProductPickerInner(
     }
   }, [parentVisible]);
 
-  const filters: PagedFilter[] | undefined = useMemo(() => {
-    if (searchText.trim().length >= 2) {
-      return [
-        { column: "stockName", operator: "contains", value: searchText.trim() },
-        { column: "erpStockCode", operator: "contains", value: searchText.trim() },
-      ];
-    }
-    return undefined;
-  }, [searchText]);
-
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks({
-    filters,
-  });
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks({}, searchText);
 
   const stocks = useMemo(() => {
-    return data?.pages.flatMap((page) => page.items) || [];
-  }, [data]);
+    const rawStocks = data?.pages.flatMap((page) => page.items) || [];
+    return filterAndRankStocks(rawStocks, searchText);
+  }, [data, searchText]);
 
   const handleOpen = useCallback(() => {
     if (!disabled) {
@@ -523,7 +518,7 @@ function ProductPickerInner(
                 <View style={[styles.searchRow, { backgroundColor: inputBg, borderBottomColor: borderColor }]}>
                   <TextInput
                     style={[styles.searchInput, { color: textColor, borderColor: borderColor }]}
-                    placeholder="Ürün adı veya kodu ile ara..."
+                    placeholder="Stok kodu, stok adı, grup kodu ile ara..."
                     placeholderTextColor={mutedColor}
                     value={searchText}
                     onChangeText={setSearchText}
@@ -782,6 +777,10 @@ const styles = StyleSheet.create({
   stockCode: {
     fontSize: 13,
     fontWeight: "500",
+  },
+  stockMeta: {
+    fontSize: 12,
+    marginTop: 4,
   },
   checkmark: {
     width: 24,

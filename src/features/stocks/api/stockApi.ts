@@ -70,6 +70,7 @@ export const stockApi = {
     if (params.pageSize) queryParams.append("PageSize", params.pageSize.toString());
     queryParams.append("SortBy", params.sortBy || "StockName"); // Sıralama dinamik olsun
     queryParams.append("SortDirection", params.sortDirection || "asc");
+    if (params.filterLogic) queryParams.append("FilterLogic", params.filterLogic);
 
     // 2. FİLTRELERİ EKLEME (BURASI EKSİKTİ!)
     // Backend'in anladığı dil: Filters[0].Column=StockName&Filters[0].Value=dene
@@ -151,12 +152,15 @@ export const stockApi = {
     }
 
     return (response.data.data ?? [])
-      .map((item) => ({
-        isletmeKodu: Number(item.isletmeKodu ?? item.IsletmeKodu ?? 0),
-        subeKodu: Number(item.subeKodu ?? item.SubeKodu ?? 0),
-        grupKodu: (item.grupKodu ?? item.GrupKodu ?? undefined) as string | undefined,
-        grupAdi: (item.grupAdi ?? item.GrupAdi ?? undefined) as string | undefined,
-      }))
+      .map((item) => {
+        const raw = item as StockGroupDto & Record<string, unknown>;
+        return {
+          isletmeKodu: Number(raw.isletmeKodu ?? raw.IsletmeKodu ?? 0),
+          subeKodu: Number(raw.subeKodu ?? raw.SubeKodu ?? 0),
+          grupKodu: (raw.grupKodu ?? raw.GrupKodu ?? undefined) as string | undefined,
+          grupAdi: (raw.grupAdi ?? raw.GrupAdi ?? undefined) as string | undefined,
+        };
+      })
       .filter((item) => Boolean(item.grupKodu || item.grupAdi));
   },
 };
