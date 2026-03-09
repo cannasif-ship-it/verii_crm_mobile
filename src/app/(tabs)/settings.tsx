@@ -71,6 +71,7 @@ export default function SettingsScreen(): React.ReactElement {
   const SUPPORTED_LANGUAGES = [
     { id: 'tr', label: t('language.turkish', 'Türkçe'), flag: '🇹🇷' },
     { id: 'en', label: t('language.english', 'English'), flag: '🇬🇧' },
+    { id: 'de', label: t('language.german', 'Deutsch'), flag: '🇩🇪' },
   ];
 
   const myProfileQuery = useQuery({
@@ -121,7 +122,7 @@ export default function SettingsScreen(): React.ReactElement {
     router.back();
   };
 
-  const handleLanguageChange = async (lang: "tr" | "en"): Promise<void> => {
+  const handleLanguageChange = async (lang: "tr" | "en" | "de"): Promise<void> => {
     await setLanguage(lang);
     setCurrentLang(lang);
   };

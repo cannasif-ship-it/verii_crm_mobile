@@ -80,6 +80,7 @@ export default function ProfilePanel({
   const SUPPORTED_LANGUAGES = [
     { id: 'tr', label: 'Türkçe', flag: '🇹🇷' },
     { id: 'en', label: 'English', flag: '🇬🇧' },
+    { id: 'de', label: 'Deutsch', flag: '🇩🇪' },
   ];
 
   useEffect(() => {
@@ -100,7 +101,7 @@ export default function ProfilePanel({
     }
   }, [isOpen, translateX, backdropOpacity]);
 
-  const handleLanguageChange = async (lang: "tr" | "en") => {
+  const handleLanguageChange = async (lang: "tr" | "en" | "de") => {
     await setLanguage(lang);
     setCurrentLang(lang);
   };
@@ -235,7 +236,7 @@ export default function ProfilePanel({
                     return (
                       <TouchableOpacity
                         key={lang.id}
-                        onPress={() => handleLanguageChange(lang.id as "tr" | "en")}
+                        onPress={() => handleLanguageChange(lang.id as "tr" | "en" | "de")}
                         style={[
                           styles.langPill, 
                           { 

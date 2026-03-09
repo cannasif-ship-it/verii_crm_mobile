@@ -5,10 +5,12 @@ import { LANGUAGE_STORAGE_KEY } from "../constants/storage";
 
 import tr from "./tr.json";
 import en from "./en.json";
+import de from "./de.json";
 
 const resources = {
   tr: { translation: tr },
   en: { translation: en },
+  de: { translation: de },
 };
 
 i18n.use(initReactI18next).init({
@@ -25,7 +27,7 @@ i18n.use(initReactI18next).init({
 
 export async function initLanguage(): Promise<void> {
   const savedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-  if (savedLanguage === "tr" || savedLanguage === "en") {
+  if (savedLanguage === "tr" || savedLanguage === "en" || savedLanguage === "de") {
     i18n.changeLanguage(savedLanguage);
   } else {
     i18n.changeLanguage("tr");
@@ -33,7 +35,7 @@ export async function initLanguage(): Promise<void> {
   }
 }
 
-export async function setLanguage(lang: "tr" | "en"): Promise<void> {
+export async function setLanguage(lang: "tr" | "en" | "de"): Promise<void> {
   await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
   i18n.changeLanguage(lang);
 }

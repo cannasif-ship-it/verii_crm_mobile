@@ -177,7 +177,8 @@
   "language": {
     "title": "Language",
     "turkish": "Turkish",
-    "english": "English"
+    "english": "English",
+    "german": "German"
   },
   "settings": {
   "title": "Profile Settings",
@@ -288,7 +289,27 @@
     "defaultShippingAddress": "Default Shipping Address",
     "defaultShippingAddressPlaceholder": "Select",
     "noShippingAddress": "No shipping address found",
-    "search": "Customer Call..."
+    "search": "Search Customer...",
+    "view360": "360 View",
+    "quickQuotation": "Create Quick Quote",
+    "images": "Images",
+    "addImage": "Add Image",
+    "uploadingImage": "Uploading...",
+    "noImages": "No images have been added for this customer yet.",
+    "imageDefaultDescription": "Customer image",
+    "imageUploadSuccess": "Customer image uploaded",
+    "imageUploadError": "Customer image could not be uploaded",
+    "imagePermissionError": "Gallery permission is required",
+    "addressAndLocation": "Address & Location",
+    "addressNotSpecified": "Address information is not specified.",
+    "cityDistrict": "City / District",
+    "unspecified": "Unspecified",
+    "notesSection": "Customer Notes",
+    "noNotes": "No notes have been added for this customer yet.",
+    "systemStatus": "System Status",
+    "pendingApproval": "Pending Approval",
+    "systemUser": "System",
+    "createdAt": "Date"
   },
   "erpCustomer": {
     "title": "ERP Customers",

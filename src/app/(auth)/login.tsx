@@ -77,7 +77,9 @@ export default function LoginScreen(): React.ReactElement {
   }, []);
 
   const toggleLanguage = async (): Promise<void> => {
-    const newLang = currentLang === "tr" ? "en" : "tr";
+    const languages: Array<"tr" | "en" | "de"> = ["tr", "en", "de"];
+    const currentIndex = languages.indexOf((currentLang as "tr" | "en" | "de") || "tr");
+    const newLang = languages[(currentIndex + 1) % languages.length];
     await setLanguage(newLang);
     setCurrentLang(newLang);
   };
@@ -144,7 +146,7 @@ export default function LoginScreen(): React.ReactElement {
                 activeOpacity={0.7}
               >
                 <Text className="text-[11px] font-[800] text-slate-300 tracking-[1.5px]">
-                  {currentLang === "tr" ? "EN" : "TR"}
+                  {String(currentLang || "tr").toUpperCase()}
                 </Text>
               </TouchableOpacity>
             </View>

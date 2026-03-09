@@ -166,7 +166,8 @@
   "language": {
     "title": "Dil",
     "turkish": "Türkçe",
-    "english": "English"
+    "english": "English",
+    "german": "Deutsch"
   },
   "settings": {
   "title": "Profil Ayarları",
@@ -277,7 +278,27 @@
     "defaultShippingAddress": "Varsayılan Sevk Adresi",
     "defaultShippingAddressPlaceholder": "Seçiniz",
     "noShippingAddress": "Sevk adresi bulunamadı",
-    "search": "Müşteri Ara..."
+    "search": "Müşteri Ara...",
+    "view360": "360 Görünüm",
+    "quickQuotation": "Hızlı Teklif Oluştur",
+    "images": "Görseller",
+    "addImage": "Resim Ekle",
+    "uploadingImage": "Yükleniyor...",
+    "noImages": "Bu müşteri için henüz görsel eklenmemiş.",
+    "imageDefaultDescription": "Müşteri görseli",
+    "imageUploadSuccess": "Müşteri görseli yüklendi",
+    "imageUploadError": "Müşteri görseli yüklenemedi",
+    "imagePermissionError": "Galeri izni gerekli",
+    "addressAndLocation": "Adres ve Konum",
+    "addressNotSpecified": "Adres bilgisi belirtilmemiş.",
+    "cityDistrict": "Şehir / İlçe",
+    "unspecified": "Belirtilmemiş",
+    "notesSection": "Müşteri Notları",
+    "noNotes": "Bu müşteri için henüz bir not eklenmemiş.",
+    "systemStatus": "Sistem Durumu",
+    "pendingApproval": "Onay Bekliyor",
+    "systemUser": "Sistem",
+    "createdAt": "Tarih"
   },
   "erpCustomer": {
     "title": "ERP Müşteriler",

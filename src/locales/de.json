@@ -1,0 +1,71 @@
+{
+  "common": {
+    "error": "Ein Fehler ist aufgetreten",
+    "retry": "Erneut versuchen",
+    "cancel": "Abbrechen",
+    "delete": "Löschen",
+    "confirm": "Bestätigen",
+    "loading": "Wird geladen..."
+  },
+  "language": {
+    "title": "Sprache",
+    "turkish": "Türkisch",
+    "english": "Englisch",
+    "german": "Deutsch"
+  },
+  "settings": {
+    "title": "Profileinstellungen",
+    "darkMode": "Dunkelmodus",
+    "lightMode": "Hellmodus"
+  },
+  "profile": {
+    "account": "Konto",
+    "settings": "Profileinstellungen",
+    "preferences": "Einstellungen",
+    "support": "Support"
+  },
+  "auth": {
+    "welcome": "Willkommen",
+    "welcomeSubtitle": "Melden Sie sich an, um fortzufahren",
+    "login": {
+      "slogan": "Verwalten Sie Ihr Unternehmen mit VERII CRM."
+    }
+  },
+  "customer": {
+    "detail": "Kundendetail",
+    "deleteConfirm": "Möchten Sie diesen Kunden wirklich löschen?",
+    "contactInfo": "Kontaktinformationen",
+    "phone": "Telefon",
+    "email": "E-Mail",
+    "website": "Webseite",
+    "creditLimit": "Kreditlimit",
+    "taxNumber": "Steuernummer",
+    "approvalStatus": "Genehmigungsstatus",
+    "statusCompleted": "Abgeschlossen",
+    "statusPending": "Ausstehend",
+    "createdBy": "Erstellt von",
+    "view360": "360-Ansicht",
+    "quickQuotation": "Schnellangebot erstellen",
+    "images": "Bilder",
+    "addImage": "Bild hinzufügen",
+    "uploadingImage": "Wird hochgeladen...",
+    "noImages": "Für diesen Kunden wurden noch keine Bilder hinzugefügt.",
+    "imageDefaultDescription": "Kundenbild",
+    "imageUploadSuccess": "Kundenbild hochgeladen",
+    "imageUploadError": "Kundenbild konnte nicht hochgeladen werden",
+    "imagePermissionError": "Galerieberechtigung ist erforderlich",
+    "addressAndLocation": "Adresse und Standort",
+    "addressNotSpecified": "Keine Adressinformation angegeben.",
+    "cityDistrict": "Stadt / Bezirk",
+    "unspecified": "Nicht angegeben",
+    "notesSection": "Kundennotizen",
+    "noNotes": "Für diesen Kunden wurden noch keine Notizen hinzugefügt.",
+    "systemStatus": "Systemstatus",
+    "pendingApproval": "Genehmigung ausstehend",
+    "systemUser": "System",
+    "createdAt": "Datum"
+  },
+  "lookup": {
+    "country": "Land"
+  }
+}
