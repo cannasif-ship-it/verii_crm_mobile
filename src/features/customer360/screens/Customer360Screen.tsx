@@ -19,8 +19,9 @@ import {
 import { CurrencyPicker } from "../components";
 import { Customer360OverviewTab } from "./Customer360OverviewTab";
 import { Customer360AnalyticsTab } from "./Customer360AnalyticsTab";
+import { Customer360MailLogsTab } from "./Customer360MailLogsTab";
 
-type TabType = "overview" | "analytics";
+type TabType = "overview" | "analytics" | "mailLogs";
 
 function collectCurrencyOptions(
   summaryCurrencies: { currency: string }[],
@@ -163,6 +164,25 @@ export function Customer360Screen(): React.ReactElement {
                 {t("customer360.tabs.analytics")}
               </Text>
             </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tab,
+                activeTab === "mailLogs" && {
+                  borderBottomColor: colors.accent,
+                  borderBottomWidth: 2,
+                },
+              ]}
+              onPress={() => setActiveTab("mailLogs")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: activeTab === "mailLogs" ? colors.accent : colors.textMuted },
+                ]}
+              >
+                {t("customer360.tabs.mailLogs")}
+              </Text>
+            </TouchableOpacity>
           </View>
 
           {activeTab === "overview" ? (
@@ -191,7 +211,7 @@ export function Customer360Screen(): React.ReactElement {
                 isFetching={overviewQuery.isFetching}
               />
             )
-          ) : (
+          ) : activeTab === "analytics" ? (
             summaryQuery.isLoading && !summaryQuery.data ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={colors.accent} />
@@ -208,6 +228,8 @@ export function Customer360Screen(): React.ReactElement {
                 chartsError={chartsQuery.isError ? chartsQuery.error ?? null : null}
               />
             )
+          ) : (
+            <Customer360MailLogsTab customerId={customerId ?? 0} colors={colors} />
           )}
         </View>
       </View>
