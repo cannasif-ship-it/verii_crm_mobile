@@ -102,6 +102,7 @@
   "profile": {
     "account": "Konto",
     "settings": "Profileinstellungen",
+    "integrationSettings": "Integrationseinstellungen",
     "preferences": "Präferenzen",
     "support": "Support",
     "guestUser": "Gast",
@@ -246,7 +247,23 @@
     "errorEmptyFields": "Bitte alle Passwortfelder ausfüllen",
     "errorShortPassword": "Neues Passwort muss mindestens 6 Zeichen lang sein",
     "errorMismatchPassword": "Neue Passwörter stimmen nicht überein",
-    "defaultUser": "Benutzer"
+    "defaultUser": "Benutzer",
+    "integrationSettings": "Integrationseinstellungen",
+    "integrationSettingsDescription": "Verwalten Sie Ihre Google- und Outlook-Kontoverbindungen in diesem Bereich.",
+    "integrationConnectButton": "Verbinden",
+    "integrationDisconnectButton": "Verbindung trennen",
+    "integrationRedirectInfo": "Der Verbindungsfluss wird im Browser geöffnet.",
+    "integrationStatusConnected": "Verbunden",
+    "integrationStatusDisconnected": "Nicht verbunden",
+    "integrationGoogleConnectError": "Google-Verbindung konnte nicht gestartet werden.",
+    "integrationGoogleDisconnectError": "Google-Verbindung konnte nicht getrennt werden.",
+    "integrationGoogleDisconnected": "Google-Verbindung wurde getrennt.",
+    "integrationOutlookConnectError": "Outlook-Verbindung konnte nicht gestartet werden.",
+    "integrationOutlookDisconnectError": "Outlook-Verbindung konnte nicht getrennt werden.",
+    "integrationOutlookDisconnected": "Outlook-Verbindung wurde getrennt.",
+    "integrationDisconnectTitle": "Verbindung trennen",
+    "integrationGoogleDisconnectConfirm": "Möchten Sie die Google-Verbindung trennen?",
+    "integrationOutlookDisconnectConfirm": "Möchten Sie die Outlook-Verbindung trennen?"
   },
   "scan": {
     "alignBarcode": "Barcode im Rahmen ausrichten",

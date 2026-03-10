@@ -102,6 +102,7 @@
   "profile": {
   "account": "Hesap",
   "settings": "Profil Ayarları",
+  "integrationSettings": "Entegrasyon Ayarları",
   "preferences": "Tercihler",
   "support": "Destek",
   "guestUser": "Misafir",
@@ -239,6 +240,23 @@
   "errorShortPassword": "Yeni şifre en az 6 karakter olmalı",
   "errorMismatchPassword": "Yeni şifre ve tekrar şifresi eşleşmiyor",
   "defaultUser": "Kullanıcı"
+  ,
+  "integrationSettings": "Entegrasyon Ayarları",
+  "integrationSettingsDescription": "Google ve Outlook hesap bağlantılarınızı bu bölümden yönetin.",
+  "integrationConnectButton": "Bağlan",
+  "integrationDisconnectButton": "Bağlantıyı Kaldır",
+  "integrationRedirectInfo": "Bağlantı adımı tarayıcıda açılıyor.",
+  "integrationStatusConnected": "Bağlı",
+  "integrationStatusDisconnected": "Bağlı Değil",
+  "integrationGoogleConnectError": "Google bağlantısı başlatılamadı.",
+  "integrationGoogleDisconnectError": "Google bağlantısı kaldırılamadı.",
+  "integrationGoogleDisconnected": "Google bağlantısı kaldırıldı.",
+  "integrationOutlookConnectError": "Outlook bağlantısı başlatılamadı.",
+  "integrationOutlookDisconnectError": "Outlook bağlantısı kaldırılamadı.",
+  "integrationOutlookDisconnected": "Outlook bağlantısı kaldırıldı.",
+  "integrationDisconnectTitle": "Bağlantıyı kaldır",
+  "integrationGoogleDisconnectConfirm": "Google bağlantısını kaldırmak istiyor musunuz?",
+  "integrationOutlookDisconnectConfirm": "Outlook bağlantısını kaldırmak istiyor musunuz?"
 },
   "scan": {
     "alignBarcode": "Barkodu çerçeve içine hizalayın",

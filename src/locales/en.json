@@ -102,6 +102,7 @@
 "profile": {
   "account": "Account",
   "settings": "Profile Settings",
+  "integrationSettings": "Integration Settings",
   "preferences": "Preferences",
   "support": "Support",
   "guestUser": "Guest",
@@ -246,7 +247,23 @@
   "errorEmptyFields": "Please fill in all password fields",
   "errorShortPassword": "New password must be at least 6 characters",
   "errorMismatchPassword": "New passwords do not match",
-  "defaultUser": "User"
+  "defaultUser": "User",
+  "integrationSettings": "Integration Settings",
+  "integrationSettingsDescription": "Manage your Google and Outlook account connections from this section.",
+  "integrationConnectButton": "Connect",
+  "integrationDisconnectButton": "Disconnect",
+  "integrationRedirectInfo": "Connection flow is opening in browser.",
+  "integrationStatusConnected": "Connected",
+  "integrationStatusDisconnected": "Not Connected",
+  "integrationGoogleConnectError": "Google connection could not be started.",
+  "integrationGoogleDisconnectError": "Google connection could not be removed.",
+  "integrationGoogleDisconnected": "Google connection removed.",
+  "integrationOutlookConnectError": "Outlook connection could not be started.",
+  "integrationOutlookDisconnectError": "Outlook connection could not be removed.",
+  "integrationOutlookDisconnected": "Outlook connection removed.",
+  "integrationDisconnectTitle": "Remove connection",
+  "integrationGoogleDisconnectConfirm": "Do you want to remove Google connection?",
+  "integrationOutlookDisconnectConfirm": "Do you want to remove Outlook connection?"
 },
   "scan": {
     "alignBarcode": "Align barcode within the frame",
