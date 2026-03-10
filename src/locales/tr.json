@@ -714,6 +714,12 @@
     "approveError": "Onay işlemi gerçekleştirilemedi",
     "rejectSuccess": "Red işlemi başarıyla gerçekleştirildi",
     "rejectError": "Red işlemi gerçekleştirilemedi",
+    "product": "Ürün",
+    "tapToSelectProduct": "Ürün seçmek için dokunun",
+    "searchStockPlaceholder": "Stok kodu, stok adı, grup kodu ile ara...",
+    "noSearchResults": "Sonuç bulunamadı",
+    "minSearchChars": "Arama yapmak için en az 2 karakter giriniz",
+    "noRelatedStocks": "Bu ürünün bağlı stoğu bulunmuyor",
     "offerType": {
       "label": "Teklif Tipi",
       "domestic": "Yurtiçi",

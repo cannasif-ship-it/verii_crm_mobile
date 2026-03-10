@@ -722,6 +722,11 @@
     "approveError": "Approval failed",
     "rejectSuccess": "Rejection completed successfully",
     "rejectError": "Rejection failed",
+    "tapToSelectProduct": "Tap to select product",
+    "searchStockPlaceholder": "Search stock by code or name...",
+    "noSearchResults": "No stocks found",
+    "minSearchChars": "Search for at least 2 characters",
+    "noRelatedStocks": "No related stocks found",
     "offerType": {
       "label": "Offer Type",
       "domestic": "Domestic",

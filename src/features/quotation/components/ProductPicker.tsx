@@ -1,4 +1,12 @@
-import React, { useCallback, useState, useMemo, useEffect, memo, useImperativeHandle, forwardRef } from "react";
+import React, {
+  useCallback,
+  useState,
+  useMemo,
+  useEffect,
+  memo,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
 import {
   View,
   TouchableOpacity,
@@ -8,16 +16,20 @@ import {
   ActivityIndicator,
   TextInput,
 } from "react-native";
+import { Ionicons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
-import type { ThemeColors } from "../../../constants/theme";
 import { useUIStore } from "../../../store/ui";
 import { VoiceSearchButton } from "./VoiceSearchButton";
-import { useStocks, useStock, useStockRelations, useStockRelationsAsRelated } from "../../stocks/hooks";
+import {
+  useStocks,
+  useStock,
+  useStockRelations,
+  useStockRelationsAsRelated,
+} from "../../stocks/hooks";
 import type { StockGetDto, StockRelationDto } from "../../stocks/types";
-import { filterAndRankStocks } from "../../stocks/utils/advancedSearch";
 
 export interface ProductPickerRef {
   close: () => void;
@@ -40,17 +52,332 @@ interface ProductPickerProps {
   relatedStocksSelection?: RelatedStocksSelectionProps | null;
 }
 
+function normalizeSearchText(value: string): string {
+  return (value || "")
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/ı/g, "i")
+    .replace(/İ/g, "i")
+    .replace(/ş/g, "s")
+    .replace(/Ş/g, "s")
+    .replace(/ğ/g, "g")
+    .replace(/Ğ/g, "g")
+    .replace(/ü/g, "u")
+    .replace(/Ü/g, "u")
+    .replace(/ö/g, "o")
+    .replace(/Ö/g, "o")
+    .replace(/ç/g, "c")
+    .replace(/Ç/g, "c")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/[-_/]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function tokenize(value: string): string[] {
+  return normalizeSearchText(value).split(" ").filter(Boolean);
+}
+
+function compact(value: string): string {
+  return normalizeSearchText(value).replace(/\s+/g, "");
+}
+
+function sortTokens(value: string): string {
+  return tokenize(value).sort((a, b) => a.localeCompare(b, "tr")).join(" ");
+}
+
+function damerauLevenshtein(a: string, b: string): number {
+  const alen = a.length;
+  const blen = b.length;
+
+  if (alen === 0) return blen;
+  if (blen === 0) return alen;
+
+  const dp: number[][] = Array.from({ length: alen + 1 }, () => Array(blen + 1).fill(0));
+
+  for (let i = 0; i <= alen; i++) dp[i][0] = i;
+  for (let j = 0; j <= blen; j++) dp[0][j] = j;
+
+  for (let i = 1; i <= alen; i++) {
+    for (let j = 1; j <= blen; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + cost
+      );
+
+      if (
+        i > 1 &&
+        j > 1 &&
+        a[i - 1] === b[j - 2] &&
+        a[i - 2] === b[j - 1]
+      ) {
+        dp[i][j] = Math.min(dp[i][j], dp[i - 2][j - 2] + cost);
+      }
+    }
+  }
+
+  return dp[alen][blen];
+}
+
+function isSubsequence(query: string, target: string): boolean {
+  if (!query) return true;
+  let qi = 0;
+  let ti = 0;
+
+  while (qi < query.length && ti < target.length) {
+    if (query[qi] === target[ti]) qi++;
+    ti++;
+  }
+
+  return qi === query.length;
+}
+
+function charFrequencySimilarity(a: string, b: string): number {
+  if (!a || !b) return 0;
+
+  const fa = new Map<string, number>();
+  const fb = new Map<string, number>();
+
+  for (const ch of a) fa.set(ch, (fa.get(ch) || 0) + 1);
+  for (const ch of b) fb.set(ch, (fb.get(ch) || 0) + 1);
+
+  let intersection = 0;
+  let total = 0;
+
+  const keys = new Set([...fa.keys(), ...fb.keys()]);
+  for (const key of keys) {
+    const av = fa.get(key) || 0;
+    const bv = fb.get(key) || 0;
+    intersection += Math.min(av, bv);
+    total += Math.max(av, bv);
+  }
+
+  if (total === 0) return 0;
+  return intersection / total;
+}
+
+function tokenSetCoverage(queryTokens: string[], fieldTokens: string[]): number {
+  if (queryTokens.length === 0 || fieldTokens.length === 0) return 0;
+
+  let matched = 0;
+
+  for (const q of queryTokens) {
+    const hasMatch = fieldTokens.some((f) => {
+      if (f === q) return true;
+      if (f.startsWith(q) || f.includes(q)) return true;
+      if (q.length >= 3 && isSubsequence(q, f)) return true;
+      const dist = damerauLevenshtein(q, f);
+      return dist <= (q.length <= 4 ? 1 : 2);
+    });
+
+    if (hasMatch) matched++;
+  }
+
+  return matched / queryTokens.length;
+}
+
+function scoreWordAgainstField(word: string, field: string): number {
+  if (!word || !field) return 0;
+
+  if (field === word) return 280;
+  if (field.startsWith(word)) return 220;
+  if (field.includes(word)) return 180;
+
+  const compactField = compact(field);
+  const compactWord = compact(word);
+
+  if (!compactWord || !compactField) return 0;
+
+  if (compactField === compactWord) return 270;
+  if (compactField.startsWith(compactWord)) return 210;
+  if (compactField.includes(compactWord)) return 170;
+
+  if (word.length >= 3 && isSubsequence(compactWord, compactField)) return 120;
+
+  const compareSlice = compactField.slice(0, Math.min(compactField.length, compactWord.length + 2));
+  const distance = damerauLevenshtein(compactWord, compareSlice);
+
+  if (distance === 1) return 150;
+  if (distance === 2) return 105;
+  if (distance === 3 && compactWord.length >= 7) return 70;
+
+  const freqSim = charFrequencySimilarity(compactWord, compareSlice);
+  if (freqSim >= 0.9) return 95;
+  if (freqSim >= 0.8) return 70;
+  if (freqSim >= 0.7) return 45;
+
+  return 0;
+}
+
+function scoreWholeQueryAgainstField(query: string, field: string): number {
+  if (!query || !field) return 0;
+
+  const normalizedQuery = normalizeSearchText(query);
+  const normalizedField = normalizeSearchText(field);
+
+  if (!normalizedQuery || !normalizedField) return 0;
+
+  if (normalizedField === normalizedQuery) return 380;
+  if (normalizedField.startsWith(normalizedQuery)) return 300;
+  if (normalizedField.includes(normalizedQuery)) return 250;
+
+  const compactQuery = compact(normalizedQuery);
+  const compactField = compact(normalizedField);
+
+  if (compactField === compactQuery) return 360;
+  if (compactField.startsWith(compactQuery)) return 290;
+  if (compactField.includes(compactQuery)) return 235;
+
+  const sortedQuery = sortTokens(normalizedQuery);
+  const sortedField = sortTokens(normalizedField);
+
+  if (sortedQuery && sortedField && sortedField === sortedQuery) return 325;
+  if (sortedQuery && sortedField && sortedField.includes(sortedQuery)) return 250;
+
+  if (compactQuery.length >= 3 && isSubsequence(compactQuery, compactField)) return 160;
+
+  const distance = damerauLevenshtein(
+    compactQuery,
+    compactField.slice(0, Math.min(compactField.length, compactQuery.length + 3))
+  );
+
+  if (distance === 1) return 210;
+  if (distance === 2) return 160;
+  if (distance === 3 && compactQuery.length >= 8) return 110;
+
+  const freqSim = charFrequencySimilarity(compactQuery, compactField.slice(0, compactQuery.length + 3));
+  if (freqSim >= 0.9) return 140;
+  if (freqSim >= 0.8) return 100;
+  if (freqSim >= 0.7) return 65;
+
+  return 0;
+}
+
+function scoreFieldWithTokens(field: string, query: string): number {
+  const queryTokens = tokenize(query);
+  const fieldTokens = tokenize(field);
+
+  if (queryTokens.length === 0 || fieldTokens.length === 0) return 0;
+
+  let total = 0;
+  let matchedCount = 0;
+
+  for (const q of queryTokens) {
+    let best = 0;
+    for (const f of fieldTokens) {
+      const score = scoreWordAgainstField(q, f);
+      if (score > best) best = score;
+    }
+    if (best > 0) {
+      matchedCount++;
+      total += best;
+    }
+  }
+
+  const coverage = tokenSetCoverage(queryTokens, fieldTokens);
+  if (coverage >= 1) total += 120;
+  else if (coverage >= 0.8) total += 80;
+  else if (coverage >= 0.6) total += 45;
+
+  if (matchedCount === 0) return 0;
+  return total;
+}
+
+function scoreStock(stock: StockGetDto, query: string): number {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return 1;
+
+  const name = stock.stockName || "";
+  const code = stock.erpStockCode || "";
+  const groupCode = stock.grupKodu || "";
+  const groupName = stock.grupAdi || "";
+
+  const wholeName = scoreWholeQueryAgainstField(normalizedQuery, name) + 35;
+  const wholeCode = scoreWholeQueryAgainstField(normalizedQuery, code) + 20;
+  const wholeGroupCode = scoreWholeQueryAgainstField(normalizedQuery, groupCode) + 12;
+  const wholeGroupName = scoreWholeQueryAgainstField(normalizedQuery, groupName) + 10;
+
+  const tokenName = scoreFieldWithTokens(name, normalizedQuery) + 25;
+  const tokenCode = scoreFieldWithTokens(code, normalizedQuery) + 15;
+  const tokenGroupCode = scoreFieldWithTokens(groupCode, normalizedQuery) + 10;
+  const tokenGroupName = scoreFieldWithTokens(groupName, normalizedQuery) + 8;
+
+  let score = Math.max(
+    wholeName,
+    wholeCode,
+    wholeGroupCode,
+    wholeGroupName,
+    tokenName,
+    tokenCode,
+    tokenGroupCode,
+    tokenGroupName
+  );
+
+  const combinedField = [name, code, groupCode, groupName].filter(Boolean).join(" ");
+  const combinedWhole = scoreWholeQueryAgainstField(normalizedQuery, combinedField);
+  const combinedToken = scoreFieldWithTokens(combinedField, normalizedQuery);
+  score = Math.max(score, combinedWhole + 18, combinedToken + 12);
+
+  const queryTokens = tokenize(normalizedQuery);
+  const fullTextTokens = tokenize(combinedField);
+  const coverage = tokenSetCoverage(queryTokens, fullTextTokens);
+
+  if (coverage >= 1) score += 65;
+  else if (coverage >= 0.8) score += 40;
+  else if (coverage >= 0.6) score += 20;
+
+  return score;
+}
+
+function filterAndRankStocksLocal(stocks: StockGetDto[], query: string): StockGetDto[] {
+  const normalizedQuery = normalizeSearchText(query);
+
+  if (!normalizedQuery) {
+    return [...stocks].sort((a, b) =>
+      (a.stockName || "").localeCompare(b.stockName || "", "tr")
+    );
+  }
+
+  return stocks
+    .map((stock) => ({
+      stock,
+      score: scoreStock(stock, normalizedQuery),
+    }))
+    .filter((item) => item.score > 0)
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+
+      const aName = a.stock.stockName || "";
+      const bName = b.stock.stockName || "";
+      return aName.localeCompare(bName, "tr");
+    })
+    .map((item) => item.stock);
+}
+
+function getRelationDisplayName(relation: StockRelationDto, currentStockId?: number): string {
+  if (relation.relatedStockName) return relation.relatedStockName;
+  if (relation.relatedStockCode) return relation.relatedStockCode;
+
+  if (currentStockId && relation.relatedStockId === currentStockId) {
+    return `#${relation.stockId}`;
+  }
+
+  return `#${relation.relatedStockId}`;
+}
+
 function StockListItem({
   item,
   isSelected,
-  colors,
   onSelect,
   onShowRelationDetail,
   modalOpen,
 }: {
   item: StockGetDto;
   isSelected: boolean;
-  colors: ThemeColors;
   onSelect: () => void;
   onShowRelationDetail: (stock: StockGetDto, relations: StockRelationDto[]) => void;
   modalOpen: boolean;
@@ -59,8 +386,8 @@ function StockListItem({
   const { themeMode } = useUIStore();
   const isDark = themeMode === "dark";
   const brandColor = isDark ? "#EC4899" : "#DB2777";
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
-  const textColor = isDark ? "#F8FAFC" : "#1E293B";
+  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)";
+  const textColor = isDark ? "#F8FAFC" : "#0F172A";
   const mutedColor = isDark ? "#94A3B8" : "#64748B";
 
   const { data: stockDetail } = useStock(modalOpen ? item.id : undefined);
@@ -68,12 +395,15 @@ function StockListItem({
     stockId: modalOpen ? item.id : undefined,
   });
   const { data: relationsAsRelatedData } = useStockRelationsAsRelated(modalOpen ? item.id : undefined);
+
   const relationsList = useMemo((): StockRelationDto[] => {
     if (stockDetail?.parentRelations && stockDetail.parentRelations.length > 0) {
       return stockDetail.parentRelations;
     }
+
     const asParent = relationsData?.pages?.[0]?.items;
     if (Array.isArray(asParent) && asParent.length > 0) return asParent;
+
     const asRelated = relationsAsRelatedData?.items;
     return Array.isArray(asRelated) ? asRelated : [];
   }, [stockDetail?.parentRelations, relationsData?.pages, relationsAsRelatedData?.items]);
@@ -86,45 +416,66 @@ function StockListItem({
       style={[
         styles.stockItem,
         { borderBottomColor: borderColor },
-        isSelected && { backgroundColor: isDark ? "rgba(236, 72, 153, 0.1)" : "rgba(219, 39, 119, 0.08)" },
+        isSelected && {
+          backgroundColor: isDark ? "rgba(236,72,153,0.08)" : "rgba(219,39,119,0.06)",
+        },
       ]}
     >
-      <TouchableOpacity
-        style={styles.stockItemTouchable}
-        onPress={onSelect}
-        activeOpacity={0.7}
-      >
-        <View style={styles.stockInfo}>
-          <Text style={[styles.stockName, { color: textColor }]} numberOfLines={1}>
-            {item.stockName}
-          </Text>
-          <Text style={[styles.stockCode, { color: mutedColor }]} numberOfLines={1}>
-            {item.erpStockCode}
-          </Text>
-          {(item.grupKodu || item.grupAdi) ? (
-            <Text style={[styles.stockMeta, { color: mutedColor }]} numberOfLines={1}>
-              {[item.grupKodu, item.grupAdi].filter(Boolean).join(" · ")}
-            </Text>
-          ) : null}
-        </View>
-        {isSelected && (
-          <View style={[styles.checkmark, { backgroundColor: brandColor }]}>
-            <Text style={styles.checkmarkText}>✓</Text>
+      <TouchableOpacity style={styles.stockItemTouchable} onPress={onSelect} activeOpacity={0.75}>
+        <View style={styles.stockInfoRow}>
+          <View
+            style={[
+              styles.stockIconWrap,
+              {
+                backgroundColor: isDark ? "rgba(236,72,153,0.14)" : "rgba(219,39,119,0.10)",
+                borderColor: isDark ? "rgba(236,72,153,0.24)" : "rgba(219,39,119,0.16)",
+              },
+            ]}
+          >
+            <MaterialCommunityIcons name="package-variant-closed" size={18} color={brandColor} />
           </View>
+
+          <View style={styles.stockInfo}>
+            <Text style={[styles.stockName, { color: textColor }]} numberOfLines={1}>
+              {item.stockName}
+            </Text>
+            <Text style={[styles.stockCode, { color: mutedColor }]} numberOfLines={1}>
+              {item.erpStockCode}
+            </Text>
+            {(item.grupKodu || item.grupAdi) ? (
+              <Text style={[styles.stockMeta, { color: mutedColor }]} numberOfLines={1}>
+                {[item.grupKodu, item.grupAdi].filter(Boolean).join(" · ")}
+              </Text>
+            ) : null}
+          </View>
+        </View>
+
+        {isSelected ? (
+          <View style={[styles.checkmark, { backgroundColor: brandColor }]}>
+            <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+          </View>
+        ) : (
+          <Ionicons name="chevron-forward" size={18} color={mutedColor} />
         )}
       </TouchableOpacity>
+
       {showBadge && (
         <TouchableOpacity
           style={[
-            styles.relatedStockBadge, 
-            { backgroundColor: isDark ? "rgba(236, 72, 153, 0.15)" : "rgba(219, 39, 119, 0.12)", borderColor: isDark ? "rgba(236, 72, 153, 0.3)" : "rgba(219, 39, 119, 0.2)" }
+            styles.relatedStockBadge,
+            {
+              backgroundColor: isDark ? "rgba(236,72,153,0.12)" : "rgba(219,39,119,0.08)",
+              borderColor: isDark ? "rgba(236,72,153,0.24)" : "rgba(219,39,119,0.16)",
+            },
           ]}
           onPress={() => onShowRelationDetail(item, relationsList)}
-          activeOpacity={0.7}
+          activeOpacity={0.75}
         >
+          <MaterialCommunityIcons name="source-branch" size={14} color={brandColor} />
           <Text style={[styles.relatedStockBadgeText, { color: brandColor }]}>
-            {relationCount} {t("quotation.relatedStocks")} ›
+            {relationCount} {t("quotation.relatedStocks")}
           </Text>
+          <Ionicons name="chevron-forward" size={14} color={brandColor} />
         </TouchableOpacity>
       )}
     </View>
@@ -147,19 +498,19 @@ function ProductPickerInner(
   ref: React.Ref<ProductPickerRef>
 ): React.ReactElement {
   const { t } = useTranslation();
-  const { colors, themeMode } = useUIStore();
+  const { themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
 
   const isDark = themeMode === "dark";
   const mainBg = isDark ? "#161224" : "#FFFFFF";
-  const inputBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.6)";
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
-  const textColor = isDark ? "#F8FAFC" : "#1E293B";
+  const inputBg = isDark ? "rgba(255,255,255,0.03)" : "#F8FAFC";
+  const cardBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.98)";
+  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)";
+  const textColor = isDark ? "#F8FAFC" : "#0F172A";
   const mutedColor = isDark ? "#94A3B8" : "#64748B";
   const brandColor = isDark ? "#EC4899" : "#DB2777";
-
-  const dashedBorderColor = isDark ? "rgba(236, 72, 153, 0.5)" : "rgba(219, 39, 119, 0.5)";
-  const dashedBgColor = isDark ? "rgba(236, 72, 153, 0.05)" : "rgba(219, 39, 119, 0.03)";
+  const dashedBorderColor = isDark ? "rgba(236,72,153,0.42)" : "rgba(219,39,119,0.34)";
+  const dashedBgColor = isDark ? "rgba(236,72,153,0.05)" : "rgba(219,39,119,0.03)";
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
@@ -172,52 +523,37 @@ function ProductPickerInner(
     () => (relatedStocksSelection?.stock.parentRelations ?? []).filter((r) => r.isMandatory),
     [relatedStocksSelection]
   );
+
   const relatedOptional = useMemo(
     () => (relatedStocksSelection?.stock.parentRelations ?? []).filter((r) => !r.isMandatory),
     [relatedStocksSelection]
   );
 
   useEffect(() => {
-    if (relatedStocksSelection) {
-      setRelatedSelectedIds(new Set(relatedMandatory.map((r) => r.relatedStockId)));
-    }
-  }, [relatedStocksSelection, relatedMandatory]);
-
-  const toggleRelatedOptional = useCallback((relatedStockId: number) => {
-    setRelatedSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(relatedStockId)) next.delete(relatedStockId);
-      else next.add(relatedStockId);
-      return next;
-    });
-  }, []);
-
-  const handleRelatedApply = useCallback(() => {
-    if (!relatedStocksSelection) return;
-    const orderedIds: number[] = [];
-    relatedMandatory.forEach((r) => orderedIds.push(r.relatedStockId));
-    relatedOptional.forEach((r) => {
-      if (relatedSelectedIds.has(r.relatedStockId)) orderedIds.push(r.relatedStockId);
-    });
-    relatedStocksSelection.onApply(orderedIds);
-  }, [relatedStocksSelection, relatedMandatory, relatedOptional, relatedSelectedIds]);
-
-  const handleRelatedCancel = useCallback(() => {
-    relatedStocksSelection?.onCancel();
-  }, [relatedStocksSelection]);
+    if (!relatedStocksSelection?.stock?.id) return;
+    setRelatedSelectedIds(new Set(relatedMandatory.map((r) => r.relatedStockId)));
+  }, [relatedStocksSelection?.stock?.id]);
 
   useEffect(() => {
     if (!parentVisible) {
       setIsOpen(false);
       setSearchText("");
+      setRelationDetailVisible(false);
+      setRelationDetailStock(null);
+      setRelationDetailData([]);
     }
   }, [parentVisible]);
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks({}, searchText);
+  const normalizedQuery = useMemo(() => normalizeSearchText(searchText), [searchText]);
+
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks(
+    {},
+    normalizedQuery
+  );
 
   const stocks = useMemo(() => {
     const rawStocks = data?.pages.flatMap((page) => page.items) || [];
-    return filterAndRankStocks(rawStocks, searchText);
+    return filterAndRankStocksLocal(rawStocks, searchText);
   }, [data, searchText]);
 
   const handleOpen = useCallback(() => {
@@ -244,8 +580,8 @@ function ProductPickerInner(
     [onChange, handleClose]
   );
 
-  const handleClear = useCallback(() => {
-    onChange(undefined);
+  const handleClear = useCallback(async () => {
+    await Promise.resolve(onChange(undefined));
   }, [onChange]);
 
   const handleEndReached = useCallback(() => {
@@ -266,18 +602,54 @@ function ProductPickerInner(
     setRelationDetailData([]);
   }, []);
 
+  const handleRelatedApply = useCallback(() => {
+    if (!relatedStocksSelection) return;
+    const orderedIds: number[] = [];
+    relatedMandatory.forEach((r) => orderedIds.push(r.relatedStockId));
+    relatedOptional.forEach((r) => {
+      if (relatedSelectedIds.has(r.relatedStockId)) orderedIds.push(r.relatedStockId);
+    });
+    relatedStocksSelection.onApply(orderedIds);
+  }, [relatedStocksSelection, relatedMandatory, relatedOptional, relatedSelectedIds]);
+
+  const handleRelatedCancel = useCallback(() => {
+    relatedStocksSelection?.onCancel();
+  }, [relatedStocksSelection]);
+
+  const handleRequestClose = useCallback(() => {
+    if (relatedStocksSelection) {
+      handleRelatedCancel();
+      return;
+    }
+
+    if (relationDetailVisible) {
+      handleCloseRelationDetail();
+      return;
+    }
+
+    handleClose();
+  }, [relatedStocksSelection, relationDetailVisible, handleRelatedCancel, handleCloseRelationDetail, handleClose]);
+
+  const toggleRelatedOptional = useCallback((relatedStockId: number) => {
+    setRelatedSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(relatedStockId)) next.delete(relatedStockId);
+      else next.add(relatedStockId);
+      return next;
+    });
+  }, []);
+
   const renderStockItem = useCallback(
     ({ item }: { item: StockGetDto }) => (
       <MemoizedStockListItem
         item={item}
         isSelected={value === item.erpStockCode}
-        colors={colors}
         onSelect={() => handleSelect(item)}
         onShowRelationDetail={handleShowRelationDetail}
         modalOpen={isOpen}
       />
     ),
-    [value, colors, handleSelect, handleShowRelationDetail, isOpen]
+    [value, handleSelect, handleShowRelationDetail, isOpen]
   );
 
   return (
@@ -289,11 +661,12 @@ function ProductPickerInner(
             {required && <Text style={[styles.required, { color: "#ef4444" }]}>*</Text>}
           </View>
         )}
+
         <TouchableOpacity
           style={[
             styles.pickerButton,
             {
-              backgroundColor: productName ? inputBg : dashedBgColor,
+              backgroundColor: productName ? cardBg : dashedBgColor,
               borderColor: productName ? borderColor : dashedBorderColor,
               borderWidth: productName ? 1 : 1.5,
               borderStyle: productName ? "solid" : "dashed",
@@ -302,47 +675,60 @@ function ProductPickerInner(
           ]}
           onPress={handleOpen}
           disabled={disabled}
-          activeOpacity={0.7}
+          activeOpacity={0.8}
         >
           <View style={styles.pickerButtonContent}>
+            <View
+              style={[
+                styles.pickerLeadIcon,
+                {
+                  backgroundColor: productName
+                    ? isDark
+                      ? "rgba(236,72,153,0.12)"
+                      : "rgba(219,39,119,0.08)"
+                    : isDark
+                    ? "rgba(236,72,153,0.16)"
+                    : "rgba(219,39,119,0.10)",
+                },
+              ]}
+            >
+              <MaterialCommunityIcons name="package-variant-closed" size={18} color={brandColor} />
+            </View>
+
             <Text
               style={[
                 styles.pickerText,
                 { color: productName ? textColor : brandColor },
-                !productName && { fontWeight: "600" }
+                !productName && { fontWeight: "700" },
               ]}
               numberOfLines={1}
             >
-              {productName || "Ürün seçmek için dokunun"}
+              {productName || t("quotation.tapToSelectProduct")}
             </Text>
+
             {productName ? (
               <TouchableOpacity
-                style={styles.clearButton}
+                style={[styles.clearButton, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9" }]}
                 onPress={(e) => {
                   e.stopPropagation();
                   handleClear();
                 }}
+                activeOpacity={0.8}
               >
-                <Text style={[styles.clearButtonText, { color: mutedColor }]}>✕</Text>
+                <Ionicons name="close" size={16} color={mutedColor} />
               </TouchableOpacity>
             ) : (
-              <View style={[styles.chevronDown, { borderTopColor: brandColor }]} />
+              <View style={[styles.chevronWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F8FAFC" }]}>
+                <Ionicons name="chevron-down" size={16} color={brandColor} />
+              </View>
             )}
           </View>
         </TouchableOpacity>
       </View>
 
-      <Modal
-        visible={isOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={relatedStocksSelection ? handleRelatedCancel : relationDetailVisible ? handleCloseRelationDetail : handleClose}
-      >
+      <Modal visible={isOpen} transparent animationType="slide" onRequestClose={handleRequestClose}>
         <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={relatedStocksSelection ? handleRelatedCancel : relationDetailVisible ? handleCloseRelationDetail : handleClose}
-          />
+          <TouchableOpacity style={styles.modalBackdrop} onPress={handleRequestClose} />
           <View
             style={[
               styles.modalContent,
@@ -356,9 +742,11 @@ function ProductPickerInner(
                     {t("quotation.relatedStocksSelectTitle")}
                   </Text>
                 </View>
+
                 <Text style={[styles.relatedSelectDesc, { color: mutedColor }]}>
                   {t("quotation.relatedStocksSelectDesc")}
                 </Text>
+
                 <FlatListScrollView
                   style={styles.relatedSelectScroll}
                   contentContainerStyle={styles.relatedSelectScrollContent}
@@ -366,12 +754,24 @@ function ProductPickerInner(
                 >
                   {relatedMandatory.length > 0 && (
                     <View style={styles.relatedSelectBlock}>
-                      <Text style={[styles.relatedSelectBlockTitle, { color: mutedColor }]}>{t("quotation.mandatory")}</Text>
+                      <Text style={[styles.relatedSelectBlockTitle, { color: mutedColor }]}>
+                        {t("quotation.mandatory")}
+                      </Text>
+
                       {relatedMandatory.map((r) => (
                         <View key={r.id} style={[styles.relatedSelectRow, { borderBottomColor: borderColor }]}>
-                          <View style={[styles.relatedSelectCheckbox, { borderColor: borderColor, backgroundColor: brandColor + "30" }]}>
-                            <Text style={[styles.relatedSelectCheckmark, { color: brandColor }]}>✓</Text>
+                          <View
+                            style={[
+                              styles.relatedSelectCheckbox,
+                              {
+                                borderColor: borderColor,
+                                backgroundColor: brandColor + "30",
+                              },
+                            ]}
+                          >
+                            <Ionicons name="checkmark" size={14} color={brandColor} />
                           </View>
+
                           <View style={styles.relatedSelectRowContent}>
                             <Text style={[styles.relatedSelectRowName, { color: textColor }]} numberOfLines={1}>
                               {r.relatedStockName || r.relatedStockCode || `#${r.relatedStockId}`}
@@ -381,28 +781,45 @@ function ProductPickerInner(
                               {r.description ? ` · ${r.description}` : ""}
                             </Text>
                           </View>
-                          <View style={[styles.relatedSelectBadge, { backgroundColor: "#10B98120" }]}>
-                            <Text style={[styles.relatedSelectBadgeText, { color: "#10B981" }]}>{t("quotation.mandatory")}</Text>
+
+                          <View style={[styles.relatedSelectBadge, { backgroundColor: "#10B98118" }]}>
+                            <Text style={[styles.relatedSelectBadgeText, { color: "#10B981" }]}>
+                              {t("quotation.mandatory")}
+                            </Text>
                           </View>
                         </View>
                       ))}
                     </View>
                   )}
+
                   {relatedOptional.length > 0 && (
                     <View style={styles.relatedSelectBlock}>
-                      <Text style={[styles.relatedSelectBlockTitle, { color: mutedColor }]}>{t("quotation.optional")}</Text>
+                      <Text style={[styles.relatedSelectBlockTitle, { color: mutedColor }]}>
+                        {t("quotation.optional")}
+                      </Text>
+
                       {relatedOptional.map((r) => {
                         const isChecked = relatedSelectedIds.has(r.relatedStockId);
+
                         return (
                           <TouchableOpacity
                             key={r.id}
                             style={[styles.relatedSelectRow, { borderBottomColor: borderColor }]}
                             onPress={() => toggleRelatedOptional(r.relatedStockId)}
-                            activeOpacity={0.7}
+                            activeOpacity={0.8}
                           >
-                            <View style={[styles.relatedSelectCheckbox, { borderColor: borderColor, backgroundColor: isChecked ? brandColor + "30" : "transparent" }]}>
-                              {isChecked && <Text style={[styles.relatedSelectCheckmark, { color: brandColor }]}>✓</Text>}
+                            <View
+                              style={[
+                                styles.relatedSelectCheckbox,
+                                {
+                                  borderColor: isChecked ? brandColor : borderColor,
+                                  backgroundColor: isChecked ? brandColor + "30" : "transparent",
+                                },
+                              ]}
+                            >
+                              {isChecked && <Ionicons name="checkmark" size={14} color={brandColor} />}
                             </View>
+
                             <View style={styles.relatedSelectRowContent}>
                               <Text style={[styles.relatedSelectRowName, { color: textColor }]} numberOfLines={1}>
                                 {r.relatedStockName || r.relatedStockCode || `#${r.relatedStockId}`}
@@ -418,11 +835,28 @@ function ProductPickerInner(
                     </View>
                   )}
                 </FlatListScrollView>
-                <View style={[styles.relatedSelectFooter, { borderTopColor: borderColor, backgroundColor: mainBg }]}>
-                  <TouchableOpacity style={[styles.relatedSelectCancelBtn, { borderColor: borderColor }]} onPress={handleRelatedCancel}>
-                    <Text style={[styles.relatedSelectCancelText, { color: textColor }]}>{t("common.cancel")}</Text>
+
+                <View
+                  style={[
+                    styles.relatedSelectFooter,
+                    { borderTopColor: borderColor, backgroundColor: mainBg },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[styles.relatedSelectCancelBtn, { borderColor: borderColor }]}
+                    onPress={handleRelatedCancel}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.relatedSelectCancelText, { color: textColor }]}>
+                      {t("common.cancel")}
+                    </Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={[styles.relatedSelectApplyBtn, { backgroundColor: brandColor }]} onPress={handleRelatedApply}>
+
+                  <TouchableOpacity
+                    style={[styles.relatedSelectApplyBtn, { backgroundColor: brandColor }]}
+                    onPress={handleRelatedApply}
+                    activeOpacity={0.85}
+                  >
                     <Text style={styles.relatedSelectApplyText}>{t("quotation.apply")}</Text>
                   </TouchableOpacity>
                 </View>
@@ -436,25 +870,28 @@ function ProductPickerInner(
                     { borderBottomColor: borderColor },
                   ]}
                 >
-                  <TouchableOpacity onPress={handleCloseRelationDetail} style={styles.backButton}>
-                    <Text style={[styles.backButtonText, { color: brandColor }]}>←</Text>
+                  <TouchableOpacity onPress={handleCloseRelationDetail} style={styles.backButton} activeOpacity={0.8}>
+                    <Ionicons name="arrow-back" size={20} color={brandColor} />
                   </TouchableOpacity>
+
                   <Text
                     style={[styles.modalTitle, { color: textColor }, styles.relationDetailTitle]}
                     numberOfLines={1}
                   >
                     {relationDetailStock
-                      ? `${relationDetailStock.erpStockCode} – Bağlı Stoklar`
-                      : "Bağlı Stoklar"}
+                      ? `${relationDetailStock.erpStockCode} · ${t("quotation.relatedStocks")}`
+                      : t("quotation.relatedStocks")}
                   </Text>
-                  <TouchableOpacity onPress={handleCloseRelationDetail} style={styles.closeButton}>
-                    <Text style={[styles.closeButtonText, { color: textColor }]}>✕</Text>
+
+                  <TouchableOpacity onPress={handleCloseRelationDetail} style={styles.closeButton} activeOpacity={0.8}>
+                    <Ionicons name="close" size={22} color={textColor} />
                   </TouchableOpacity>
                 </View>
+
                 {relationDetailData.length === 0 ? (
                   <View style={styles.emptyContainer}>
                     <Text style={[styles.emptyText, { color: mutedColor }]}>
-                      Bu ürünün bağlı stoğu bulunmuyor
+                      {t("quotation.noRelatedStocks")}
                     </Text>
                   </View>
                 ) : (
@@ -464,32 +901,34 @@ function ProductPickerInner(
                     showsVerticalScrollIndicator={false}
                   >
                     <Text style={[styles.relationDetailCount, { color: mutedColor }]}>
-                      {relationDetailData.length} {t("quotation.relatedStocks").toLowerCase()}
+                      {relationDetailData.length} {t("quotation.relatedStocks").toLocaleLowerCase("tr-TR")}
                     </Text>
-                    {relationDetailData.map((r) => {
-                      const isInverse = relationDetailStock && r.relatedStockId === relationDetailStock.id;
-                      const name =
-                        r.relatedStockName ||
-                        r.relatedStockCode ||
-                        (isInverse ? `Stok #${r.stockId}` : `#${r.relatedStockId}`);
-                      return (
+
+                    {relationDetailData.map((r) => (
+                      <View key={r.id} style={[styles.relationDetailRow, { borderBottomColor: borderColor }]}>
                         <View
-                          key={r.id}
-                          style={[styles.relationDetailRow, { borderBottomColor: borderColor }]}
+                          style={[
+                            styles.relationDetailIconWrap,
+                            {
+                              backgroundColor: isDark ? "rgba(236,72,153,0.12)" : "rgba(219,39,119,0.08)",
+                            },
+                          ]}
                         >
-                          <View style={styles.relationDetailRowContent}>
-                            <Text style={[styles.relationDetailRowName, { color: textColor }]} numberOfLines={1}>
-                              {name}
-                            </Text>
-                            <Text style={[styles.relationDetailRowMeta, { color: mutedColor }]}>
-                              Miktar: {r.quantity}
-                              {r.description ? ` · ${r.description}` : ""}
-                              {r.isMandatory ? " · Zorunlu" : ""}
-                            </Text>
-                          </View>
+                          <MaterialCommunityIcons name="source-branch" size={16} color={brandColor} />
                         </View>
-                      );
-                    })}
+
+                        <View style={styles.relationDetailRowContent}>
+                          <Text style={[styles.relationDetailRowName, { color: textColor }]} numberOfLines={1}>
+                            {getRelationDisplayName(r, relationDetailStock?.id)}
+                          </Text>
+                          <Text style={[styles.relationDetailRowMeta, { color: mutedColor }]}>
+                            {t("quotation.quantity")}: {r.quantity}
+                            {r.description ? ` · ${r.description}` : ""}
+                            {r.isMandatory ? ` · ${t("quotation.mandatory")}` : ""}
+                          </Text>
+                        </View>
+                      </View>
+                    ))}
                   </FlatListScrollView>
                 )}
               </View>
@@ -498,32 +937,63 @@ function ProductPickerInner(
                 <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
                   <View style={[styles.handle, { backgroundColor: borderColor }]} />
                   <View style={styles.headerRow}>
-                    <View style={[styles.productIcon, { backgroundColor: brandColor }]}>
-                      <Text style={styles.productIconText}>📦</Text>
+                    <View style={[styles.productIcon, { backgroundColor: brandColor + "18" }]}>
+                      <MaterialCommunityIcons
+                        name="package-variant-closed"
+                        size={20}
+                        color={brandColor}
+                      />
                     </View>
+
                     <View style={styles.headerTitles}>
                       <Text style={[styles.modalTitle, { color: textColor }]}>
-                        {label || "Ürün"}
+                        {label || t("quotation.product")}
                       </Text>
                       <Text style={[styles.modalSubtitle, { color: mutedColor }]}>
                         {t("quotation.selectProduct")}
                       </Text>
                     </View>
-                    <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                      <Text style={[styles.closeButtonText, { color: textColor }]}>✕</Text>
+
+                    <TouchableOpacity onPress={handleClose} style={styles.closeButton} activeOpacity={0.8}>
+                      <Ionicons name="close" size={22} color={textColor} />
                     </TouchableOpacity>
                   </View>
                 </View>
 
-                <View style={[styles.searchRow, { backgroundColor: inputBg, borderBottomColor: borderColor }]}>
-                  <TextInput
-                    style={[styles.searchInput, { color: textColor, borderColor: borderColor }]}
-                    placeholder="Stok kodu, stok adı, grup kodu ile ara..."
-                    placeholderTextColor={mutedColor}
-                    value={searchText}
-                    onChangeText={setSearchText}
-                    autoFocus
-                  />
+                <View
+                  style={[
+                    styles.searchRow,
+                    { backgroundColor: inputBg, borderBottomColor: borderColor },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.searchInputWrap,
+                      {
+                        backgroundColor: isDark ? "rgba(255,255,255,0.04)" : "#FFFFFF",
+                        borderColor: borderColor,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="search" size={18} color={mutedColor} />
+                    <TextInput
+                      style={[styles.searchInput, { color: textColor }]}
+                      placeholder={t("quotation.searchStockPlaceholder")}
+                      placeholderTextColor={mutedColor}
+                      value={searchText}
+                      onChangeText={setSearchText}
+                      autoFocus
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                      keyboardType="default"
+                    />
+                    {searchText.length > 0 && (
+                      <TouchableOpacity onPress={() => setSearchText("")} activeOpacity={0.8}>
+                        <Ionicons name="close-circle" size={18} color={mutedColor} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+
                   <VoiceSearchButton onResult={setSearchText} />
                 </View>
 
@@ -535,8 +1005,8 @@ function ProductPickerInner(
                   <View style={styles.emptyContainer}>
                     <Text style={[styles.emptyText, { color: mutedColor }]}>
                       {searchText.trim().length >= 2
-                        ? "Sonuç bulunamadı"
-                        : "Arama yapmak için en az 2 karakter giriniz"}
+                        ? t("quotation.noSearchResults")
+                        : t("quotation.minSearchChars")}
                     </Text>
                   </View>
                 ) : (
@@ -546,6 +1016,7 @@ function ProductPickerInner(
                     keyExtractor={(item) => String(item.id)}
                     onEndReached={handleEndReached}
                     onEndReachedThreshold={0.5}
+                    keyboardShouldPersistTaps="handled"
                     ListFooterComponent={
                       isFetchingNextPage ? (
                         <View style={styles.footerLoading}>
@@ -589,26 +1060,31 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   pickerButton: {
-    borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    minHeight: 52,
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    minHeight: 56,
     justifyContent: "center",
   },
   pickerButtonContent: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "space-between",
   },
-  chevronDown: {
-    width: 0,
-    height: 0,
-    marginLeft: 8,
-    borderLeftWidth: 6,
-    borderRightWidth: 6,
-    borderTopWidth: 6,
-    borderLeftColor: "transparent",
-    borderRightColor: "transparent",
+  pickerLeadIcon: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+  },
+  chevronWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
   },
   pickerButtonDisabled: {
     opacity: 0.6,
@@ -618,11 +1094,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   clearButton: {
-    marginLeft: 8,
-    padding: 4,
-  },
-  clearButtonText: {
-    fontSize: 16,
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 10,
   },
   modalOverlay: {
     flex: 1,
@@ -630,13 +1107,13 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.6)",
+    backgroundColor: "rgba(2, 6, 23, 0.58)",
   },
   modalContent: {
     flex: 1,
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
-    maxHeight: "85%",
+    maxHeight: "88%",
     overflow: "hidden",
   },
   modalHeader: {
@@ -653,7 +1130,7 @@ const styles = StyleSheet.create({
     width: 44,
     height: 5,
     borderRadius: 3,
-    opacity: 0.5,
+    opacity: 0.55,
   },
   headerRow: {
     flexDirection: "row",
@@ -661,15 +1138,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
   productIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
+    width: 42,
+    height: 42,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 14,
-  },
-  productIconText: {
-    fontSize: 18,
   },
   headerTitles: {
     flex: 1,
@@ -677,7 +1151,7 @@ const styles = StyleSheet.create({
   modalTitle: {
     fontSize: 18,
     fontWeight: "700",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   modalSubtitle: {
     fontSize: 13,
@@ -685,15 +1159,19 @@ const styles = StyleSheet.create({
     fontWeight: "500",
   },
   closeButton: {
-    padding: 6,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   backButton: {
-    padding: 4,
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
     marginRight: 8,
-  },
-  backButtonText: {
-    fontSize: 20,
-    fontWeight: "700",
   },
   relationDetailHeaderRow: {
     flexDirection: "row",
@@ -701,11 +1179,6 @@ const styles = StyleSheet.create({
   },
   relationDetailTitle: {
     flex: 1,
-  },
-  closeButtonText: {
-    fontSize: 22,
-    fontWeight: "300",
-    opacity: 0.7,
   },
   searchRow: {
     flexDirection: "row",
@@ -715,13 +1188,20 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     gap: 10,
   },
+  searchInputWrap: {
+    flex: 1,
+    minHeight: 48,
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   searchInput: {
     flex: 1,
-    borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
     fontSize: 15,
+    paddingVertical: 0,
   },
   loadingContainer: {
     paddingVertical: 40,
@@ -730,40 +1210,56 @@ const styles = StyleSheet.create({
   emptyContainer: {
     paddingVertical: 40,
     alignItems: "center",
+    paddingHorizontal: 24,
   },
   emptyText: {
     fontSize: 14,
     fontWeight: "500",
     textAlign: "center",
+    lineHeight: 22,
   },
   listContent: {
     paddingVertical: 8,
     paddingBottom: 40,
   },
   stockItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderBottomWidth: 1,
-    gap: 10,
   },
   stockItemTouchable: {
-    flex: 1,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
-  stockInfo: {
+  stockInfoRow: {
     flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
     marginRight: 12,
   },
+  stockIconWrap: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
+    borderWidth: 1,
+  },
+  stockInfo: {
+    flex: 1,
+  },
   relatedStockBadge: {
+    marginTop: 10,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
+    paddingVertical: 7,
+    borderRadius: 11,
     borderWidth: 1,
     alignSelf: "flex-start",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   relatedStockBadgeText: {
     fontSize: 12,
@@ -772,7 +1268,7 @@ const styles = StyleSheet.create({
   stockName: {
     fontSize: 15,
     fontWeight: "600",
-    marginBottom: 6,
+    marginBottom: 5,
   },
   stockCode: {
     fontSize: 13,
@@ -783,16 +1279,11 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   checkmark: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-  },
-  checkmarkText: {
-    color: "#FFFFFF",
-    fontSize: 14,
-    fontWeight: "700",
   },
   footerLoading: {
     paddingVertical: 16,
@@ -816,6 +1307,16 @@ const styles = StyleSheet.create({
   relationDetailRow: {
     paddingVertical: 14,
     borderBottomWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  relationDetailIconWrap: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 12,
   },
   relationDetailRowContent: {
     flex: 1,
@@ -864,15 +1365,11 @@ const styles = StyleSheet.create({
   relatedSelectCheckbox: {
     width: 24,
     height: 24,
-    borderRadius: 6,
+    borderRadius: 7,
     borderWidth: 2,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
-  },
-  relatedSelectCheckmark: {
-    fontSize: 14,
-    fontWeight: "700",
   },
   relatedSelectRowContent: {
     flex: 1,
