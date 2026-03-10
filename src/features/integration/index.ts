@@ -7,4 +7,5 @@ export type {
   SendCustomerMailDto,
   GoogleCustomerMailSendResultDto,
   OutlookCustomerMailSendResultDto,
+  CustomerMailLogDto,
 } from "./types";

@@ -1,6 +1,8 @@
 import { apiClient } from "../../../lib/axios";
 import type {
+  CustomerMailLogDto,
   GoogleIntegrationStatusDto,
+  GoogleCustomerMailLogsResponse,
   GoogleCustomerMailSendResponse,
   GoogleCustomerMailSendResultDto,
   GoogleIntegrationStatusResponse,
@@ -8,14 +10,25 @@ import type {
   IntegrationAuthorizeUrlResponse,
   IntegrationDisconnectResponse,
   OutlookIntegrationStatusDto,
+  OutlookCustomerMailLogsResponse,
   OutlookCustomerMailSendResponse,
   OutlookCustomerMailSendResultDto,
   OutlookIntegrationStatusResponse,
   SendCustomerMailDto,
 } from "../types";
+import type { PagedResponse } from "../../customer/types/common";
 
 function getErrorMessage(response: { message?: string; exceptionMessage?: string }, fallback: string): string {
   return response.message || response.exceptionMessage || fallback;
+}
+
+interface CustomerMailLogQueryParams {
+  customerId: number;
+  pageNumber?: number;
+  pageSize?: number;
+  sortBy?: string;
+  sortDirection?: "asc" | "desc";
+  errorsOnly?: boolean;
 }
 
 export const integrationApi = {
@@ -82,6 +95,24 @@ export const integrationApi = {
     const response = await apiClient.post<OutlookCustomerMailSendResponse>("/api/customer-mail/outlook/send", payload);
     if (!response.data.success) {
       throw new Error(getErrorMessage(response.data, "Outlook ile mail gönderilemedi."));
+    }
+
+    return response.data.data;
+  },
+
+  getGoogleCustomerMailLogs: async (params: CustomerMailLogQueryParams): Promise<PagedResponse<CustomerMailLogDto>> => {
+    const response = await apiClient.get<GoogleCustomerMailLogsResponse>("/api/customer-mail/google/logs", { params });
+    if (!response.data.success || !response.data.data) {
+      throw new Error(getErrorMessage(response.data, "Google mail logları alınamadı."));
+    }
+
+    return response.data.data;
+  },
+
+  getOutlookCustomerMailLogs: async (params: CustomerMailLogQueryParams): Promise<PagedResponse<CustomerMailLogDto>> => {
+    const response = await apiClient.get<OutlookCustomerMailLogsResponse>("/api/customer-mail/outlook/logs", { params });
+    if (!response.data.success || !response.data.data) {
+      throw new Error(getErrorMessage(response.data, "Outlook mail logları alınamadı."));
     }
 
     return response.data.data;
