@@ -1,12 +1,17 @@
 import { apiClient } from "../../../lib/axios";
 import type {
   GoogleIntegrationStatusDto,
+  GoogleCustomerMailSendResponse,
+  GoogleCustomerMailSendResultDto,
   GoogleIntegrationStatusResponse,
   IntegrationAuthorizeUrlDto,
   IntegrationAuthorizeUrlResponse,
   IntegrationDisconnectResponse,
   OutlookIntegrationStatusDto,
+  OutlookCustomerMailSendResponse,
+  OutlookCustomerMailSendResultDto,
   OutlookIntegrationStatusResponse,
+  SendCustomerMailDto,
 } from "../types";
 
 function getErrorMessage(response: { message?: string; exceptionMessage?: string }, fallback: string): string {
@@ -62,5 +67,23 @@ export const integrationApi = {
     if (!response.data.success) {
       throw new Error(getErrorMessage(response.data, "Outlook bağlantısı kaldırılamadı."));
     }
+  },
+
+  sendGoogleCustomerMail: async (payload: SendCustomerMailDto): Promise<GoogleCustomerMailSendResultDto> => {
+    const response = await apiClient.post<GoogleCustomerMailSendResponse>("/api/customer-mail/google/send", payload);
+    if (!response.data.success) {
+      throw new Error(getErrorMessage(response.data, "Google ile mail gönderilemedi."));
+    }
+
+    return response.data.data;
+  },
+
+  sendOutlookCustomerMail: async (payload: SendCustomerMailDto): Promise<OutlookCustomerMailSendResultDto> => {
+    const response = await apiClient.post<OutlookCustomerMailSendResponse>("/api/customer-mail/outlook/send", payload);
+    if (!response.data.success) {
+      throw new Error(getErrorMessage(response.data, "Outlook ile mail gönderilemedi."));
+    }
+
+    return response.data.data;
   },
 };
