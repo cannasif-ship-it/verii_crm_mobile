@@ -130,6 +130,25 @@ export function CustomerDetailScreen(): React.ReactElement {
     });
   }, [router, customer]);
 
+  const handleQuickActivityPress = useCallback(() => {
+    if (!customer) return;
+
+    const start = new Date();
+    start.setSeconds(0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+    router.push({
+      pathname: "/(tabs)/activities/create",
+      params: {
+        customerId: String(customer.id ?? ""),
+        customerName: customer.name ?? "",
+        customerCode: customer.customerCode ?? "",
+        initialStartDateTime: start.toISOString(),
+        initialEndDateTime: end.toISOString(),
+      },
+    });
+  }, [router, customer]);
+
   const handleDeletePress = useCallback(() => {
     Alert.alert(
       t("common.confirm"),
@@ -344,6 +363,7 @@ export function CustomerDetailScreen(): React.ReactElement {
               t={t}
               on360Press={handleCustomer360Press}
               onQuickQuotationPress={handleQuickQuotationPress}
+              onQuickActivityPress={handleQuickActivityPress}
               onAddImagePress={handleAddImagePress}
               onUpdateLocationPress={handleUpdateCustomerLocation}
               isUpdatingLocation={isUpdatingLocation}

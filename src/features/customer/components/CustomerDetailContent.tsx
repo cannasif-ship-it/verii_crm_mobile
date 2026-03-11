@@ -269,6 +269,7 @@ interface CustomerDetailContentProps {
   t: (key: string) => string;
   on360Press: () => void;
   onQuickQuotationPress: () => void;
+  onQuickActivityPress: () => void;
   onAddImagePress: () => void;
   onUpdateLocationPress?: () => void;
   onQuotationPress?: (quotationId: number) => void;
@@ -286,6 +287,7 @@ export function CustomerDetailContent({
   t,
   on360Press,
   onQuickQuotationPress,
+  onQuickActivityPress,
   onAddImagePress,
   onUpdateLocationPress = () => {},
   onQuotationPress = () => {},
@@ -394,6 +396,14 @@ export function CustomerDetailContent({
               activeOpacity={0.7}
             >
               <Text style={[styles.textQuickQuotation, { color: "#0ea5e9" }]}>{t("customer.quickQuotation")}</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.btnQuickQuotation, { backgroundColor: "#8b5cf612", borderColor: "#8b5cf640" }]}
+              onPress={onQuickActivityPress}
+              activeOpacity={0.7}
+            >
+              <Text style={[styles.textQuickQuotation, { color: "#8b5cf6" }]}>{t("customer.quickActivity")}</Text>
             </TouchableOpacity>
 
             <TouchableOpacity

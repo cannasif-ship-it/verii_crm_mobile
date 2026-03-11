@@ -202,11 +202,38 @@ export function CustomerListScreen() {
     router.push("/customers/create");
   };
 
+  const getQuickActivityWindow = useCallback(() => {
+    const start = new Date();
+    start.setSeconds(0, 0);
+    const end = new Date(start.getTime() + 60 * 60 * 1000);
+    return {
+      start: start.toISOString(),
+      end: end.toISOString(),
+    };
+  }, []);
+
   const renderItem = useCallback(({ item }: { item: CustomerDto }) => (
     <View style={viewMode === 'grid' ? { width: GRID_WIDTH } : { width: '100%' }}>
-        <CustomerCard customer={item} viewMode={viewMode} onPress={() => router.push(`/customers/${item.id}`)} />
+        <CustomerCard
+          customer={item}
+          viewMode={viewMode}
+          onPress={() => router.push(`/customers/${item.id}`)}
+          onQuickActivityPress={() => {
+            const window = getQuickActivityWindow();
+            router.push({
+              pathname: "/(tabs)/activities/create",
+              params: {
+                customerId: String(item.id ?? ""),
+                customerName: item.name ?? "",
+                customerCode: item.customerCode ?? "",
+                initialStartDateTime: window.start,
+                initialEndDateTime: window.end,
+              },
+            });
+          }}
+        />
     </View>
-  ), [viewMode, router]);
+  ), [viewMode, router, getQuickActivityWindow]);
 
   const isAnyFilterActive = appliedFilter !== 'all' || appliedCityId !== null || appliedDistrictId !== null;
   

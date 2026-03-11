@@ -5,13 +5,15 @@ import {
   Text,
   Dimensions,
   TouchableWithoutFeedback,
-  Platform
+  Platform,
+  TouchableOpacity
 } from "react-native";
 import {
   Call02Icon,
   Mail01Icon,
   Location01Icon,
   ArrowRight01Icon,
+  Calendar03Icon,
 } from "hugeicons-react-native";
 import type { CustomerDto } from "../types"; 
 import { useUIStore } from "../../../store/ui";
@@ -30,6 +32,7 @@ interface CustomerCardProps {
   customer: any; 
   viewMode: 'grid' | 'list';
   onPress: () => void;
+  onQuickActivityPress?: () => void;
 }
 
 const getInitials = (name: string) => {
@@ -46,7 +49,7 @@ const formatPhoneNumber = (phone: string | null | undefined) => {
   return phone;
 };
 
-const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProps) => {
+const CustomerCardComponent = ({ customer, viewMode, onPress, onQuickActivityPress }: CustomerCardProps) => {
   const { themeMode } = useUIStore();
   const [isPressed, setIsPressed] = useState(false);
 
@@ -141,6 +144,18 @@ const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProp
                   {customer.name}
                 </Text>
               </View>
+              {onQuickActivityPress ? (
+                <TouchableOpacity
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    onQuickActivityPress();
+                  }}
+                  style={[styles.quickActionButton, styles.gridQuickActionButton, { borderColor: THEME.badgeBorder, backgroundColor: THEME.erpBg }]}
+                  activeOpacity={0.8}
+                >
+                  <Calendar03Icon size={14} color={THEME.erpText} strokeWidth={1.8} />
+                </TouchableOpacity>
+              ) : null}
             </View>
 
             {/* ORTA SATIR: İletişim */}
@@ -243,6 +258,18 @@ const CustomerCardComponent = ({ customer, viewMode, onPress }: CustomerCardProp
             </View>
 
             <View style={styles.listAction}>
+              {onQuickActivityPress ? (
+                <TouchableOpacity
+                  onPress={(event) => {
+                    event.stopPropagation();
+                    onQuickActivityPress();
+                  }}
+                  style={[styles.quickActionButton, { borderColor: THEME.badgeBorder, backgroundColor: THEME.erpBg }]}
+                  activeOpacity={0.8}
+                >
+                  <Calendar03Icon size={14} color={THEME.erpText} strokeWidth={1.8} />
+                </TouchableOpacity>
+              ) : null}
                <ArrowRight01Icon size={16} color={THEME.textMute} strokeWidth={2} />
             </View>
           </View>
@@ -287,6 +314,19 @@ const styles = StyleSheet.create({
   categoryText: {
     fontSize: 9.5,
     fontWeight: "600",
+  },
+  quickActionButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  gridQuickActionButton: {
+    marginRight: 0,
+    marginLeft: 8,
   },
 
   // --- GRID STYLES ---
