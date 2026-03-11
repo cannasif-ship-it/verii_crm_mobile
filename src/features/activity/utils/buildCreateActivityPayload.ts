@@ -5,6 +5,7 @@ import type {
   ActivityTypeRef,
   CreateActivityReminderDto,
 } from "../types";
+import i18n from "../../../locales";
 
 export interface ActivityFormLike {
   subject: string;
@@ -33,6 +34,35 @@ export interface BuildCreateActivityPayloadOptions {
   assignedUserIdFallback?: number;
 }
 
+function resolveActivityTypeId(
+  data: Pick<ActivityFormLike, "activityType" | "activityTypeId">,
+  activityTypes: (ActivityTypeDto | ActivityTypeRef)[]
+): number {
+  if (typeof data.activityTypeId === "number" && data.activityTypeId > 0) {
+    return data.activityTypeId;
+  }
+
+  const activityTypeValue = String(data.activityType ?? "").trim();
+  if (!activityTypeValue) {
+    throw new Error(i18n.t("validation.activityTypeRequired"));
+  }
+
+  const numericValue = Number(activityTypeValue);
+  if (Number.isInteger(numericValue) && numericValue > 0) {
+    return numericValue;
+  }
+
+  const found = activityTypes.find(
+    (type) => type.name.trim().toLowerCase() === activityTypeValue.toLowerCase()
+  );
+
+  if (!found?.id) {
+    throw new Error(i18n.t("validation.activityTypeRequired"));
+  }
+
+  return found.id;
+}
+
 function statusToNumeric(status: string): number {
   const s = status.toLowerCase().replace(/\s+/g, "");
   if (s === "completed") return 1;
@@ -53,13 +83,7 @@ export function buildCreateActivityPayload(
   options: BuildCreateActivityPayloadOptions
 ): CreateActivityDto {
   const { activityTypes, assignedUserIdFallback } = options;
-  let activityTypeId = typeof data.activityTypeId === "number" ? data.activityTypeId : 0;
-  if (activityTypeId === 0 && data.activityType) {
-    const found = activityTypes.find(
-      (t) => t.name.toLowerCase() === String(data.activityType).toLowerCase()
-    );
-    if (found) activityTypeId = found.id;
-  }
+  const activityTypeId = resolveActivityTypeId(data, activityTypes);
   const startDateTime =
     data.startDateTime ?? (data.activityDate ? new Date(data.activityDate).toISOString() : new Date().toISOString());
   const parsedStart = new Date(startDateTime);
@@ -68,6 +92,14 @@ export function buildCreateActivityPayload(
     : new Date(parsedStart.getTime() + 60 * 60 * 1000).toISOString();
   const endDateTime = data.endDateTime ?? fallbackEndDateTime;
   const assignedUserId = data.assignedUserId ?? assignedUserIdFallback ?? 0;
+
+  if (assignedUserId <= 0) {
+    throw new Error(i18n.t("validation.assignedUserRequired"));
+  }
+
+  if (Number.isNaN(new Date(endDateTime).getTime())) {
+    throw new Error(i18n.t("validation.endDateRequired"));
+  }
 
   return {
     subject: data.subject,

@@ -198,6 +198,7 @@ export function ActivityFormScreen(): React.ReactElement {
         subject: existingActivity.subject,
         description: existingActivity.description || "",
         activityType: normalizeActivityType(existingActivity.activityType),
+        activityTypeId: existingActivity.activityTypeId,
         potentialCustomerId: existingActivity.potentialCustomerId,
         erpCustomerCode: existingActivity.erpCustomerCode || "",
         productCode: existingActivity.productCode || "",
@@ -249,6 +250,7 @@ export function ActivityFormScreen(): React.ReactElement {
       subject: "",
       description: "",
       activityType: "",
+      activityTypeId: undefined,
       potentialCustomerId: initialCustomerId,
       erpCustomerCode: customerCode || "",
       productCode: "",
@@ -319,6 +321,7 @@ export function ActivityFormScreen(): React.ReactElement {
   const handleTypeSelect = useCallback(
     (type: ActivityTypeDto) => {
       setValue("activityType", type.name);
+      setValue("activityTypeId", type.id);
       setTypeModalOpen(false);
     },
     [setValue]
@@ -474,8 +477,9 @@ export function ActivityFormScreen(): React.ReactElement {
           Alert.alert("", t("activity.createSuccess"));
         }
         router.back();
-      } catch {
-        Alert.alert(t("common.error"), t("common.unknownError"));
+      } catch (error) {
+        const message = error instanceof Error && error.message ? error.message : t("common.unknownError");
+        Alert.alert(t("common.error"), message);
       }
     },
     [

@@ -6,6 +6,7 @@ export const createActivitySchema = () =>
     subject: z.string().min(1, i18n.t("validation.subjectRequired")).max(100),
     description: z.string().max(500).optional(),
     activityType: z.string().min(1, i18n.t("validation.activityTypeRequired")),
+    activityTypeId: z.number().optional().nullable(),
     potentialCustomerId: z.number().optional().nullable(),
     erpCustomerCode: z.string().optional().nullable(),
     productCode: z.string().optional().nullable(),
