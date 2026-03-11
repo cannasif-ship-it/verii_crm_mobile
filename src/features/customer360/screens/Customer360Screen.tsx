@@ -15,13 +15,15 @@ import {
   useCustomer360Overview,
   useCustomer360AnalyticsSummary,
   useCustomer360AnalyticsCharts,
+  useCustomer360QuickQuotations,
 } from "../hooks";
 import { CurrencyPicker } from "../components";
 import { Customer360OverviewTab } from "./Customer360OverviewTab";
 import { Customer360AnalyticsTab } from "./Customer360AnalyticsTab";
 import { Customer360MailLogsTab } from "./Customer360MailLogsTab";
+import { Customer360QuickQuotationsTab } from "./Customer360QuickQuotationsTab";
 
-type TabType = "overview" | "analytics" | "mailLogs";
+type TabType = "overview" | "analytics" | "quickQuotations" | "mailLogs";
 
 function collectCurrencyOptions(
   summaryCurrencies: { currency: string }[],
@@ -61,6 +63,7 @@ export function Customer360Screen(): React.ReactElement {
   const overviewQuery = useCustomer360Overview(customerId, currencyParam);
   const summaryQuery = useCustomer360AnalyticsSummary(customerId, currencyParam);
   const chartsQuery = useCustomer360AnalyticsCharts(customerId, 12, currencyParam);
+  const quickQuotationsQuery = useCustomer360QuickQuotations(customerId);
 
   const currencyOptions = useMemo(() => {
     const summary = summaryQuery.data?.totalsByCurrency ?? [];
@@ -167,6 +170,25 @@ export function Customer360Screen(): React.ReactElement {
             <TouchableOpacity
               style={[
                 styles.tab,
+                activeTab === "quickQuotations" && {
+                  borderBottomColor: colors.accent,
+                  borderBottomWidth: 2,
+                },
+              ]}
+              onPress={() => setActiveTab("quickQuotations")}
+            >
+              <Text
+                style={[
+                  styles.tabText,
+                  { color: activeTab === "quickQuotations" ? colors.accent : colors.textMuted },
+                ]}
+              >
+                {t("customer360.tabs.quickQuotations")}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[
+                styles.tab,
                 activeTab === "mailLogs" && {
                   borderBottomColor: colors.accent,
                   borderBottomWidth: 2,
@@ -226,6 +248,24 @@ export function Customer360Screen(): React.ReactElement {
                 isChartsLoading={chartsQuery.isLoading}
                 summaryError={summaryQuery.isError ? summaryQuery.error ?? new Error(t("customer360.analytics.error")) : null}
                 chartsError={chartsQuery.isError ? chartsQuery.error ?? null : null}
+              />
+            )
+          ) : activeTab === "quickQuotations" ? (
+            quickQuotationsQuery.isLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color={colors.accent} />
+              </View>
+            ) : quickQuotationsQuery.isError ? (
+              <View style={styles.errorContainer}>
+                <Text style={[styles.errorText, { color: colors.error }]}>
+                  {quickQuotationsQuery.error?.message ?? t("customer360.quickQuotations.error")}
+                </Text>
+              </View>
+            ) : (
+              <Customer360QuickQuotationsTab
+                items={quickQuotationsQuery.data ?? []}
+                colors={colors}
+                emptyText={t("customer360.quickQuotations.empty")}
               />
             )
           ) : (
