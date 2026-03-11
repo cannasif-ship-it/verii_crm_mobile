@@ -236,6 +236,7 @@
     "customerRequired": "Müşteri seçimi zorunludur",
     "fullNameRequired": "Ad soyad zorunludur",
     "addressRequired": "Adres alanı zorunludur",
+    "fillRequiredFields": "Lütfen zorunlu alanları doldurun",
     "required": "Bu alan zorunludur",
     "maxLength": "Bu alan en fazla {{count}} karakter olabilir"
   },
