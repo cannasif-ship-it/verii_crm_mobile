@@ -566,6 +566,10 @@ export function OrderCreateScreen(): React.ReactElement {
     [lines, exchangeRates, createOrder, setError]
   );
 
+  const onInvalidSubmit = useCallback(() => {
+    showToast("error", t("validation.fillRequiredFields", "Lütfen zorunlu alanları doldurun"));
+  }, [showToast, t]);
+
   return (
     <>
       <StatusBar style="light" />
@@ -1171,7 +1175,7 @@ export function OrderCreateScreen(): React.ReactElement {
                 { backgroundColor: colors.accent },
                 (isSubmitting || createOrder.isPending) && styles.submitButtonDisabled,
               ]}
-              onPress={handleSubmit(onSubmit)}
+              onPress={handleSubmit(onSubmit, onInvalidSubmit)}
               disabled={isSubmitting || createOrder.isPending}
             >
               {isSubmitting || createOrder.isPending ? (
