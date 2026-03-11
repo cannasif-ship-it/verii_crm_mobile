@@ -13,6 +13,7 @@ export function useCreateActivity() {
     mutationFn: activityApi.create,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["activity", "list"] });
+      queryClient.invalidateQueries({ queryKey: ["customer360"] });
       showToast("success", t("activity.createSuccess"));
     },
     onError: (error) => {
@@ -46,6 +47,7 @@ export function useUpdateActivity() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["activity", "list"] });
       queryClient.invalidateQueries({ queryKey: ["activity", "detail", variables.id] });
+      queryClient.invalidateQueries({ queryKey: ["customer360"] });
       showToast("success", t("activity.updateSuccess"));
     },
     onError: (error, variables, context) => {
