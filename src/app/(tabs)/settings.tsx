@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Image,
   ScrollView,
+  TextInput,
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useRouter } from "expo-router";
@@ -36,18 +37,24 @@ import { useUIStore } from "../../store/ui";
 import { setLanguage, getCurrentLanguage } from "../../locales";
 import { profileApi } from "../../features/profile";
 import { useToast } from "../../hooks/useToast";
+import { DEFAULT_API_BASE_URL, getApiBaseUrl, saveApiBaseUrl, testApiBaseUrl } from "../../constants/config";
+import { apiClient } from "../../lib/axios";
 
 export default function SettingsScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const queryClient = useQueryClient();
-  const { showSuccess, showError } = useToast();
+  const { showSuccess, showError, showInfo } = useToast();
 
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const authUser = useAuthStore((state) => state.user);
   const { themeMode, toggleTheme } = useUIStore();
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
+  const [apiUrlInput, setApiUrlInput] = useState(getApiBaseUrl());
+  const [lastSuccessfulApiUrl, setLastSuccessfulApiUrl] = useState(getApiBaseUrl());
+  const [isTestingApiUrl, setIsTestingApiUrl] = useState(false);
+  const [isSavingApiUrl, setIsSavingApiUrl] = useState(false);
 
   const isDarkMode = themeMode === "dark";
 
@@ -108,6 +115,42 @@ export default function SettingsScreen(): React.ReactElement {
 
   const handleOpenIntegrationSettings = (): void => {
     router.push("/integrations-settings");
+  };
+
+  const handleTestApiUrl = async (): Promise<void> => {
+    setIsTestingApiUrl(true);
+    try {
+      await testApiBaseUrl(apiUrlInput);
+      const normalized = apiUrlInput.trim();
+      setLastSuccessfulApiUrl(normalized);
+      showSuccess(t("settings.apiUrlTestSuccess"));
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t("settings.apiUrlTestError"));
+    } finally {
+      setIsTestingApiUrl(false);
+    }
+  };
+
+  const handleSaveApiUrl = async (): Promise<void> => {
+    setIsSavingApiUrl(true);
+    try {
+      const normalized = await saveApiBaseUrl(lastSuccessfulApiUrl);
+      apiClient.defaults.baseURL = normalized;
+      await queryClient.invalidateQueries();
+      setApiUrlInput(normalized);
+      setLastSuccessfulApiUrl(normalized);
+      showSuccess(t("settings.apiUrlSaveSuccess"));
+    } catch (error) {
+      showError(error instanceof Error ? error.message : t("settings.apiUrlSaveError"));
+    } finally {
+      setIsSavingApiUrl(false);
+    }
+  };
+
+  const handleResetApiUrl = (): void => {
+    setApiUrlInput(DEFAULT_API_BASE_URL);
+    setLastSuccessfulApiUrl("");
+    showInfo(t("settings.apiUrlResetInfo"));
   };
 
   const handleLanguageChange = async (lang: "tr" | "en" | "de"): Promise<void> => {
@@ -325,6 +368,94 @@ export default function SettingsScreen(): React.ReactElement {
             </TouchableOpacity>
           </MenuGroup>
 
+          <Text style={[styles.groupTitle, { color: mutedColor }]}>{t("settings.apiUrlTitle")}</Text>
+          <MenuGroup>
+            <View style={styles.inputContainer}>
+              <Text style={[styles.menuText, { color: textColor, flex: 0 }]}>{t("settings.apiUrlTitle")}</Text>
+              <Text style={[styles.sectionDescription, { color: mutedColor }]}>
+                {t("settings.apiUrlDescription")}
+              </Text>
+
+              <TextInput
+                value={apiUrlInput}
+                onChangeText={setApiUrlInput}
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                placeholder={DEFAULT_API_BASE_URL}
+                placeholderTextColor={mutedColor}
+                style={[
+                  styles.apiUrlInput,
+                  {
+                    backgroundColor: inputBg,
+                    borderColor,
+                    color: textColor,
+                  },
+                ]}
+              />
+
+              <Text style={[styles.sectionDescription, { color: mutedColor }]}>
+                {t("settings.apiUrlCurrent")}: {getApiBaseUrl()}
+              </Text>
+
+              <View style={styles.apiActionRow}>
+                <TouchableOpacity
+                  style={[
+                    styles.apiSecondaryButton,
+                    {
+                      backgroundColor: inputBg,
+                      borderColor,
+                      opacity: isTestingApiUrl || isSavingApiUrl ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={handleTestApiUrl}
+                  disabled={isTestingApiUrl || isSavingApiUrl}
+                >
+                  {isTestingApiUrl ? (
+                    <ActivityIndicator size="small" color={brandColor} />
+                  ) : (
+                    <Text style={[styles.apiSecondaryButtonText, { color: brandColor }]}>
+                      {t("settings.apiUrlTestButton")}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[
+                    styles.apiPrimaryButton,
+                    {
+                      backgroundColor: brandColor,
+                      opacity:
+                        !lastSuccessfulApiUrl ||
+                        isSavingApiUrl ||
+                        lastSuccessfulApiUrl.trim() !== apiUrlInput.trim()
+                          ? 0.45
+                          : 1,
+                    },
+                  ]}
+                  onPress={handleSaveApiUrl}
+                  disabled={
+                    !lastSuccessfulApiUrl ||
+                    isSavingApiUrl ||
+                    lastSuccessfulApiUrl.trim() !== apiUrlInput.trim()
+                  }
+                >
+                  {isSavingApiUrl ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.apiPrimaryButtonText}>{t("settings.apiUrlSaveButton")}</Text>
+                  )}
+                </TouchableOpacity>
+              </View>
+
+              <TouchableOpacity onPress={handleResetApiUrl} style={styles.apiResetButton}>
+                <Text style={[styles.apiResetButtonText, { color: mutedColor }]}>
+                  {t("settings.apiUrlResetButton")}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </MenuGroup>
+
           <TouchableOpacity 
             style={[
               styles.logoutButton, 
@@ -446,6 +577,52 @@ const styles = StyleSheet.create({
   sectionDescription: {
     fontSize: 13,
     lineHeight: 20,
+  },
+  apiUrlInput: {
+    borderWidth: 1,
+    borderRadius: 16,
+    minHeight: 52,
+    paddingHorizontal: 16,
+    fontSize: 14,
+    fontWeight: "500",
+  },
+  apiActionRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  apiSecondaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  apiSecondaryButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  apiPrimaryButton: {
+    flex: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  apiPrimaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  apiResetButton: {
+    alignSelf: "flex-start",
+    paddingVertical: 4,
+  },
+  apiResetButtonText: {
+    fontSize: 12,
+    fontWeight: "600",
   },
   primaryButton: {
     flexDirection: "row",
