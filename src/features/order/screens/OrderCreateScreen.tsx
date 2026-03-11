@@ -320,6 +320,8 @@ export function OrderCreateScreen(): React.ReactElement {
     setLineFormVisible(true);
   }, [watchedCustomerId, watchedErpCustomerCode, watchedRepresentativeId, watchedCurrency, showToast]);
 
+  const canAddLine = Boolean((watchedCustomerId || watchedErpCustomerCode) && watchedRepresentativeId && watchedCurrency);
+
   const handleEditLine = useCallback(
     (line: OrderLineFormState) => {
       setEditingLine(line);
@@ -809,8 +811,13 @@ export function OrderCreateScreen(): React.ReactElement {
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: colors.text }]}>Satırlar</Text>
               <TouchableOpacity
-                style={[styles.addButton, { backgroundColor: colors.accent }]}
+                style={[
+                  styles.addButton,
+                  { backgroundColor: colors.accent },
+                  !canAddLine && styles.submitButtonDisabled,
+                ]}
                 onPress={handleAddLine}
+                disabled={!canAddLine}
               >
                 <Text style={styles.addButtonText}>+ Satır Ekle</Text>
               </TouchableOpacity>
