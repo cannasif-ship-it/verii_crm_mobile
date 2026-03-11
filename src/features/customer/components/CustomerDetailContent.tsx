@@ -4,7 +4,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
-import { API_BASE_URL } from "../../../constants/config";
+import { getApiBaseUrl } from "../../../constants/config";
 import i18n from "../../../locales";
 import type { CustomerDto, CustomerImageDto } from "../types";
 import type { QuotationGetDto } from "../../../features/quotation/types";
@@ -138,7 +138,7 @@ function toAbsoluteImageUrl(path: string | null | undefined): string | undefined
   if (!path) return undefined;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE_URL}${normalized}`;
+  return `${getApiBaseUrl()}${normalized}`;
 }
 
 async function openUrlSafely(url: string) {

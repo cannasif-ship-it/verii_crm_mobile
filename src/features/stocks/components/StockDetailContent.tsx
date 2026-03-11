@@ -2,7 +2,7 @@ import React, { useMemo, useCallback, useState } from "react";
 import { View, StyleSheet, FlatList, Image, TouchableOpacity } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { Text } from "../../../components/ui/text";
-import { API_BASE_URL } from "../../../constants/config";
+import { getApiBaseUrl } from "../../../constants/config";
 import type { StockGetDto, StockRelationDto, StockImageDto } from "../types";
 
 function DetailRow({
@@ -72,7 +72,8 @@ export function StockDetailContent({
     if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
       return filePath;
     }
-    const baseUrl = API_BASE_URL.endsWith("/") ? API_BASE_URL.slice(0, -1) : API_BASE_URL;
+    const currentBaseUrl = getApiBaseUrl();
+    const baseUrl = currentBaseUrl.endsWith("/") ? currentBaseUrl.slice(0, -1) : currentBaseUrl;
     const path = filePath.startsWith("/") ? filePath : `/${filePath}`;
     return `${baseUrl}${path}`;
   }, []);

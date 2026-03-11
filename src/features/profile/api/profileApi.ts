@@ -1,5 +1,5 @@
 import { apiClient } from "../../../lib/axios";
-import { API_BASE_URL } from "../../../constants/config";
+import { getApiBaseUrl } from "../../../constants/config";
 import type {
   AuthUserProfile,
   AuthUserProfileResponse,
@@ -13,7 +13,7 @@ function toAbsoluteImageUrl(path: string | null | undefined): string | undefined
   if (!path) return undefined;
   if (path.startsWith("http://") || path.startsWith("https://")) return path;
   const normalized = path.startsWith("/") ? path : `/${path}`;
-  return `${API_BASE_URL}${normalized}`;
+  return `${getApiBaseUrl()}${normalized}`;
 }
 
 export const profileApi = {
