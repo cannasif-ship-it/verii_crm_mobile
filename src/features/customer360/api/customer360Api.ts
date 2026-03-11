@@ -2,6 +2,7 @@ import { apiClient } from "../../../lib/axios";
 import type { ApiResponse } from "../../auth/types";
 import type {
   Customer360OverviewDto,
+  Customer360QuickQuotationDto,
   Customer360AnalyticsSummaryDto,
   Customer360AnalyticsChartsDto,
 } from "../types";
@@ -9,6 +10,7 @@ import type {
 const CUSTOMER_360_OVERVIEW_STALE_MS = 30 * 1000;
 const CUSTOMER_360_SUMMARY_STALE_MS = 30 * 1000;
 const CUSTOMER_360_CHARTS_STALE_MS = 45 * 1000;
+const CUSTOMER_360_QUICK_QUOTATIONS_STALE_MS = 30 * 1000;
 
 function buildConfig(currency: string | null): {
   params?: { currency: string };
@@ -91,10 +93,22 @@ export const customer360Api = {
     >(getAnalyticsChartsPath(customerId), { ...config, params });
     return assertSuccess(response, "Grafik verisi yüklenemedi");
   },
+
+  getQuickQuotations: async (
+    customerId: number
+  ): Promise<Customer360QuickQuotationDto[]> => {
+    const response = await apiClient.get<
+      ApiResponse<Customer360QuickQuotationDto[]> & {
+        data: Customer360QuickQuotationDto[] | null;
+      }
+    >(`/api/customers/${customerId}/quick-quotations`);
+    return assertSuccess(response, "Hızlı teklifler yüklenemedi");
+  },
 };
 
 export {
   CUSTOMER_360_OVERVIEW_STALE_MS,
   CUSTOMER_360_SUMMARY_STALE_MS,
   CUSTOMER_360_CHARTS_STALE_MS,
+  CUSTOMER_360_QUICK_QUOTATIONS_STALE_MS,
 };
