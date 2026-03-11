@@ -12,7 +12,11 @@ export const createDemandSchema = () =>
         status: z.number().nullable().optional(),
         description: z.string().max(500).nullable().optional(),
         paymentTypeId: z.number().nullable().optional(),
-        documentSerialTypeId: z.number().nullable().optional(),
+        documentSerialTypeId: z
+          .number()
+          .nullable()
+          .optional()
+          .refine((v) => v != null && v > 0, { message: "Seri no seçilmelidir" }),
         offerType: z.string().min(1, "Talep tipi seçilmelidir"),
         offerDate: z.string().nullable().optional(),
         offerNo: z.string().max(50).nullable().optional(),
@@ -45,6 +49,13 @@ export const createDemandSchema = () =>
           code: z.ZodIssueCode.custom,
           message: "Teslimat tarihi seçilmelidir",
           path: ["demand", "deliveryDate"],
+        });
+      }
+      if (d.documentSerialTypeId == null || d.documentSerialTypeId === 0) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Seri no seçilmelidir",
+          path: ["demand", "documentSerialTypeId"],
         });
       }
     });

@@ -592,7 +592,7 @@ export function DemandCreateScreen(): React.ReactElement {
             const list: string[] = [];
             const q = errors.demand as Record<string, { message?: string }> | undefined;
             if (q) {
-              ["potentialCustomerId", "paymentTypeId", "deliveryDate", "offerType", "currency"].forEach((key) => {
+              ["potentialCustomerId", "paymentTypeId", "deliveryDate", "documentSerialTypeId", "offerType", "currency"].forEach((key) => {
                 const m = msg(q[key]);
                 if (m && !list.includes(m)) list.push(m);
               });
