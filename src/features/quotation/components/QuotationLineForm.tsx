@@ -525,10 +525,9 @@ export function QuotationLineForm({
                 style={[
                   styles.input,
                   { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                  styles.inputReadOnly,
                 ]}
                 value={unitPrice}
-                editable={false}
+                onChangeText={setUnitPrice}
                 placeholder="Birim fiyat"
                 placeholderTextColor={mutedColor}
                 keyboardType="numeric"
