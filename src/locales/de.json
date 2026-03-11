@@ -216,6 +216,7 @@
     "fullNameRequired": "Vollständiger Name ist erforderlich",
     "subjectRequired": "Betreff ist erforderlich",
     "activityTypeRequired": "Aktivitätstyp ist erforderlich",
+    "assignedUserRequired": "Zugewiesener Benutzer ist erforderlich",
     "statusRequired": "Status ist erforderlich",
     "dateRequired": "Datum ist erforderlich",
     "endDateRequired": "Enddatum ist erforderlich"
@@ -1195,7 +1196,24 @@
     "tabs": {
       "overview": "Übersicht",
       "analytics": "Analyse",
+      "quickQuotations": "Schnellangebote",
       "mailLogs": "Mail-Verlauf"
+    },
+    "quickQuotations": {
+      "empty": "Für diesen Kunden wurden keine Schnellangebote gefunden",
+      "error": "Schnellangebote konnten nicht geladen werden",
+      "draft": "Entwurf",
+      "converted": "In Angebot umgewandelt",
+      "sentToApproval": "Zur Freigabe gesendet",
+      "notSentToApproval": "Nicht zur Freigabe gesendet",
+      "currency": "Währung",
+      "total": "Gesamt",
+      "quotationStatus": "Angebotsstatus",
+      "approvalStep": "Freigabeschritt",
+      "stepValue": "Schritt {{step}}",
+      "convertedAt": "Umgewandelt: {{date}}",
+      "notConvertedYet": "Noch nicht umgewandelt",
+      "openQuotation": "Angebot öffnen"
     },
     "mail": {
       "providers": {

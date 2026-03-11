@@ -216,6 +216,7 @@
     "fullNameRequired": "Full name is required",
     "subjectRequired": "Subject is required",
     "activityTypeRequired": "Activity type is required",
+    "assignedUserRequired": "Assigned user is required",
     "statusRequired": "Status is required",
     "dateRequired": "Date is required",
     "endDateRequired": "End date is required"
@@ -1194,7 +1195,24 @@
     "tabs": {
       "overview": "Overview",
       "analytics": "Analytics",
+      "quickQuotations": "Quick Quotations",
       "mailLogs": "Mail History"
+    },
+    "quickQuotations": {
+      "empty": "No quick quotations found for this customer",
+      "error": "Quick quotations could not be loaded",
+      "draft": "Draft",
+      "converted": "Converted",
+      "sentToApproval": "Sent to Approval",
+      "notSentToApproval": "Not Sent to Approval",
+      "currency": "Currency",
+      "total": "Total",
+      "quotationStatus": "Quotation Status",
+      "approvalStep": "Approval Step",
+      "stepValue": "Step {{step}}",
+      "convertedAt": "Converted: {{date}}",
+      "notConvertedYet": "Not converted yet",
+      "openQuotation": "Open Quotation"
     },
     "mail": {
       "providers": {

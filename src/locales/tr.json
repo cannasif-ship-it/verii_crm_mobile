@@ -218,6 +218,7 @@
   "validation": {
     "subjectRequired": "Konu zorunludur",
     "activityTypeRequired": "Aktivite tipi seçilmelidir",
+    "assignedUserRequired": "Atanan kullanıcı zorunludur",
     "statusRequired": "Durum seçilmelidir",
     "dateRequired": "Tarih zorunludur",
     "endDateRequired": "Bitiş tarihi zorunludur",
@@ -1221,7 +1222,24 @@
     "tabs": {
       "overview": "Genel Bakış",
       "analytics": "Analitik",
+      "quickQuotations": "Hızlı Teklifler",
       "mailLogs": "Mail Geçmişi"
+    },
+    "quickQuotations": {
+      "empty": "Bu cariye ait hızlı teklif bulunamadı",
+      "error": "Hızlı teklifler yüklenemedi",
+      "draft": "Taslak",
+      "converted": "Teklife Döndü",
+      "sentToApproval": "Onaya Gönderildi",
+      "notSentToApproval": "Onaya Gitmedi",
+      "currency": "Para Birimi",
+      "total": "Toplam",
+      "quotationStatus": "Teklif Durumu",
+      "approvalStep": "Onay Adımı",
+      "stepValue": "Adım {{step}}",
+      "convertedAt": "Dönüşüm: {{date}}",
+      "notConvertedYet": "Henüz teklife dönüşmedi",
+      "openQuotation": "Teklifi Aç"
     },
     "mail": {
       "providers": {
