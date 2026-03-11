@@ -44,11 +44,26 @@ interface PickerOption {
 export function ActivityFormScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
-  const { id, initialDate, initialStartDateTime, initialEndDateTime } = useLocalSearchParams<{
+  const {
+    id,
+    initialDate,
+    initialStartDateTime,
+    initialEndDateTime,
+    customerId,
+    customerName,
+    customerCode,
+    contactId,
+    contactName,
+  } = useLocalSearchParams<{
     id: string;
     initialDate: string;
     initialStartDateTime: string;
     initialEndDateTime: string;
+    customerId: string;
+    customerName: string;
+    customerCode: string;
+    contactId: string;
+    contactName: string;
   }>();
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
@@ -58,16 +73,30 @@ export function ActivityFormScreen(): React.ReactElement {
 
   const toDefaultStartDateTime = useCallback((): string => {
     if (initialStartDateTime) return initialStartDateTime;
-    if (initialDate) return initialDate;
-    return new Date().toISOString();
+    const base = initialDate ? new Date(initialDate) : new Date();
+    if (Number.isNaN(base.getTime())) {
+      const fallback = new Date();
+      fallback.setSeconds(0, 0);
+      return fallback.toISOString();
+    }
+    if (initialDate) {
+      const now = new Date();
+      base.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    } else {
+      base.setSeconds(0, 0);
+    }
+    return base.toISOString();
   }, [initialDate, initialStartDateTime]);
 
   const toDefaultEndDateTime = useCallback((): string => {
     if (initialEndDateTime) return initialEndDateTime;
     const start = new Date(toDefaultStartDateTime());
-    if (Number.isNaN(start.getTime())) return new Date().toISOString();
-    start.setHours(start.getHours() + 1);
-    return start.toISOString();
+    if (Number.isNaN(start.getTime())) {
+      const fallback = new Date();
+      fallback.setHours(fallback.getHours() + 1, fallback.getMinutes(), 0, 0);
+      return fallback.toISOString();
+    }
+    return new Date(start.getTime() + 60 * 60 * 1000).toISOString();
   }, [initialEndDateTime, toDefaultStartDateTime]);
 
   const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
@@ -207,6 +236,85 @@ export function ActivityFormScreen(): React.ReactElement {
       }
     }
   }, [existingActivity, normalizeActivityType, normalizePriority, normalizeStatus, reset, toDefaultEndDateTime, toDefaultStartDateTime]);
+
+  useEffect(() => {
+    if (existingActivity || isEditMode) {
+      return;
+    }
+
+    const initialCustomerId = customerId ? Number(customerId) : undefined;
+    const initialContactId = contactId ? Number(contactId) : undefined;
+
+    reset({
+      subject: "",
+      description: "",
+      activityType: "",
+      potentialCustomerId: initialCustomerId,
+      erpCustomerCode: customerCode || "",
+      productCode: "",
+      productName: "",
+      status: "Scheduled",
+      isCompleted: false,
+      priority: "Medium",
+      contactId: initialContactId,
+      assignedUserId: user?.id,
+      startDateTime: toDefaultStartDateTime(),
+      endDateTime: toDefaultEndDateTime(),
+      isAllDay: false,
+      reminders: [],
+    });
+
+    setSelectedCustomer(
+      initialCustomerId
+        ? ({
+            id: initialCustomerId,
+            name: customerName || "",
+            customerCode: customerCode || undefined,
+          } as CustomerDto)
+        : undefined
+    );
+
+    setSelectedContact(
+      initialContactId
+        ? ({
+            id: initialContactId,
+            fullName: contactName || "",
+            customerId: initialCustomerId ?? 0,
+          } as ContactDto)
+        : undefined
+    );
+  }, [
+    contactId,
+    contactName,
+    customerCode,
+    customerId,
+    customerName,
+    existingActivity,
+    isEditMode,
+    reset,
+    toDefaultEndDateTime,
+    toDefaultStartDateTime,
+    user?.id,
+  ]);
+
+  useEffect(() => {
+    if (!watchIsAllDay || isEditMode) {
+      return;
+    }
+
+    const start = new Date(watchStartDateTime || toDefaultStartDateTime());
+    if (Number.isNaN(start.getTime())) {
+      return;
+    }
+
+    const nextStart = new Date(start);
+    nextStart.setHours(9, 0, 0, 0);
+    const nextEnd = new Date(start);
+    nextEnd.setHours(18, 0, 0, 0);
+
+    setValue("startDateTime", nextStart.toISOString());
+    setValue("endDateTime", nextEnd.toISOString());
+  }, [isEditMode, setValue, toDefaultStartDateTime, watchIsAllDay, watchStartDateTime]);
 
   const handleTypeSelect = useCallback(
     (type: ActivityTypeDto) => {
