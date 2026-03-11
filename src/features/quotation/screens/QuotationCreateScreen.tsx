@@ -720,6 +720,10 @@ export function QuotationCreateScreen(): React.ReactElement {
     [lines, exchangeRates, notes, createQuotation, setError]
   );
 
+  const onInvalidSubmit = useCallback(() => {
+    showToast("error", t("validation.fillRequiredFields", "Lütfen zorunlu alanları doldurun"));
+  }, [showToast, t]);
+
   return (
     <>
       <StatusBar style={isDark ? "light" : "dark"} />
@@ -1975,7 +1979,7 @@ export function QuotationCreateScreen(): React.ReactElement {
                   (isSubmitting || createQuotation.isPending) &&
                     styles.submitButtonDisabled,
                 ]}
-                onPress={handleSubmit(onSubmit)}
+                onPress={handleSubmit(onSubmit, onInvalidSubmit)}
                 disabled={isSubmitting || createQuotation.isPending}
               >
                 {isSubmitting || createQuotation.isPending ? (
