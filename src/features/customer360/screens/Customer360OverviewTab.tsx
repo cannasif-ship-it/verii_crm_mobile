@@ -21,6 +21,7 @@ function formatDate(
 ): string {
   if (!dateStr) return "";
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleDateString(locale, {
     day: "2-digit",
     month: "2-digit",
@@ -30,6 +31,7 @@ function formatDate(
 
 function formatDateTime(dateStr: string, locale: string): string {
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
   return date.toLocaleString(locale, {
     dateStyle: "short",
     timeStyle: "short",
@@ -48,9 +50,9 @@ export function Customer360OverviewTab({
   colors,
 }: Customer360OverviewTabProps): React.ReactElement {
   const { t, i18n } = useTranslation();
-  const locale = i18n.language === "tr" ? "tr-TR" : "en-US";
+  const locale =
+    i18n.language === "tr" ? "tr-TR" : i18n.language === "de" ? "de-DE" : "en-US";
 
-  const profile = data?.profile ?? { id: 0, name: "", customerCode: null };
   const kpis = data?.kpis ?? {
     totalDemands: 0,
     totalQuotations: 0,
@@ -59,6 +61,7 @@ export function Customer360OverviewTab({
     openOrders: 0,
     lastActivityDate: null,
   };
+
   const contacts = data?.contacts ?? [];
   const shippingAddresses = data?.shippingAddresses ?? [];
   const recentDemands = data?.recentDemands ?? [];
@@ -71,14 +74,17 @@ export function Customer360OverviewTab({
     (d: string | null | undefined) => formatDate(d, locale),
     [locale]
   );
+
   const formatDateTimeCb = useCallback(
     (d: string) => formatDateTime(d, locale),
     [locale]
   );
+
   const formatAmountCb = useCallback(
     (v: number) => formatAmount(v, locale),
     [locale]
   );
+
   const getStatusLabel = useCallback(
     (status: string | null | undefined): string => {
       if (status == null || status === "") return "";
@@ -97,87 +103,100 @@ export function Customer360OverviewTab({
       contentContainerStyle={styles.scrollContent}
       showsVerticalScrollIndicator={false}
     >
-      <View style={styles.kpiRow}>
-        <KpiCard
-          label={t("customer360.kpi.totalDemands")}
-          value={kpis.totalDemands}
-          colors={colors}
-        />
-        <KpiCard
-          label={t("customer360.kpi.totalQuotations")}
-          value={kpis.totalQuotations}
-          colors={colors}
-        />
-        <KpiCard
-          label={t("customer360.kpi.totalOrders")}
-          value={kpis.totalOrders}
-          colors={colors}
-        />
+      <View style={styles.kpiGroup}>
+        <View style={styles.kpiRow}>
+          <KpiCard
+            label={t("customer360.kpi.totalDemands")}
+            value={kpis.totalDemands}
+            colors={colors}
+          />
+          <KpiCard
+            label={t("customer360.kpi.totalQuotations")}
+            value={kpis.totalQuotations}
+            colors={colors}
+          />
+          <KpiCard
+            label={t("customer360.kpi.totalOrders")}
+            value={kpis.totalOrders}
+            colors={colors}
+          />
+        </View>
+
+        <View style={styles.kpiRow}>
+          <KpiCard
+            label={t("customer360.kpi.openQuotations")}
+            value={kpis.openQuotations}
+            colors={colors}
+          />
+          <KpiCard
+            label={t("customer360.kpi.openOrders")}
+            value={kpis.openOrders}
+            colors={colors}
+          />
+        </View>
       </View>
-      <View style={styles.kpiRow}>
-        <KpiCard
-          label={t("customer360.kpi.openQuotations")}
-          value={kpis.openQuotations}
+
+      <View style={styles.sectionGroup}>
+        <SectionCard
+          title={t("customer360.sections.contacts")}
+          items={contacts}
           colors={colors}
+          noDataKey={noDataKey}
+          formatDate={formatDateCb}
         />
-        <KpiCard
-          label={t("customer360.kpi.openOrders")}
-          value={kpis.openOrders}
+
+        <SectionCard
+          title={t("customer360.sections.shippingAddresses")}
+          items={shippingAddresses}
           colors={colors}
+          noDataKey={noDataKey}
+          formatDate={formatDateCb}
+        />
+
+        <SectionCard
+          title={t("customer360.sections.recentDemands")}
+          items={recentDemands}
+          colors={colors}
+          noDataKey={noDataKey}
+          formatDate={formatDateCb}
+        />
+
+        <SectionCard
+          title={t("customer360.sections.recentQuotations")}
+          items={recentQuotations}
+          colors={colors}
+          noDataKey={noDataKey}
+          formatDate={formatDateCb}
+        />
+
+        <SectionCard
+          title={t("customer360.sections.recentOrders")}
+          items={recentOrders}
+          colors={colors}
+          noDataKey={noDataKey}
+          formatDate={formatDateCb}
+        />
+
+        <SectionCard
+          title={t("customer360.sections.recentActivities")}
+          items={recentActivities}
+          colors={colors}
+          noDataKey={noDataKey}
+          formatDate={formatDateCb}
         />
       </View>
 
-      <SectionCard
-        title={t("customer360.sections.contacts")}
-        items={contacts}
-        colors={colors}
-        noDataKey={noDataKey}
-        formatDate={formatDateCb}
-      />
-      <SectionCard
-        title={t("customer360.sections.shippingAddresses")}
-        items={shippingAddresses}
-        colors={colors}
-        noDataKey={noDataKey}
-        formatDate={formatDateCb}
-      />
-      <SectionCard
-        title={t("customer360.sections.recentDemands")}
-        items={recentDemands}
-        colors={colors}
-        noDataKey={noDataKey}
-        formatDate={formatDateCb}
-      />
-      <SectionCard
-        title={t("customer360.sections.recentQuotations")}
-        items={recentQuotations}
-        colors={colors}
-        noDataKey={noDataKey}
-        formatDate={formatDateCb}
-      />
-      <SectionCard
-        title={t("customer360.sections.recentOrders")}
-        items={recentOrders}
-        colors={colors}
-        noDataKey={noDataKey}
-        formatDate={formatDateCb}
-      />
-      <SectionCard
-        title={t("customer360.sections.recentActivities")}
-        items={recentActivities}
-        colors={colors}
-        noDataKey={noDataKey}
-        formatDate={formatDateCb}
-      />
-      <TimelineSection
-        title={t("customer360.sections.timeline")}
-        timeline={timeline}
-        colors={colors}
-        noDataKey={noDataKey}
-        formatDateTime={formatDateTimeCb}
-        getStatusLabel={getStatusLabel}
-        formatAmount={formatAmountCb}
-      />
+      <View style={styles.timelineWrap}>
+        <TimelineSection
+          title={t("customer360.sections.timeline")}
+          timeline={timeline}
+          colors={colors}
+          noDataKey={noDataKey}
+          formatDateTime={formatDateTimeCb}
+          getStatusLabel={getStatusLabel}
+          formatAmount={formatAmountCb}
+        />
+      </View>
     </FlatListScrollView>
   );
 }
@@ -185,15 +204,25 @@ export function Customer360OverviewTab({
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
+    backgroundColor: "transparent",
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
+    paddingTop: 6,
+    paddingBottom: 120,
+  },
+  kpiGroup: {
+    gap: 14,
+    marginBottom: 20,
   },
   kpiRow: {
     flexDirection: "row",
     flexWrap: "wrap",
     gap: 12,
-    marginBottom: 16,
+  },
+  sectionGroup: {
+    gap: 16,
+  },
+  timelineWrap: {
+    marginTop: 20,
   },
 });

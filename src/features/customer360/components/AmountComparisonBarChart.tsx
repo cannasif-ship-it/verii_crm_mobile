@@ -2,6 +2,7 @@ import React, { useMemo } from "react";
 import { View, StyleSheet, Dimensions } from "react-native";
 import { BarChart } from "react-native-gifted-charts";
 import { Text } from "../../../components/ui/text";
+import { useUIStore } from "../../../store/ui";
 import type { Customer360AmountComparisonDto } from "../types";
 
 const CHART_COLORS = {
@@ -10,8 +11,9 @@ const CHART_COLORS = {
   openOrder: "#F97316",
 };
 
-const CHART_WIDTH = Math.min(Dimensions.get("window").width - 72, 320);
-const BAR_HEIGHT = 28;
+const CHART_WIDTH = Math.min(Dimensions.get("window").width - 92, 286);
+const BAR_HEIGHT = 18;
+
 const safeNumber = (value: unknown): number => {
   const numberValue = typeof value === "number" ? value : Number(value);
   return Number.isFinite(numberValue) ? numberValue : 0;
@@ -36,17 +38,28 @@ export function AmountComparisonBarChart({
   openOrderLabel,
   formatAmount,
 }: AmountComparisonBarChartProps): React.ReactElement {
+  const { themeMode } = useUIStore();
+  const isDark = themeMode === "dark";
+
+  const cardBg = isDark ? "rgba(18,8,25,0.62)" : "rgba(255,250,252,0.82)";
+  const cardBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(219,39,119,0.07)";
+  const chartBg = isDark ? "rgba(255,255,255,0.015)" : "rgba(255,255,255,0.78)";
+  const labelText = isDark ? "rgba(255,255,255,0.54)" : "#64748B";
+  const valueText = isDark ? "#F8FAFC" : "#1F2937";
+  const noDataText = isDark ? "rgba(255,255,255,0.5)" : "#6B7280";
+
   const barData = useMemo(() => {
     const last12 = safeNumber(data?.last12MonthsOrderAmount);
     const openQuot = safeNumber(data?.openQuotationAmount);
     const openOrd = safeNumber(data?.openOrderAmount);
+
     return [
       {
         value: last12,
         label: last12Label,
         frontColor: CHART_COLORS.last12,
         topLabelComponent: () => (
-          <Text style={[styles.barValue, { color: colors.text }]}>
+          <Text style={[styles.barValue, { color: valueText }]}>
             {formatAmount(last12)}
           </Text>
         ),
@@ -56,7 +69,7 @@ export function AmountComparisonBarChart({
         label: openQuotationLabel,
         frontColor: CHART_COLORS.openQuotation,
         topLabelComponent: () => (
-          <Text style={[styles.barValue, { color: colors.text }]}>
+          <Text style={[styles.barValue, { color: valueText }]}>
             {formatAmount(openQuot)}
           </Text>
         ),
@@ -66,7 +79,7 @@ export function AmountComparisonBarChart({
         label: openOrderLabel,
         frontColor: CHART_COLORS.openOrder,
         topLabelComponent: () => (
-          <Text style={[styles.barValue, { color: colors.text }]}>
+          <Text style={[styles.barValue, { color: valueText }]}>
             {formatAmount(openOrd)}
           </Text>
         ),
@@ -78,7 +91,7 @@ export function AmountComparisonBarChart({
     openQuotationLabel,
     openOrderLabel,
     formatAmount,
-    colors.text,
+    valueText,
   ]);
 
   const maxValue = useMemo(() => {
@@ -86,55 +99,109 @@ export function AmountComparisonBarChart({
     const openQuot = safeNumber(data?.openQuotationAmount);
     const openOrd = safeNumber(data?.openOrderAmount);
     const max = Math.max(last12, openQuot, openOrd, 1);
-    return max + Math.ceil(max * 0.15);
+    return max + Math.ceil(max * 0.12);
   }, [data]);
 
   const totalZero = barData.every((b) => b.value === 0);
+
   if (totalZero) {
     return (
-      <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-        <Text style={[styles.noData, { color: colors.textMuted }]}>{noDataKey}</Text>
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: cardBg,
+            borderColor: cardBorder,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.innerCard,
+            {
+              backgroundColor: chartBg,
+              borderColor: cardBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.noData, { color: noDataText }]}>{noDataKey}</Text>
+        </View>
       </View>
     );
   }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-      <BarChart
-        data={barData}
-        horizontal
-        width={CHART_WIDTH}
-        barWidth={BAR_HEIGHT}
-        maxValue={maxValue}
-        spacing={44}
-        initialSpacing={20}
-        endSpacing={20}
-        xAxisThickness={0}
-        yAxisThickness={0}
-        hideRules
-        noOfSections={4}
-        barBorderRadius={6}
-        isAnimated
-        xAxisLabelTextStyle={{ color: colors.textMuted, fontSize: 11 }}
-      />
+    <View
+      style={[
+        styles.container,
+        {
+          backgroundColor: cardBg,
+          borderColor: cardBorder,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.innerCard,
+          {
+            backgroundColor: chartBg,
+            borderColor: cardBorder,
+          },
+        ]}
+      >
+        <BarChart
+          data={barData}
+          horizontal
+          width={CHART_WIDTH}
+          barWidth={BAR_HEIGHT}
+          maxValue={maxValue}
+          spacing={30}
+          initialSpacing={10}
+          endSpacing={8}
+          xAxisThickness={0}
+          yAxisThickness={0}
+          hideRules
+          noOfSections={4}
+          barBorderRadius={7}
+          isAnimated
+          xAxisLabelTextStyle={{
+            color: labelText,
+            fontSize: 9,
+            fontWeight: "400",
+          }}
+          yAxisTextStyle={{
+            color: labelText,
+            fontSize: 8,
+          }}
+        />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 6,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 2,
+  },
+  innerCard: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    overflow: "hidden",
   },
   noData: {
-    fontSize: 14,
+    fontSize: 10,
     textAlign: "center",
-    paddingVertical: 24,
+    paddingVertical: 18,
+    fontWeight: "400",
   },
   barValue: {
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 8.5,
+    fontWeight: "500",
+    lineHeight: 10,
   },
 });

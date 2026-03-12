@@ -79,7 +79,8 @@
     "quotationCreateFailed": "Teklif oluşturulamadı",
     "quotationCreateFailedGeneric": "Teklif oluşturulurken bir hata oluştu.",
     "lineDeleteFailed": "Satır silinemedi",
-    "voiceSearchSupportInfo": "Sesli arama: Web'de tarayıcı destekliyorsa çalışır. Mobil için: npx expo install expo-speech-recognition"
+    "voiceSearchSupportInfo": "Sesli arama: Web'de tarayıcı destekliyorsa çalışır. Mobil için: npx expo install expo-speech-recognition",
+    "all": "Tümü"
   },
   "home": {
     "greeting": "Merhaba",
@@ -479,6 +480,10 @@
     "searchDistrict": "İlçe Ara...",
     "noteCreatedBy": "Notu yazan",
     "noteCreatedAt": "Not tarihi",
+    "salesRepresentative": "Satış Temsilcisi",
+    "updateLocation": "Konumu Güncelle",
+    "latestQuotations": "En Son Teklifler",
+    "noQuotations": "Henüz teklif bulunmuyor.",
     "modal": {
       "title": "Filtreler",
       "customerStatus": "Müşteri Durumu",
@@ -845,7 +850,7 @@
     "searchStockPlaceholder": "Stok kodu, stok adı, Kod-1, Kod-2 ve grup ile ara...",
     "noSearchResults": "Sonuç bulunamadı",
     "minSearchChars": "Arama yapmak için en az 2 karakter giriniz",
-    "noRelatedStocks": "Bu ürünün bağlı stoğu bulunmuyor",
+    "noRelatedStocks": "Bu ürünün bağlı stoğu bulunmuyor",  
     "offerType": {
       "label": "Teklif Tipi",
       "domestic": "Yurtiçi",
@@ -867,7 +872,6 @@
     "currency": "Para Birimi",
     "description": "Açıklama",
     "shippingAddress": "Sevk Adresi",
-    "status": "Durum",
     "statusHavenotStarted": "Başlamadı",
     "statusWaiting": "Beklemede",
     "statusApproved": "Onaylandı",
@@ -948,6 +952,12 @@
     },
     "exchangeRate": {
       "inUseCannotEdit": "Kullanımda olan kur değiştirilemez."
+    },
+    "status": {
+      "pending": "Beklemede",
+      "approved": "Onaylandı",
+      "rejected": "Reddedildi",
+      "notStarted": "Başlamadı"
     },
     "projectCode": "Proje Kodu",
     "projectCodeSearch": "Proje ara...",

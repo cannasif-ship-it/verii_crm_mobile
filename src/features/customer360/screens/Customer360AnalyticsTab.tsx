@@ -3,8 +3,8 @@ import { View, StyleSheet } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
+import { useUIStore } from "../../../store/ui";
 import {
-  KpiCard,
   CurrencyTotalsTable,
   AmountComparisonTable,
   DistributionPieChart,
@@ -16,6 +16,14 @@ import type {
   Customer360AnalyticsChartsDto,
   Customer360CurrencyAmountDto,
 } from "../types";
+import {
+  AnalyticsUpIcon,
+  Calendar03Icon,
+  Invoice03Icon,
+  ShoppingBag03Icon,
+  Activity01Icon,
+  Alert02Icon,
+} from "hugeicons-react-native";
 
 interface Customer360AnalyticsTabProps {
   summary: Customer360AnalyticsSummaryDto | undefined;
@@ -41,11 +49,54 @@ function formatDateOnly(
 ): string {
   if (!dateStr) return "—";
   const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "—";
   return date.toLocaleDateString(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
+}
+
+interface MetricCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  titleText: string;
+  mutedText: string;
+  cardBg: string;
+  cardBorder: string;
+}
+
+function MetricCard({
+  icon,
+  label,
+  value,
+  titleText,
+  mutedText,
+  cardBg,
+  cardBorder,
+}: MetricCardProps): React.ReactElement {
+  return (
+    <View
+      style={[
+        styles.metricCard,
+        {
+          backgroundColor: cardBg,
+          borderColor: cardBorder,
+        },
+      ]}
+    >
+      <View style={styles.metricTopRow}>
+        <View style={styles.metricIconWrap}>{icon}</View>
+        <Text style={[styles.metricLabel, { color: mutedText }]} numberOfLines={2}>
+          {label}
+        </Text>
+      </View>
+      <Text style={[styles.metricValue, { color: titleText }]} numberOfLines={2}>
+        {String(value)}
+      </Text>
+    </View>
+  );
 }
 
 export function Customer360AnalyticsTab({
@@ -57,7 +108,12 @@ export function Customer360AnalyticsTab({
   chartsError,
 }: Customer360AnalyticsTabProps): React.ReactElement {
   const { t, i18n } = useTranslation();
-  const locale = i18n.language === "tr" ? "tr-TR" : "en-US";
+  const { themeMode } = useUIStore();
+
+  const isDark = themeMode === "dark";
+  const locale =
+    i18n.language === "tr" ? "tr-TR" : i18n.language === "de" ? "de-DE" : "en-US";
+
   const formatAmountCb = useCallback(
     (v: number) => formatAmount(v, locale),
     [locale]
@@ -69,12 +125,44 @@ export function Customer360AnalyticsTab({
   const amountComparisonByCurrency =
     charts?.amountComparisonByCurrency ?? [];
 
+  const titleText = isDark ? "#FFFFFF" : "#1F2937";
+  const mutedText = isDark ? "rgba(255,255,255,0.58)" : "#6B7280";
+  const softText = isDark ? "rgba(255,255,255,0.42)" : "#94A3B8";
+  const accent = isDark ? "#EC4899" : "#DB2777";
+  const accentSecondary = isDark ? "#F97316" : "#F59E0B";
+  const cardBg = isDark ? "rgba(19,11,27,0.72)" : "rgba(255,245,248,0.84)";
+  const cardBgAlt = isDark ? "rgba(18,8,25,0.78)" : "rgba(255,250,252,0.86)";
+  const cardBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(219,39,119,0.08)";
+  const sectionTitleColor = isDark ? "#F8FAFC" : "#334155";
+  const errorColor = colors.error;
+
   if (summaryError) {
     return (
       <View style={styles.centered}>
-        <Text style={[styles.errorText, { color: colors.error }]}>
-          {t("customer360.analytics.error")}
-        </Text>
+        <View
+          style={[
+            styles.stateCard,
+            {
+              backgroundColor: cardBgAlt,
+              borderColor: cardBorder,
+            },
+          ]}
+        >
+          <View
+            style={[
+              styles.stateIconWrap,
+              {
+                backgroundColor: `${errorColor}12`,
+                borderColor: `${errorColor}22`,
+              },
+            ]}
+          >
+            <Alert02Icon size={20} color={errorColor} variant="stroke" />
+          </View>
+          <Text style={[styles.errorText, { color: errorColor }]}>
+            {t("customer360.analytics.error")}
+          </Text>
+        </View>
       </View>
     );
   }
@@ -87,55 +175,67 @@ export function Customer360AnalyticsTab({
     >
       {isSingleCurrency ? (
         <>
-          <View style={styles.summaryRow}>
-            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-                {t("customer360.analytics.last12MonthsOrderAmount")}
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {formatAmountCb(summary?.last12MonthsOrderAmount ?? 0)}
-              </Text>
-            </View>
-            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-                {t("customer360.analytics.openQuotationAmount")}
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {formatAmountCb(summary?.openQuotationAmount ?? 0)}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.summaryRow}>
-            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-                {t("customer360.analytics.openOrderAmount")}
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {formatAmountCb(summary?.openOrderAmount ?? 0)}
-              </Text>
-            </View>
-            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-                {t("customer360.analytics.activityCount")}
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {summary?.activityCount ?? 0}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.summaryRow}>
-            <View style={[styles.summaryCard, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.summaryLabel, { color: colors.textMuted }]}>
-                {t("customer360.analytics.lastActivityDate")}
-              </Text>
-              <Text style={[styles.summaryValue, { color: colors.text }]}>
-                {formatDateOnly(summary?.lastActivityDate, locale)}
-              </Text>
-            </View>
+          <View style={styles.metricsGrid}>
+            <MetricCard
+              icon={<AnalyticsUpIcon size={14} color={accent} variant="stroke" />}
+              label={t("customer360.analytics.last12MonthsOrderAmount")}
+              value={formatAmountCb(summary?.last12MonthsOrderAmount ?? 0)}
+              titleText={titleText}
+              mutedText={mutedText}
+              cardBg={cardBg}
+              cardBorder={cardBorder}
+            />
+            <MetricCard
+              icon={<Invoice03Icon size={14} color={accentSecondary} variant="stroke" />}
+              label={t("customer360.analytics.openQuotationAmount")}
+              value={formatAmountCb(summary?.openQuotationAmount ?? 0)}
+              titleText={titleText}
+              mutedText={mutedText}
+              cardBg={cardBg}
+              cardBorder={cardBorder}
+            />
+            <MetricCard
+              icon={<ShoppingBag03Icon size={14} color={accent} variant="stroke" />}
+              label={t("customer360.analytics.openOrderAmount")}
+              value={formatAmountCb(summary?.openOrderAmount ?? 0)}
+              titleText={titleText}
+              mutedText={mutedText}
+              cardBg={cardBg}
+              cardBorder={cardBorder}
+            />
+            <MetricCard
+              icon={<Activity01Icon size={14} color={accentSecondary} variant="stroke" />}
+              label={t("customer360.analytics.activityCount")}
+              value={summary?.activityCount ?? 0}
+              titleText={titleText}
+              mutedText={mutedText}
+              cardBg={cardBg}
+              cardBorder={cardBorder}
+            />
+            <MetricCard
+              icon={<Calendar03Icon size={14} color={accent} variant="stroke" />}
+              label={t("customer360.analytics.lastActivityDate")}
+              value={formatDateOnly(summary?.lastActivityDate, locale)}
+              titleText={titleText}
+              mutedText={mutedText}
+              cardBg={cardBg}
+              cardBorder={cardBorder}
+            />
           </View>
         </>
-      ) : (
-        totalsByCurrency.length > 0 && (
+      ) : totalsByCurrency.length > 0 ? (
+        <View
+          style={[
+            styles.sectionWrap,
+            {
+              backgroundColor: cardBgAlt,
+              borderColor: cardBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+            {t("customer360.currencyTotals.title")}
+          </Text>
           <CurrencyTotalsTable
             items={totalsByCurrency}
             colors={colors}
@@ -147,63 +247,136 @@ export function Customer360AnalyticsTab({
             orderAmountLabel={t("customer360.currencyTotals.orderAmount")}
             noDataKey={noDataKey}
           />
-        )
-      )}
+        </View>
+      ) : null}
 
       {amountComparisonByCurrency.length > 0 ? (
-        <AmountComparisonTable
-          items={amountComparisonByCurrency}
-          colors={colors}
-          formatAmount={formatAmountCb}
-          title={t("customer360.analyticsCharts.amountComparisonTitle")}
-          currencyLabel={t("customer360.currencyTotals.currency")}
-          last12Label={t("customer360.analyticsCharts.last12MonthsOrderAmount")}
-          openQuotationLabel={t("customer360.analyticsCharts.openQuotationAmount")}
-          openOrderLabel={t("customer360.analyticsCharts.openOrderAmount")}
-          noDataKey={noDataKey}
-        />
+        <View
+          style={[
+            styles.sectionWrap,
+            {
+              backgroundColor: cardBgAlt,
+              borderColor: cardBorder,
+            },
+          ]}
+        >
+          <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+            {t("customer360.analyticsCharts.amountComparisonTitle")}
+          </Text>
+          <AmountComparisonTable
+            items={amountComparisonByCurrency}
+            colors={colors}
+            formatAmount={formatAmountCb}
+            title={t("customer360.analyticsCharts.amountComparisonTitle")}
+            currencyLabel={t("customer360.currencyTotals.currency")}
+            last12Label={t("customer360.analyticsCharts.last12MonthsOrderAmount")}
+            openQuotationLabel={t("customer360.analyticsCharts.openQuotationAmount")}
+            openOrderLabel={t("customer360.analyticsCharts.openOrderAmount")}
+            noDataKey={noDataKey}
+          />
+        </View>
       ) : null}
 
       {chartsError ? (
         <View style={styles.chartError}>
-          <Text style={[styles.errorText, { color: colors.error }]}>
-            {t("customer360.analytics.error")}
-          </Text>
+          <View
+            style={[
+              styles.stateCard,
+              {
+                backgroundColor: cardBgAlt,
+                borderColor: cardBorder,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.stateIconWrap,
+                {
+                  backgroundColor: `${errorColor}12`,
+                  borderColor: `${errorColor}22`,
+                },
+              ]}
+            >
+              <Alert02Icon size={20} color={errorColor} variant="stroke" />
+            </View>
+            <Text style={[styles.errorText, { color: errorColor }]}>
+              {t("customer360.analytics.error")}
+            </Text>
+          </View>
         </View>
       ) : (
         <>
-          <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t("customer360.analyticsCharts.distributionTitle")}
-          </Text>
-          <DistributionPieChart
-            data={
-              charts?.distribution ?? {
-                demandCount: 0,
-                quotationCount: 0,
-                orderCount: 0,
+          <View
+            style={[
+              styles.sectionWrap,
+              {
+                backgroundColor: cardBgAlt,
+                borderColor: cardBorder,
+              },
+            ]}
+          >
+            <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+              {t("customer360.analyticsCharts.distributionTitle")}
+            </Text>
+            <Text style={[styles.sectionSubTitle, { color: softText }]}>
+              {t("customer360.analyticsCharts.demand")} · {t("customer360.analyticsCharts.quotation")} · {t("customer360.analyticsCharts.order")}
+            </Text>
+            <DistributionPieChart
+              data={
+                charts?.distribution ?? {
+                  demandCount: 0,
+                  quotationCount: 0,
+                  orderCount: 0,
+                }
               }
-            }
-            colors={colors}
-            noDataKey={noDataKey}
-            demandLabel={t("customer360.analyticsCharts.demand")}
-            quotationLabel={t("customer360.analyticsCharts.quotation")}
-            orderLabel={t("customer360.analyticsCharts.order")}
-          />
-          <Text style={[styles.chartTitle, { color: colors.text }]}>
-            {t("customer360.analyticsCharts.monthlyTrendTitle")}
-          </Text>
-          <MonthlyTrendLineChart
-            data={charts?.monthlyTrend ?? []}
-            colors={colors}
-            noDataKey={noDataKey}
-            demandLabel={t("customer360.analyticsCharts.demand")}
-            quotationLabel={t("customer360.analyticsCharts.quotation")}
-            orderLabel={t("customer360.analyticsCharts.order")}
-          />
+              colors={colors}
+              noDataKey={noDataKey}
+              demandLabel={t("customer360.analyticsCharts.demand")}
+              quotationLabel={t("customer360.analyticsCharts.quotation")}
+              orderLabel={t("customer360.analyticsCharts.order")}
+            />
+          </View>
+
+          <View
+            style={[
+              styles.sectionWrap,
+              {
+                backgroundColor: cardBgAlt,
+                borderColor: cardBorder,
+              },
+            ]}
+          >
+            <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
+              {t("customer360.analyticsCharts.monthlyTrendTitle")}
+            </Text>
+            <Text style={[styles.sectionSubTitle, { color: softText }]}>
+              {t("customer360.analyticsCharts.demand")} · {t("customer360.analyticsCharts.quotation")} · {t("customer360.analyticsCharts.order")}
+            </Text>
+            <MonthlyTrendLineChart
+              data={charts?.monthlyTrend ?? []}
+              colors={colors}
+              noDataKey={noDataKey}
+              demandLabel={t("customer360.analyticsCharts.demand")}
+              quotationLabel={t("customer360.analyticsCharts.quotation")}
+              orderLabel={t("customer360.analyticsCharts.order")}
+            />
+          </View>
+
           {isSingleCurrency ? (
-            <>
-              <Text style={[styles.chartTitle, { color: colors.text }]}>
+            <View
+              style={[
+                styles.sectionWrap,
+                {
+                  backgroundColor: cardBgAlt,
+                  borderColor: cardBorder,
+                },
+              ]}
+            >
+              <Text style={[styles.sectionTitle, { color: sectionTitleColor }]}>
                 {t("customer360.analyticsCharts.amountComparisonTitle")}
+              </Text>
+              <Text style={[styles.sectionSubTitle, { color: softText }]}>
+                {t("customer360.analyticsCharts.last12MonthsOrderAmount")} · {t("customer360.analyticsCharts.openQuotationAmount")} · {t("customer360.analyticsCharts.openOrderAmount")}
               </Text>
               <AmountComparisonBarChart
                 data={
@@ -220,7 +393,7 @@ export function Customer360AnalyticsTab({
                 openOrderLabel={t("customer360.analyticsCharts.openOrderAmount")}
                 formatAmount={formatAmountCb}
               />
-            </>
+            </View>
           ) : null}
         </>
       )}
@@ -231,48 +404,104 @@ export function Customer360AnalyticsTab({
 const styles = StyleSheet.create({
   scroll: {
     flex: 1,
+    backgroundColor: "transparent",
   },
   scrollContent: {
-    padding: 20,
-    paddingBottom: 100,
+    paddingTop: 2,
+    paddingBottom: 110,
+    gap: 10,
   },
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
+    paddingVertical: 20,
   },
-  summaryRow: {
+  metricsGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 12,
-    marginBottom: 16,
+    gap: 10,
+    marginBottom: 2,
   },
-  summaryCard: {
-    flex: 1,
-    minWidth: 140,
-    padding: 16,
-    borderRadius: 12,
+  metricCard: {
+    width: "48%",
+    minHeight: 94,
+    borderRadius: 18,
     borderWidth: 1,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    justifyContent: "space-between",
   },
-  summaryLabel: {
+  metricTopRow: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 8,
+  },
+  metricIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  metricLabel: {
+    flex: 1,
+    fontSize: 10,
+    fontWeight: "400",
+    lineHeight: 13,
+    marginTop: 1,
+  },
+  metricValue: {
+    fontSize: 14,
+    fontWeight: "500",
+    lineHeight: 18,
+    marginTop: 10,
+  },
+  sectionWrap: {
+    borderWidth: 1,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingTop: 12,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  sectionTitle: {
     fontSize: 12,
-    marginBottom: 4,
+    fontWeight: "500",
+    lineHeight: 16,
   },
-  summaryValue: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 8,
+  sectionSubTitle: {
+    fontSize: 10,
+    fontWeight: "400",
+    lineHeight: 14,
+    marginTop: -2,
+    marginBottom: 2,
   },
   chartError: {
-    padding: 20,
+    paddingVertical: 4,
+  },
+  stateCard: {
+    width: "100%",
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 22,
+  },
+  stateIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
   },
   errorText: {
-    fontSize: 14,
+    fontSize: 13,
+    fontWeight: "500",
     textAlign: "center",
+    lineHeight: 18,
   },
 });

@@ -78,7 +78,8 @@
     "quotationCreateFailed": "Angebot konnte nicht erstellt werden",
     "quotationCreateFailedGeneric": "Beim Erstellen des Angebots ist ein Fehler aufgetreten.",
     "lineDeleteFailed": "Zeile konnte nicht gelöscht werden",
-    "voiceSearchSupportInfo": "Sprachsuche: Funktioniert, wenn der Webbrowser dies unterstützt. Für Mobilgeräte: npx expo install expo-speech-recognition"
+    "voiceSearchSupportInfo": "Sprachsuche: Funktioniert, wenn der Webbrowser dies unterstützt. Für Mobilgeräte: npx expo install expo-speech-recognition",
+    "all": "Alle"
   },
   "home": {
     "greeting": "Hallo",
@@ -455,6 +456,10 @@
     "searchDistrict": "Bezirk suchen...",
     "noteCreatedBy": "Noten-Ersteller",
     "noteCreatedAt": "Noten-Erstellungsdatum",
+    "salesRepresentative": "Vertriebsmitarbeiter",
+    "updateLocation": "Standort aktualisieren",
+    "latestQuotations": "En Son Teklifler",
+    "noQuotations": "Keine teklif gefunden.",
     "modal": {
       "title": "Filter",
       "customerStatus": "Kundenstatus",

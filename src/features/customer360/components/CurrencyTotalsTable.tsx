@@ -1,6 +1,7 @@
 import React from "react";
 import { View, StyleSheet } from "react-native";
 import { Text } from "../../../components/ui/text";
+import { useUIStore } from "../../../store/ui";
 import type { Customer360CurrencyAmountDto } from "../types";
 
 interface CurrencyTotalsTableProps {
@@ -15,47 +16,172 @@ interface CurrencyTotalsTableProps {
   noDataKey: string;
 }
 
+function getCurrencySymbol(currency?: string | null): string {
+  const code = (currency ?? "").toUpperCase().trim();
+  switch (code) {
+    case "TRY":
+      return "₺";
+    case "USD":
+      return "$";
+    case "EUR":
+      return "€";
+    case "GBP":
+      return "£";
+    case "CHF":
+        return "₣";
+    case "JPY":
+      return "¥";
+    default:
+      return code || "—";
+  }
+}
+
 export function CurrencyTotalsTable({
   items,
-  colors,
   formatAmount,
-  title,
   currencyLabel,
   demandAmountLabel,
   quotationAmountLabel,
   orderAmountLabel,
   noDataKey,
 }: CurrencyTotalsTableProps): React.ReactElement {
+  const { themeMode } = useUIStore();
+  const isDark = themeMode === "dark";
+
   const list = items ?? [];
+  const sectionBg = isDark ? "rgba(18,8,25,0.58)" : "rgba(255,250,252,0.82)";
+  const sectionBorder = isDark ? "rgba(255,255,255,0.05)" : "rgba(219,39,119,0.06)";
+  const tableBg = isDark ? "rgba(255,255,255,0.015)" : "rgba(255,255,255,0.78)";
+  const headerBg = isDark ? "rgba(255,255,255,0.02)" : "rgba(15,23,42,0.022)";
+  const gridLine = isDark ? "rgba(255,255,255,0.045)" : "rgba(15,23,42,0.045)";
+  const titleText = isDark ? "#F8FAFC" : "#1F2937";
+  const mutedText = isDark ? "rgba(255,255,255,0.48)" : "#6B7280";
+  const softText = isDark ? "rgba(255,255,255,0.36)" : "#94A3B8";
+  const accent = isDark ? "#F472B6" : "#DB2777";
+
   if (list.length === 0) {
     return (
-      <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-        <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
-        <Text style={[styles.noData, { color: colors.textMuted }]}>{noDataKey}</Text>
+      <View
+        style={[
+          styles.section,
+          {
+            backgroundColor: sectionBg,
+            borderColor: sectionBorder,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.emptyWrap,
+            {
+              backgroundColor: tableBg,
+              borderColor: gridLine,
+            },
+          ]}
+        >
+          <Text style={[styles.noData, { color: mutedText }]}>{noDataKey}</Text>
+        </View>
       </View>
     );
   }
+
   return (
-    <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-      <Text style={[styles.sectionTitle, { color: colors.text }]}>{title}</Text>
-      <View style={[styles.table, { borderColor: colors.border }]}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.headerCell, styles.cellCurrency, { color: colors.textMuted }]}>
-            {currencyLabel}
-          </Text>
-          <Text style={[styles.headerCell, { color: colors.textMuted }]}>{demandAmountLabel}</Text>
-          <Text style={[styles.headerCell, { color: colors.textMuted }]}>{quotationAmountLabel}</Text>
-          <Text style={[styles.headerCell, { color: colors.textMuted }]}>{orderAmountLabel}</Text>
+    <View
+      style={[
+        styles.section,
+        {
+          backgroundColor: sectionBg,
+          borderColor: sectionBorder,
+        },
+      ]}
+    >
+      <View
+        style={[
+          styles.table,
+          {
+            backgroundColor: tableBg,
+            borderColor: gridLine,
+          },
+        ]}
+      >
+        <View
+          style={[
+            styles.headerRow,
+            {
+              backgroundColor: headerBg,
+              borderBottomColor: gridLine,
+            },
+          ]}
+        >
+          <View style={[styles.cellBase, styles.currencyColumn, styles.rightDivider, { borderRightColor: gridLine }]}>
+            <Text style={[styles.headerCell, { color: softText }]} numberOfLines={2}>
+              {currencyLabel}
+            </Text>
+          </View>
+
+          <View style={[styles.cellBase, styles.rightDivider, { borderRightColor: gridLine }]}>
+            <Text style={[styles.headerCell, { color: softText }]} numberOfLines={2}>
+              {demandAmountLabel}
+            </Text>
+          </View>
+
+          <View style={[styles.cellBase, styles.rightDivider, { borderRightColor: gridLine }]}>
+            <Text style={[styles.headerCell, { color: softText }]} numberOfLines={2}>
+              {quotationAmountLabel}
+            </Text>
+          </View>
+
+          <View style={styles.cellBase}>
+            <Text style={[styles.headerCell, { color: softText }]} numberOfLines={2}>
+              {orderAmountLabel}
+            </Text>
+          </View>
         </View>
+
         {list.map((row, index) => (
           <View
             key={`${row.currency}-${index}`}
-            style={[styles.dataRow, index < list.length - 1 && { borderBottomWidth: 1, borderColor: colors.border }]}
+            style={[
+              styles.dataRow,
+              {
+                borderBottomWidth: index < list.length - 1 ? 1 : 0,
+                borderBottomColor: gridLine,
+              },
+            ]}
           >
-            <Text style={[styles.cell, styles.cellCurrency, { color: colors.text }]}>{row.currency}</Text>
-            <Text style={[styles.cell, { color: colors.text }]}>{formatAmount(row.demandAmount)}</Text>
-            <Text style={[styles.cell, { color: colors.text }]}>{formatAmount(row.quotationAmount)}</Text>
-            <Text style={[styles.cell, { color: colors.text }]}>{formatAmount(row.orderAmount)}</Text>
+            <View style={[styles.cellBase, styles.currencyColumn, styles.rightDivider, { borderRightColor: gridLine }]}>
+              <View
+                style={[
+                  styles.currencyBadge,
+                  {
+                    backgroundColor: `${accent}0F`,
+                    borderColor: `${accent}16`,
+                  },
+                ]}
+              >
+                <Text style={[styles.currencyText, { color: titleText }]} numberOfLines={1}>
+                  {getCurrencySymbol(row.currency)}
+                </Text>
+              </View>
+            </View>
+
+            <View style={[styles.cellBase, styles.rightDivider, { borderRightColor: gridLine }]}>
+              <Text style={[styles.valueCell, { color: titleText }]} numberOfLines={1}>
+                {formatAmount(row.demandAmount)}
+              </Text>
+            </View>
+
+            <View style={[styles.cellBase, styles.rightDivider, { borderRightColor: gridLine }]}>
+              <Text style={[styles.valueCell, { color: titleText }]} numberOfLines={1}>
+                {formatAmount(row.quotationAmount)}
+              </Text>
+            </View>
+
+            <View style={styles.cellBase}>
+              <Text style={[styles.valueCell, { color: titleText }]} numberOfLines={1}>
+                {formatAmount(row.orderAmount)}
+              </Text>
+            </View>
           </View>
         ))}
       </View>
@@ -65,47 +191,78 @@ export function CurrencyTotalsTable({
 
 const styles = StyleSheet.create({
   section: {
-    padding: 16,
-    borderRadius: 12,
+    padding: 6,
+    borderRadius: 14,
     borderWidth: 1,
-    marginBottom: 16,
+    marginBottom: 2,
   },
-  sectionTitle: {
-    fontSize: 16,
-    fontWeight: "600",
-    marginBottom: 12,
+  emptyWrap: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 8,
+    paddingVertical: 10,
+    alignItems: "center",
+    justifyContent: "center",
   },
   noData: {
-    fontSize: 14,
+    fontSize: 9,
+    fontWeight: "400",
+    lineHeight: 12,
     textAlign: "center",
-    paddingVertical: 12,
   },
   table: {
     borderWidth: 1,
-    borderRadius: 8,
+    borderRadius: 10,
     overflow: "hidden",
   },
   headerRow: {
     flexDirection: "row",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    backgroundColor: "rgba(0,0,0,0.04)",
-  },
-  headerCell: {
-    fontSize: 12,
-    fontWeight: "600",
-    flex: 1,
+    minHeight: 28,
+    borderBottomWidth: 1,
   },
   dataRow: {
     flexDirection: "row",
-    paddingVertical: 10,
-    paddingHorizontal: 12,
+    minHeight: 34,
+    alignItems: "center",
   },
-  cell: {
-    fontSize: 13,
+  cellBase: {
     flex: 1,
+    paddingHorizontal: 4,
+    paddingVertical: 5,
+    justifyContent: "center",
+    alignItems: "center",
   },
-  cellCurrency: {
-    flex: 0.8,
+  currencyColumn: {
+    flex: 0.62,
+  },
+  rightDivider: {
+    borderRightWidth: 1,
+  },
+  headerCell: {
+    fontSize: 6.5,
+    fontWeight: "500",
+    lineHeight: 8,
+    textAlign: "center",
+    letterSpacing: 0,
+  },
+  valueCell: {
+    fontSize: 8.5,
+    fontWeight: "500",
+    lineHeight: 10,
+    textAlign: "center",
+  },
+  currencyBadge: {
+    minWidth: 22,
+    height: 18,
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 4,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  currencyText: {
+    fontSize: 9,
+    fontWeight: "600",
+    lineHeight: 9,
   },
 });

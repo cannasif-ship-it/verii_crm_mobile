@@ -8,6 +8,7 @@ import {
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
+import { LinearGradient } from "expo-linear-gradient";
 import { Text } from "../../../components/ui/text";
 import { ScreenHeader } from "../../../components/navigation";
 import { useUIStore } from "../../../store/ui";
@@ -22,6 +23,15 @@ import { Customer360OverviewTab } from "./Customer360OverviewTab";
 import { Customer360AnalyticsTab } from "./Customer360AnalyticsTab";
 import { Customer360MailLogsTab } from "./Customer360MailLogsTab";
 import { Customer360QuickQuotationsTab } from "./Customer360QuickQuotationsTab";
+import {
+  AnalyticsUpIcon,
+  ChartAverageIcon,
+  Invoice03Icon,
+  Mail01Icon,
+  Rotate360Icon,
+  Alert02Icon,
+  UserIcon,
+} from "hugeicons-react-native";
 
 type TabType = "overview" | "analytics" | "quickQuotations" | "mailLogs";
 
@@ -49,9 +59,19 @@ function isNotFoundError(error: Error | null): boolean {
 export function Customer360Screen(): React.ReactElement {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { colors } = useUIStore();
+  const { colors, themeMode } = useUIStore();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [selectedCurrency, setSelectedCurrency] = useState<string>("ALL");
+
+  const isDark = themeMode === "dark";
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (isDark
+    ? ["rgba(236, 72, 153, 0.12)", "transparent", "rgba(249, 115, 22, 0.12)"]
+    : ["rgba(255, 235, 240, 0.6)", "#FFFFFF", "rgba(255, 240, 225, 0.6)"]) as [
+    string,
+    string,
+    ...string[]
+  ];
 
   const customerId = useMemo(() => {
     if (id == null || id === "") return undefined;
@@ -73,52 +93,231 @@ export function Customer360Screen(): React.ReactElement {
     summaryQuery.data?.totalsByCurrency,
     chartsQuery.data?.amountComparisonByCurrency,
   ]);
-  const isSingleCurrency = selectedCurrency !== "ALL";
 
+  const isSingleCurrency = selectedCurrency !== "ALL";
   const invalidId = customerId == null;
   const notFound = overviewQuery.isError && isNotFoundError(overviewQuery.error);
   const showNotFound = invalidId || notFound;
 
   const profile = overviewQuery.data?.profile;
-  const subtitle = profile
-    ? [profile.name, profile.customerCode].filter(Boolean).join(" · ")
-    : "";
+  const rawName = profile?.name?.trim() || t("customer360.title");
+  const rawCode = profile?.customerCode?.trim() || "";
+  const displayCode = rawCode && rawCode !== rawName ? rawCode : "";
 
-  const contentBackground = colors.background;
+  const titleText = isDark ? "#FFFFFF" : "#1F2937";
+  const mutedText = isDark ? "rgba(255,255,255,0.58)" : "#6B7280";
+  const accent = isDark ? "#EC4899" : "#DB2777";
+  const cardBg = isDark ? "rgba(19,11,27,0.72)" : "rgba(255,245,248,0.84)";
+  const cardBgAlt = isDark ? "rgba(18,8,25,0.78)" : "rgba(255,250,252,0.86)";
+  const cardBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(219,39,119,0.08)";
+  const tabShellBg = isDark ? "rgba(17,10,24,0.72)" : "rgba(255,248,251,0.86)";
+  const tabActiveBg = isDark ? "rgba(236,72,153,0.10)" : "rgba(219,39,119,0.08)";
+  const tabActiveBorder = isDark ? "rgba(236,72,153,0.24)" : "rgba(219,39,119,0.18)";
+  const errorColor = colors.error;
+
+  const tabs = [
+    { key: "overview" as const, label: t("customer360.tabs.overview"), icon: AnalyticsUpIcon },
+    { key: "analytics" as const, label: t("customer360.tabs.analytics"), icon: ChartAverageIcon },
+    { key: "quickQuotations" as const, label: t("customer360.tabs.quickQuotations"), icon: Invoice03Icon },
+    { key: "mailLogs" as const, label: t("customer360.tabs.mailLogs"), icon: Mail01Icon },
+  ];
+
+  const renderLoading = () => (
+    <View style={styles.loadingContainer}>
+      <View style={[styles.stateCard, { backgroundColor: cardBgAlt, borderColor: cardBorder }]}>
+        <ActivityIndicator size="large" color={accent} />
+      </View>
+    </View>
+  );
+
+  const renderError = (message: string, onRetry?: () => void) => (
+    <View style={styles.errorContainer}>
+      <View style={[styles.stateCard, { backgroundColor: cardBgAlt, borderColor: cardBorder }]}>
+        <View
+          style={[
+            styles.stateIconWrap,
+            {
+              backgroundColor: `${errorColor}12`,
+              borderColor: `${errorColor}22`,
+            },
+          ]}
+        >
+          <Alert02Icon size={20} color={errorColor} variant="stroke" />
+        </View>
+        <Text style={[styles.stateTitle, { color: titleText }]}>{message}</Text>
+        {onRetry ? (
+          <TouchableOpacity
+            onPress={onRetry}
+            style={[
+              styles.retryButton,
+              {
+                backgroundColor: `${accent}10`,
+                borderColor: `${accent}22`,
+              },
+            ]}
+            activeOpacity={0.82}
+          >
+            <Rotate360Icon size={15} color={accent} variant="stroke" />
+            <Text style={[styles.retryText, { color: accent }]}>
+              {t("customer360.retry")}
+            </Text>
+          </TouchableOpacity>
+        ) : null}
+      </View>
+    </View>
+  );
 
   if (showNotFound) {
     return (
-      <>
-        <StatusBar style="light" />
-        <View style={[styles.container, { backgroundColor: colors.header }]}>
+      <View style={[styles.container, { backgroundColor: mainBg }]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={StyleSheet.absoluteFill}>
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+
+        <View style={styles.shell}>
           <ScreenHeader title={t("customer360.title")} showBackButton />
-          <View style={[styles.content, { backgroundColor: contentBackground }]}>
+          <View style={styles.content}>
             <View style={styles.centered}>
-              <Text style={[styles.notFoundText, { color: colors.text }]}>
-                {t("customer360.notFound")}
-              </Text>
+              <View style={[styles.stateCard, { backgroundColor: cardBgAlt, borderColor: cardBorder }]}>
+                <View
+                  style={[
+                    styles.stateIconWrap,
+                    {
+                      backgroundColor: `${accent}12`,
+                      borderColor: `${accent}22`,
+                    },
+                  ]}
+                >
+                  <Alert02Icon size={20} color={accent} variant="stroke" />
+                </View>
+                <Text style={[styles.stateTitle, { color: titleText }]}>
+                  {t("customer360.notFound")}
+                </Text>
+              </View>
             </View>
           </View>
         </View>
-      </>
+      </View>
     );
   }
 
   return (
-    <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
-        <ScreenHeader
-          title={t("customer360.title")}
-          showBackButton
+    <View style={[styles.container, { backgroundColor: mainBg }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <View style={StyleSheet.absoluteFill}>
+        <LinearGradient
+          colors={gradientColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={StyleSheet.absoluteFill}
         />
-        <View style={[styles.content, { backgroundColor: contentBackground }]}>
-          {subtitle ? (
-            <Text style={[styles.subtitle, { color: colors.textMuted }]}>
-              {subtitle}
-            </Text>
-          ) : null}
-          <View style={styles.currencySection}>
+      </View>
+
+      <View style={styles.shell}>
+        <ScreenHeader title={t("customer360.title")} showBackButton />
+
+        <View style={styles.content}>
+          <View
+            style={[
+              styles.customerMiniCard,
+              {
+                backgroundColor: cardBg,
+                borderColor: cardBorder,
+              },
+            ]}
+          >
+            <View
+              style={[
+                styles.customerIconWrap,
+                {
+                  backgroundColor: `${accent}10`,
+                  borderColor: `${accent}22`,
+                },
+              ]}
+            >
+              <UserIcon size={14} color={accent} variant="stroke" />
+            </View>
+
+            <View style={styles.customerTextWrap}>
+              <Text style={[styles.customerName, { color: titleText }]} numberOfLines={1}>
+                {rawName}
+              </Text>
+              {displayCode ? (
+                <Text style={[styles.customerCode, { color: mutedText }]} numberOfLines={1}>
+                  {displayCode}
+                </Text>
+              ) : null}
+            </View>
+          </View>
+
+          <View
+            style={[
+              styles.tabBar,
+              {
+                backgroundColor: tabShellBg,
+                borderColor: cardBorder,
+              },
+            ]}
+          >
+            
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.key;
+
+              return (
+                <TouchableOpacity
+                  key={tab.key}
+                  style={[
+                    styles.tab,
+                    {
+                      backgroundColor: isActive ? tabActiveBg : "transparent",
+                      borderColor: isActive ? tabActiveBorder : "transparent",
+                    },
+                  ]}
+                  onPress={() => setActiveTab(tab.key)}
+                  activeOpacity={0.82}
+                >
+                  <View
+                    style={[
+                      styles.tabIconWrap,
+                      {
+                        backgroundColor: isActive ? `${accent}10` : "transparent",
+                        borderColor: isActive ? `${accent}18` : "transparent",
+                      },
+                    ]}
+                  >
+                    <Icon size={14} color={isActive ? accent : mutedText} variant="stroke" />
+                  </View>
+
+                  <Text
+                    style={[
+                      styles.tabText,
+                      { color: isActive ? titleText : mutedText },
+                    ]}
+                    numberOfLines={1}
+                  >
+                    {tab.label}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          <View
+            style={[
+              styles.filterShell,
+              {
+                backgroundColor: cardBgAlt,
+                borderColor: cardBorder,
+              },
+            ]}
+          >
             <CurrencyPicker
               selectedCurrency={selectedCurrency}
               currencyOptions={currencyOptions}
@@ -128,152 +327,64 @@ export function Customer360Screen(): React.ReactElement {
               onSelect={setSelectedCurrency}
             />
           </View>
-          <View style={[styles.tabBar, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "overview" && {
-                  borderBottomColor: colors.accent,
-                  borderBottomWidth: 2,
-                },
-              ]}
-              onPress={() => setActiveTab("overview")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: activeTab === "overview" ? colors.accent : colors.textMuted },
-                ]}
-              >
-                {t("customer360.tabs.overview")}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "analytics" && {
-                  borderBottomColor: colors.accent,
-                  borderBottomWidth: 2,
-                },
-              ]}
-              onPress={() => setActiveTab("analytics")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: activeTab === "analytics" ? colors.accent : colors.textMuted },
-                ]}
-              >
-                {t("customer360.tabs.analytics")}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "quickQuotations" && {
-                  borderBottomColor: colors.accent,
-                  borderBottomWidth: 2,
-                },
-              ]}
-              onPress={() => setActiveTab("quickQuotations")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: activeTab === "quickQuotations" ? colors.accent : colors.textMuted },
-                ]}
-              >
-                {t("customer360.tabs.quickQuotations")}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[
-                styles.tab,
-                activeTab === "mailLogs" && {
-                  borderBottomColor: colors.accent,
-                  borderBottomWidth: 2,
-                },
-              ]}
-              onPress={() => setActiveTab("mailLogs")}
-            >
-              <Text
-                style={[
-                  styles.tabText,
-                  { color: activeTab === "mailLogs" ? colors.accent : colors.textMuted },
-                ]}
-              >
-                {t("customer360.tabs.mailLogs")}
-              </Text>
-            </TouchableOpacity>
-          </View>
 
-          {activeTab === "overview" ? (
-            overviewQuery.isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.accent} />
-              </View>
-            ) : overviewQuery.isError ? (
-              <View style={styles.errorContainer}>
-                <Text style={[styles.errorText, { color: colors.error }]}>
-                  {overviewQuery.error?.message ?? t("customer360.error")}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => overviewQuery.refetch()}
-                  style={styles.retryButton}
-                >
-                  <Text style={[styles.retryText, { color: colors.accent }]}>
-                    {t("customer360.retry")}
-                  </Text>
-                </TouchableOpacity>
-              </View>
+          <View style={styles.tabContentWrap}>
+            {activeTab === "overview" ? (
+              overviewQuery.isLoading ? (
+                renderLoading()
+              ) : overviewQuery.isError ? (
+                renderError(
+                  overviewQuery.error?.message ?? t("customer360.error"),
+                  () => overviewQuery.refetch()
+                )
+              ) : (
+                <Customer360OverviewTab
+                  data={overviewQuery.data}
+                  colors={colors}
+                  isFetching={overviewQuery.isFetching}
+                />
+              )
+            ) : activeTab === "analytics" ? (
+              summaryQuery.isLoading && !summaryQuery.data ? (
+                renderLoading()
+              ) : (
+                <Customer360AnalyticsTab
+                  summary={summaryQuery.data}
+                  charts={chartsQuery.data}
+                  colors={colors}
+                  isSingleCurrency={isSingleCurrency}
+                  isSummaryLoading={summaryQuery.isLoading}
+                  isChartsLoading={chartsQuery.isLoading}
+                  summaryError={
+                    summaryQuery.isError
+                      ? summaryQuery.error ?? new Error(t("customer360.analytics.error"))
+                      : null
+                  }
+                  chartsError={chartsQuery.isError ? chartsQuery.error ?? null : null}
+                />
+              )
+            ) : activeTab === "quickQuotations" ? (
+              quickQuotationsQuery.isLoading ? (
+                renderLoading()
+              ) : quickQuotationsQuery.isError ? (
+                renderError(
+                  quickQuotationsQuery.error?.message ??
+                    t("customer360.quickQuotations.error")
+                )
+              ) : (
+                <Customer360QuickQuotationsTab
+                  items={quickQuotationsQuery.data ?? []}
+                  colors={colors}
+                  emptyText={t("customer360.quickQuotations.empty")}
+                />
+              )
             ) : (
-              <Customer360OverviewTab
-                data={overviewQuery.data}
-                colors={colors}
-                isFetching={overviewQuery.isFetching}
-              />
-            )
-          ) : activeTab === "analytics" ? (
-            summaryQuery.isLoading && !summaryQuery.data ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.accent} />
-              </View>
-            ) : (
-              <Customer360AnalyticsTab
-                summary={summaryQuery.data}
-                charts={chartsQuery.data}
-                colors={colors}
-                isSingleCurrency={isSingleCurrency}
-                isSummaryLoading={summaryQuery.isLoading}
-                isChartsLoading={chartsQuery.isLoading}
-                summaryError={summaryQuery.isError ? summaryQuery.error ?? new Error(t("customer360.analytics.error")) : null}
-                chartsError={chartsQuery.isError ? chartsQuery.error ?? null : null}
-              />
-            )
-          ) : activeTab === "quickQuotations" ? (
-            quickQuotationsQuery.isLoading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={colors.accent} />
-              </View>
-            ) : quickQuotationsQuery.isError ? (
-              <View style={styles.errorContainer}>
-                <Text style={[styles.errorText, { color: colors.error }]}>
-                  {quickQuotationsQuery.error?.message ?? t("customer360.quickQuotations.error")}
-                </Text>
-              </View>
-            ) : (
-              <Customer360QuickQuotationsTab
-                items={quickQuotationsQuery.data ?? []}
-                colors={colors}
-                emptyText={t("customer360.quickQuotations.empty")}
-              />
-            )
-          ) : (
-            <Customer360MailLogsTab customerId={customerId ?? 0} colors={colors} />
-          )}
+              <Customer360MailLogsTab customerId={customerId ?? 0} colors={colors} />
+            )}
+          </View>
         </View>
       </View>
-    </>
+    </View>
   );
 }
 
@@ -281,63 +392,108 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  shell: {
+    flex: 1,
+  },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    overflow: "hidden",
+    backgroundColor: "transparent",
+    paddingHorizontal: 14,
+    paddingTop: 8,
+    paddingBottom: 0,
   },
-  subtitle: {
-    fontSize: 14,
-    paddingHorizontal: 20,
-    paddingTop: 12,
+  customerMiniCard: {
+    minHeight: 50,
+    borderRadius: 16,
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
   },
-  currencySection: {
-    paddingHorizontal: 20,
-    paddingTop: 12,
+  customerIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 9,
+  },
+  customerTextWrap: {
+    flex: 1,
+    minWidth: 0,
+  },
+  customerName: {
+    fontSize: 12,
+    fontWeight: "500",
+    lineHeight: 15,
+  },
+  customerCode: {
+    fontSize: 9,
+    fontWeight: "400",
+    marginTop: 1,
+    lineHeight: 11,
   },
   tabBar: {
     flexDirection: "row",
-    borderBottomWidth: 1,
-    marginHorizontal: 20,
-    marginTop: 12,
-    borderRadius: 12,
-    overflow: "hidden",
+    borderRadius: 18,
+    borderWidth: 1,
+    padding: 4,
+    gap: 4,
+    marginBottom: 8,
   },
   tab: {
     flex: 1,
-    paddingVertical: 12,
+    minHeight: 54,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 2,
+    paddingVertical: 6,
+    gap: 4,
+  },
+  tabIconWrap: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   tabText: {
-    fontSize: 14,
-    fontWeight: "500",
+    fontSize: 9,
+    fontWeight: "400",
+    textAlign: "center",
+    lineHeight: 11,
+    paddingHorizontal: 1,
+  },
+  filterShell: {
+  borderRadius: 12,
+  borderWidth: 1,
+  paddingHorizontal: 8,
+  paddingTop: 5,
+  paddingBottom: 5,
+  marginBottom: 8,
+},
+  tabContentWrap: {
+    flex: 1,
+    minHeight: 0,
+    backgroundColor: "transparent",
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 60,
+    paddingVertical: 20,
   },
   errorContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    padding: 20,
-  },
-  errorText: {
-    fontSize: 16,
-    marginBottom: 16,
-    textAlign: "center",
-  },
-  retryButton: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-  },
-  retryText: {
-    fontSize: 16,
-    fontWeight: "600",
+    paddingVertical: 20,
   },
   centered: {
     flex: 1,
@@ -345,8 +501,43 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     padding: 20,
   },
-  notFoundText: {
-    fontSize: 16,
+  stateCard: {
+    width: "100%",
+    borderRadius: 20,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 22,
+  },
+  stateIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 13,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 12,
+  },
+  stateTitle: {
+    fontSize: 13,
+    fontWeight: "500",
     textAlign: "center",
+    lineHeight: 19,
+  },
+  retryButton: {
+    marginTop: 14,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    borderWidth: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+  },
+  retryText: {
+    fontSize: 12,
+    fontWeight: "500",
+    letterSpacing: 0.1,
   },
 });
