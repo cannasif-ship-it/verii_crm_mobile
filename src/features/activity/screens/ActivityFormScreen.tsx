@@ -12,6 +12,7 @@ import {
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -35,11 +36,23 @@ import {
 } from "../types";
 import type { CustomerDto } from "../../customer/types";
 import type { ContactDto } from "../../contact/types";
+import {
+  Calendar03Icon,
+  Clock01Icon,
+  TaskDaily01Icon,
+  Alert02Icon,
+  CheckmarkCircle02Icon,
+  ArrowDown01Icon,
+  Tick02Icon,
+  Notification03Icon,
+} from "hugeicons-react-native";
 
 interface PickerOption {
   value: string;
   label: string;
 }
+
+type AndroidPickerStep = "start-date" | "start-time" | "end-date" | "end-time" | null;
 
 export function ActivityFormScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -65,47 +78,41 @@ export function ActivityFormScreen(): React.ReactElement {
     contactId: string;
     contactName: string;
   }>();
+
   const { colors, themeMode } = useUIStore();
   const insets = useSafeAreaInsets();
 
   const isEditMode = !!id;
   const activityId = id ? Number(id) : undefined;
+  const isDark = themeMode === "dark";
 
-  const toDefaultStartDateTime = useCallback((): string => {
-    if (initialStartDateTime) return initialStartDateTime;
-    const base = initialDate ? new Date(initialDate) : new Date();
-    if (Number.isNaN(base.getTime())) {
-      const fallback = new Date();
-      fallback.setSeconds(0, 0);
-      return fallback.toISOString();
-    }
-    if (initialDate) {
-      const now = new Date();
-      base.setHours(now.getHours(), now.getMinutes(), 0, 0);
-    } else {
-      base.setSeconds(0, 0);
-    }
-    return base.toISOString();
-  }, [initialDate, initialStartDateTime]);
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (isDark
+    ? ["rgba(236, 72, 153, 0.12)", "transparent", "rgba(249, 115, 22, 0.12)"]
+    : ["rgba(255, 235, 240, 0.65)", "#FFFFFF", "rgba(255, 240, 225, 0.7)"]) as [
+    string,
+    string,
+    ...string[]
+  ];
 
-  const toDefaultEndDateTime = useCallback((): string => {
-    if (initialEndDateTime) return initialEndDateTime;
-    const start = new Date(toDefaultStartDateTime());
-    if (Number.isNaN(start.getTime())) {
-      const fallback = new Date();
-      fallback.setHours(fallback.getHours() + 1, fallback.getMinutes(), 0, 0);
-      return fallback.toISOString();
-    }
-    return new Date(start.getTime() + 60 * 60 * 1000).toISOString();
-  }, [initialEndDateTime, toDefaultStartDateTime]);
-
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
+  const shellBg = isDark ? "rgba(19,11,27,0.74)" : "rgba(255,245,248,0.88)";
+  const shellBgAlt = isDark ? "rgba(18,8,25,0.80)" : "rgba(255,250,252,0.92)";
+  const shellBorder = isDark ? "rgba(255,255,255,0.07)" : "rgba(219,39,119,0.08)";
+  const innerBg = isDark ? "rgba(255,255,255,0.028)" : "rgba(255,255,255,0.86)";
+  const innerBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.06)";
+  const titleText = isDark ? "#FFFFFF" : "#1F2937";
+  const mutedText = isDark ? "rgba(255,255,255,0.58)" : "#6B7280";
+  const softText = isDark ? "rgba(255,255,255,0.42)" : "#94A3B8";
+  const accent = isDark ? "#EC4899" : "#DB2777";
+  const accentSecondary = isDark ? "#F97316" : "#F59E0B";
 
   const [typeModalOpen, setTypeModalOpen] = useState(false);
   const [statusModalOpen, setStatusModalOpen] = useState(false);
   const [priorityModalOpen, setPriorityModalOpen] = useState(false);
   const [startDateModalOpen, setStartDateModalOpen] = useState(false);
   const [endDateModalOpen, setEndDateModalOpen] = useState(false);
+  const [androidPickerStep, setAndroidPickerStep] = useState<AndroidPickerStep>(null);
+
   const [tempStartDate, setTempStartDate] = useState(new Date());
   const [tempEndDate, setTempEndDate] = useState(new Date());
 
@@ -117,6 +124,39 @@ export function ActivityFormScreen(): React.ReactElement {
   const { data: activityTypes, isLoading: typesLoading } = useActivityTypes();
   const createActivity = useCreateActivity();
   const updateActivity = useUpdateActivity();
+
+  const toDefaultStartDateTime = useCallback((): string => {
+    if (initialStartDateTime) return initialStartDateTime;
+
+    const base = initialDate ? new Date(initialDate) : new Date();
+    if (Number.isNaN(base.getTime())) {
+      const fallback = new Date();
+      fallback.setSeconds(0, 0);
+      return fallback.toISOString();
+    }
+
+    if (initialDate) {
+      const now = new Date();
+      base.setHours(now.getHours(), now.getMinutes(), 0, 0);
+    } else {
+      base.setSeconds(0, 0);
+    }
+
+    return base.toISOString();
+  }, [initialDate, initialStartDateTime]);
+
+  const toDefaultEndDateTime = useCallback((): string => {
+    if (initialEndDateTime) return initialEndDateTime;
+
+    const start = new Date(toDefaultStartDateTime());
+    if (Number.isNaN(start.getTime())) {
+      const fallback = new Date();
+      fallback.setHours(fallback.getHours() + 1, fallback.getMinutes(), 0, 0);
+      return fallback.toISOString();
+    }
+
+    return new Date(start.getTime() + 60 * 60 * 1000).toISOString();
+  }, [initialEndDateTime, toDefaultStartDateTime]);
 
   const schema = useMemo(() => createActivitySchema(), []);
 
@@ -181,16 +221,13 @@ export function ActivityFormScreen(): React.ReactElement {
     return value ? String(value) : "Medium";
   }, []);
 
-  const normalizeActivityType = useCallback(
-    (activityType: ActivityDto["activityType"]): string => {
-      if (typeof activityType === "string") return activityType;
-      if (activityType && typeof activityType === "object" && typeof activityType.name === "string") {
-        return activityType.name;
-      }
-      return "";
-    },
-    []
-  );
+  const normalizeActivityType = useCallback((activityType: ActivityDto["activityType"]): string => {
+    if (typeof activityType === "string") return activityType;
+    if (activityType && typeof activityType === "object" && typeof activityType.name === "string") {
+      return activityType.name;
+    }
+    return "";
+  }, []);
 
   useEffect(() => {
     if (existingActivity) {
@@ -236,12 +273,18 @@ export function ActivityFormScreen(): React.ReactElement {
         } as unknown as ContactDto);
       }
     }
-  }, [existingActivity, normalizeActivityType, normalizePriority, normalizeStatus, reset, toDefaultEndDateTime, toDefaultStartDateTime]);
+  }, [
+    existingActivity,
+    normalizeActivityType,
+    normalizePriority,
+    normalizeStatus,
+    reset,
+    toDefaultEndDateTime,
+    toDefaultStartDateTime,
+  ]);
 
   useEffect(() => {
-    if (existingActivity || isEditMode) {
-      return;
-    }
+    if (existingActivity || isEditMode) return;
 
     const initialCustomerId = customerId ? Number(customerId) : undefined;
     const initialContactId = contactId ? Number(contactId) : undefined;
@@ -300,14 +343,10 @@ export function ActivityFormScreen(): React.ReactElement {
   ]);
 
   useEffect(() => {
-    if (!watchIsAllDay || isEditMode) {
-      return;
-    }
+    if (!watchIsAllDay || isEditMode) return;
 
     const start = new Date(watchStartDateTime || toDefaultStartDateTime());
-    if (Number.isNaN(start.getTime())) {
-      return;
-    }
+    if (Number.isNaN(start.getTime())) return;
 
     const nextStart = new Date(start);
     nextStart.setHours(9, 0, 0, 0);
@@ -330,11 +369,7 @@ export function ActivityFormScreen(): React.ReactElement {
   const handleStatusSelect = useCallback(
     (option: PickerOption) => {
       setValue("status", option.value);
-      if (option.value === "Completed") {
-        setValue("isCompleted", true);
-      } else {
-        setValue("isCompleted", false);
-      }
+      setValue("isCompleted", option.value === "Completed");
       setStatusModalOpen(false);
     },
     [setValue]
@@ -367,48 +402,123 @@ export function ActivityFormScreen(): React.ReactElement {
   );
 
   const handleOpenStartDateModal = useCallback(() => {
-    setTempStartDate(new Date(watchStartDateTime));
-    setStartDateModalOpen(true);
+    const next = new Date(watchStartDateTime);
+    setTempStartDate(next);
+
+    if (Platform.OS === "android") {
+      setAndroidPickerStep("start-date");
+    } else {
+      setStartDateModalOpen(true);
+    }
   }, [watchStartDateTime]);
 
   const handleOpenEndDateModal = useCallback(() => {
-    setTempEndDate(new Date(watchEndDateTime || watchStartDateTime));
-    setEndDateModalOpen(true);
+    const next = new Date(watchEndDateTime || watchStartDateTime);
+    setTempEndDate(next);
+
+    if (Platform.OS === "android") {
+      setAndroidPickerStep("end-date");
+    } else {
+      setEndDateModalOpen(true);
+    }
   }, [watchEndDateTime, watchStartDateTime]);
 
   const handleStartDateChange = useCallback(
-    (_: DateTimePickerEvent, selectedDate?: Date) => {
+    (event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (Platform.OS === "android") {
+        if (event.type === "dismissed") {
+          setAndroidPickerStep(null);
+          return;
+        }
+
+        if (!selectedDate) {
+          setAndroidPickerStep(null);
+          return;
+        }
+
+        if (androidPickerStep === "start-date") {
+          const next = new Date(tempStartDate);
+          next.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+          setTempStartDate(next);
+          setAndroidPickerStep("start-time");
+          return;
+        }
+
+        if (androidPickerStep === "start-time") {
+          const next = new Date(tempStartDate);
+          next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+          setTempStartDate(next);
+          setValue("startDateTime", next.toISOString());
+
+          if (!watchEndDateTime) {
+            const nextHour = new Date(next);
+            nextHour.setHours(nextHour.getHours() + 1);
+            setValue("endDateTime", nextHour.toISOString());
+          }
+
+          setAndroidPickerStep(null);
+          return;
+        }
+
+        return;
+      }
+
       if (selectedDate) {
         setTempStartDate(selectedDate);
-        if (Platform.OS === "android") {
-          setValue("startDateTime", selectedDate.toISOString());
-          setStartDateModalOpen(false);
-        }
       }
     },
-    [setValue]
+    [androidPickerStep, tempStartDate, setValue, watchEndDateTime]
   );
 
   const handleEndDateChange = useCallback(
-    (_: DateTimePickerEvent, selectedDate?: Date) => {
+    (event: DateTimePickerEvent, selectedDate?: Date) => {
+      if (Platform.OS === "android") {
+        if (event.type === "dismissed") {
+          setAndroidPickerStep(null);
+          return;
+        }
+
+        if (!selectedDate) {
+          setAndroidPickerStep(null);
+          return;
+        }
+
+        if (androidPickerStep === "end-date") {
+          const next = new Date(tempEndDate);
+          next.setFullYear(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+          setTempEndDate(next);
+          setAndroidPickerStep("end-time");
+          return;
+        }
+
+        if (androidPickerStep === "end-time") {
+          const next = new Date(tempEndDate);
+          next.setHours(selectedDate.getHours(), selectedDate.getMinutes(), 0, 0);
+          setTempEndDate(next);
+          setValue("endDateTime", next.toISOString());
+          setAndroidPickerStep(null);
+          return;
+        }
+
+        return;
+      }
+
       if (selectedDate) {
         setTempEndDate(selectedDate);
-        if (Platform.OS === "android") {
-          setValue("endDateTime", selectedDate.toISOString());
-          setEndDateModalOpen(false);
-        }
       }
     },
-    [setValue]
+    [androidPickerStep, tempEndDate, setValue]
   );
 
   const handleConfirmStartDate = useCallback(() => {
     setValue("startDateTime", tempStartDate.toISOString());
+
     if (!watchEndDateTime) {
       const nextHour = new Date(tempStartDate);
       nextHour.setHours(nextHour.getHours() + 1);
       setValue("endDateTime", nextHour.toISOString());
     }
+
     setStartDateModalOpen(false);
   }, [tempStartDate, watchEndDateTime, setValue]);
 
@@ -420,6 +530,7 @@ export function ActivityFormScreen(): React.ReactElement {
   const handleToggleReminder = useCallback(
     (offsetMinutes: number) => {
       const exists = watchReminders.includes(offsetMinutes);
+
       if (exists) {
         setValue(
           "reminders",
@@ -427,6 +538,7 @@ export function ActivityFormScreen(): React.ReactElement {
         );
         return;
       }
+
       setValue("reminders", [...watchReminders, offsetMinutes].sort((a, b) => a - b));
     },
     [watchReminders, setValue]
@@ -450,6 +562,7 @@ export function ActivityFormScreen(): React.ReactElement {
           activityTypes: activityTypes ?? [],
           assignedUserIdFallback: user?.id,
         };
+
         const payloadInput = {
           ...data,
           activityTypeName: watchActivityType || data.activityType,
@@ -462,12 +575,13 @@ export function ActivityFormScreen(): React.ReactElement {
           })),
         };
 
-        const payload = isEditMode && existingActivity
-          ? buildUpdateActivityPayload(payloadInput, {
-              ...options,
-              existingAssignedUserId: existingActivity.assignedUserId,
-            })
-          : buildCreateActivityPayload(payloadInput, options);
+        const payload =
+          isEditMode && existingActivity
+            ? buildUpdateActivityPayload(payloadInput, {
+                ...options,
+                existingAssignedUserId: existingActivity.assignedUserId,
+              })
+            : buildCreateActivityPayload(payloadInput, options);
 
         if (isEditMode && activityId) {
           await updateActivity.mutateAsync({ id: activityId, data: payload });
@@ -476,9 +590,11 @@ export function ActivityFormScreen(): React.ReactElement {
           await createActivity.mutateAsync(payload);
           Alert.alert("", t("activity.createSuccess"));
         }
+
         router.back();
       } catch (error) {
-        const message = error instanceof Error && error.message ? error.message : t("common.unknownError");
+        const message =
+          error instanceof Error && error.message ? error.message : t("common.unknownError");
         Alert.alert(t("common.error"), message);
       }
     },
@@ -492,6 +608,10 @@ export function ActivityFormScreen(): React.ReactElement {
       updateActivity,
       router,
       t,
+      watchActivityType,
+      selectedCustomer?.name,
+      selectedContact?.fullName,
+      toDefaultEndDateTime,
     ]
   );
 
@@ -505,57 +625,166 @@ export function ActivityFormScreen(): React.ReactElement {
   const renderTypeItem = useCallback(
     ({ item }: { item: ActivityTypeDto }) => {
       const isSelected = watchActivityType === item.name;
+
       return (
         <TouchableOpacity
           style={[
             styles.pickerItem,
-            { borderBottomColor: colors.border },
-            isSelected && { backgroundColor: colors.activeBackground },
+            { borderBottomColor: innerBorder },
+            isSelected && { backgroundColor: `${accent}0E` },
           ]}
           onPress={() => handleTypeSelect(item)}
         >
-          <Text style={[styles.pickerItemText, { color: colors.text }]}>{item.name}</Text>
-          {isSelected && <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>}
+          <Text style={[styles.pickerItemText, { color: titleText }]}>{item.name}</Text>
+          {isSelected ? (
+            <View
+              style={[
+                styles.checkIconWrap,
+                { backgroundColor: `${accent}10`, borderColor: `${accent}18` },
+              ]}
+            >
+              <Tick02Icon size={12} color={accent} variant="stroke" />
+            </View>
+          ) : null}
         </TouchableOpacity>
       );
     },
-    [watchActivityType, colors, handleTypeSelect]
+    [watchActivityType, innerBorder, accent, handleTypeSelect, titleText]
   );
 
   const renderPickerItem = useCallback(
-    ({ item, onSelect, selectedValue }: { item: PickerOption; onSelect: (opt: PickerOption) => void; selectedValue: string | undefined | null }) => {
+    ({
+      item,
+      onSelect,
+      selectedValue,
+    }: {
+      item: PickerOption;
+      onSelect: (opt: PickerOption) => void;
+      selectedValue: string | undefined | null;
+    }) => {
       const isSelected = selectedValue === item.value;
+
       return (
         <TouchableOpacity
           style={[
             styles.pickerItem,
-            { borderBottomColor: colors.border },
-            isSelected && { backgroundColor: colors.activeBackground },
+            { borderBottomColor: innerBorder },
+            isSelected && { backgroundColor: `${accent}0E` },
           ]}
           onPress={() => onSelect(item)}
         >
-          <Text style={[styles.pickerItemText, { color: colors.text }]}>{item.label}</Text>
-          {isSelected && <Text style={[styles.checkmark, { color: colors.accent }]}>✓</Text>}
+          <Text style={[styles.pickerItemText, { color: titleText }]}>{item.label}</Text>
+          {isSelected ? (
+            <View
+              style={[
+                styles.checkIconWrap,
+                { backgroundColor: `${accent}10`, borderColor: `${accent}18` },
+              ]}
+            >
+              <Tick02Icon size={12} color={accent} variant="stroke" />
+            </View>
+          ) : null}
         </TouchableOpacity>
       );
     },
-    [colors]
+    [innerBorder, accent, titleText]
   );
 
   const selectedTypeName = useMemo(() => {
     if (!watchActivityType) return null;
-    return activityTypes?.find((t) => t.name === watchActivityType)?.name || watchActivityType;
+    return activityTypes?.find((type) => type.name === watchActivityType)?.name || watchActivityType;
   }, [watchActivityType, activityTypes]);
+
+  const selectedStatusLabel = useMemo(
+    () => statusOptions.find((option) => option.value === watchStatus)?.label || t("activity.selectStatus"),
+    [statusOptions, watchStatus, t]
+  );
+
+  const selectedPriorityLabel = useMemo(
+    () =>
+      priorityOptions.find((option) => option.value === watchPriority)?.label ||
+      t("activity.selectPriority"),
+    [priorityOptions, watchPriority, t]
+  );
+
+  const selectedStatusMeta = useMemo(() => {
+    const normalized = String(watchStatus || "").toLocaleLowerCase("tr-TR");
+
+    if (normalized.includes("completed")) {
+      return {
+        color: "#10B981",
+        bg: isDark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.10)",
+        Icon: CheckmarkCircle02Icon,
+      };
+    }
+
+    if (normalized.includes("scheduled")) {
+      return {
+        color: "#F59E0B",
+        bg: isDark ? "rgba(245,158,11,0.12)" : "rgba(245,158,11,0.10)",
+        Icon: Calendar03Icon,
+      };
+    }
+
+    return {
+      color: accent,
+      bg: `${accent}12`,
+      Icon: Alert02Icon,
+    };
+  }, [watchStatus, isDark, accent]);
+
+  const selectedPriorityMeta = useMemo(() => {
+    const normalized = String(watchPriority || "").toLocaleLowerCase("tr-TR");
+
+    if (normalized.includes("high")) {
+      return {
+        color: "#EF4444",
+        bg: isDark ? "rgba(239,68,68,0.12)" : "rgba(239,68,68,0.10)",
+      };
+    }
+
+    if (normalized.includes("low")) {
+      return {
+        color: "#10B981",
+        bg: isDark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.10)",
+      };
+    }
+
+    return {
+      color: "#F59E0B",
+      bg: isDark ? "rgba(245,158,11,0.12)" : "rgba(245,158,11,0.10)",
+    };
+  }, [watchPriority, isDark]);
+
+  const reminderPresets = useMemo(
+    () => [
+      { value: 15, label: "15 dk" },
+      { value: 30, label: "30 dk" },
+      { value: 60, label: "60 dk" },
+      { value: 1440, label: t("activity.oneDayBefore") },
+    ],
+    [t]
+  );
 
   if (isEditMode && activityLoading) {
     return (
       <>
-        <StatusBar style="light" />
-        <View style={[styles.container, { backgroundColor: colors.header }]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={[styles.container, { backgroundColor: mainBg }]}>
+          <View style={StyleSheet.absoluteFill}>
+            <LinearGradient
+              colors={gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+              style={StyleSheet.absoluteFill}
+            />
+          </View>
           <ScreenHeader title={t("activity.edit")} showBackButton />
-          <View style={[styles.content, { backgroundColor: contentBackground }]}>
+          <View style={styles.content}>
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color={colors.accent} />
+              <View style={[styles.loadingCard, { backgroundColor: shellBgAlt, borderColor: shellBorder }]}>
+                <ActivityIndicator size="large" color={accent} />
+              </View>
             </View>
           </View>
         </View>
@@ -565,250 +794,430 @@ export function ActivityFormScreen(): React.ReactElement {
 
   return (
     <>
-      <StatusBar style="light" />
-      <View style={[styles.container, { backgroundColor: colors.header }]}>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <View style={[styles.container, { backgroundColor: mainBg }]}>
+        <View style={StyleSheet.absoluteFill}>
+          <LinearGradient
+            colors={gradientColors}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+        </View>
+
         <ScreenHeader
           title={isEditMode ? t("activity.edit") : t("activity.create")}
           showBackButton
         />
+
         <FlatList
-          style={[styles.content, { backgroundColor: contentBackground }]}
+          style={styles.content}
           data={[0]}
           keyExtractor={(item) => String(item)}
-          contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 110 }]}
           showsVerticalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           renderItem={() => (
-            <>
-          <Controller
-            control={control}
-            name="subject"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("activity.subject")}
-                value={value}
-                onChangeText={onChange}
-                error={errors.subject?.message}
-                required
-                maxLength={100}
-              />
-            )}
-          />
+            <View style={styles.screenStack}>
+              <View style={[styles.formSection, { backgroundColor: shellBg, borderColor: shellBorder }]}>
+                <Controller
+                  control={control}
+                  name="subject"
+                  render={({ field: { onChange, value } }) => (
+                    <FormField
+                      label={t("activity.subject")}
+                      value={value}
+                      onChangeText={onChange}
+                      error={errors.subject?.message}
+                      required
+                      maxLength={100}
+                    />
+                  )}
+                />
 
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {t("activity.activityType")} <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerField,
-                { backgroundColor: colors.backgroundSecondary, borderColor: errors.activityType ? colors.error : colors.border },
-              ]}
-              onPress={() => setTypeModalOpen(true)}
-            >
-              {typesLoading ? (
-                <ActivityIndicator size="small" color={colors.accent} />
-              ) : (
-                <Text
-                  style={[
-                    styles.pickerFieldText,
-                    { color: selectedTypeName ? colors.text : colors.textMuted },
-                  ]}
-                >
-                  {selectedTypeName || t("activity.selectType")}
-                </Text>
-              )}
-              <Text style={[styles.arrow, { color: colors.textMuted }]}>▼</Text>
-            </TouchableOpacity>
-            {errors.activityType && (
-              <Text style={[styles.errorText, { color: colors.error }]}>{errors.activityType.message}</Text>
-            )}
-          </View>
-
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {t("activity.activityDate")} <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerField,
-                { backgroundColor: colors.backgroundSecondary, borderColor: errors.startDateTime ? colors.error : colors.border },
-              ]}
-              onPress={handleOpenStartDateModal}
-            >
-              <Text style={[styles.pickerFieldText, { color: colors.text }]}>
-                {formatDisplayDate(watchStartDateTime)}
-              </Text>
-              <Text style={[styles.arrow, { color: colors.textMuted }]}>📅</Text>
-            </TouchableOpacity>
-            {errors.startDateTime && (
-              <Text style={[styles.errorText, { color: colors.error }]}>{errors.startDateTime.message}</Text>
-            )}
-          </View>
-
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {t("activity.endDate")} <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerField,
-                { backgroundColor: colors.backgroundSecondary, borderColor: errors.endDateTime ? colors.error : colors.border },
-              ]}
-              onPress={handleOpenEndDateModal}
-            >
-              <Text style={[styles.pickerFieldText, { color: colors.text }]}>
-                {watchEndDateTime ? formatDisplayDate(watchEndDateTime) : "-"}
-              </Text>
-              <Text style={[styles.arrow, { color: colors.textMuted }]}>🕒</Text>
-            </TouchableOpacity>
-            {errors.endDateTime && (
-              <Text style={[styles.errorText, { color: colors.error }]}>{errors.endDateTime.message}</Text>
-            )}
-          </View>
-
-          <TouchableOpacity
-            style={[styles.toggleRow, { borderColor: colors.border, backgroundColor: colors.backgroundSecondary }]}
-            onPress={() => setValue("isAllDay", !watchIsAllDay)}
-            activeOpacity={0.8}
-          >
-            <Text style={[styles.toggleLabel, { color: colors.text }]}>{t("activity.isAllDay")}</Text>
-            <View
-              style={[
-                styles.toggleIndicator,
-                { backgroundColor: watchIsAllDay ? colors.accent : colors.border },
-              ]}
-            >
-              <Text style={styles.toggleIndicatorText}>{watchIsAllDay ? "✓" : ""}</Text>
-            </View>
-          </TouchableOpacity>
-
-          <CustomerPicker
-            label={t("activity.customer")}
-            value={watchCustomerId ?? undefined}
-            customerName={selectedCustomer?.name}
-            onChange={handleCustomerChange}
-          />
-
-          <ContactPicker
-            label={t("activity.contact")}
-            value={watch("contactId") ?? undefined}
-            contactName={selectedContact?.fullName}
-            customerId={watchCustomerId ?? undefined}
-            onChange={handleContactChange}
-          />
-
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {t("activity.status")} <Text style={{ color: colors.error }}>*</Text>
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerField,
-                { backgroundColor: colors.backgroundSecondary, borderColor: errors.status ? colors.error : colors.border },
-              ]}
-              onPress={() => setStatusModalOpen(true)}
-            >
-              <Text
-                style={[
-                  styles.pickerFieldText,
-                  { color: watchStatus ? colors.text : colors.textMuted },
-                ]}
-              >
-                {watchStatus
-                  ? statusOptions.find((o) => o.value === watchStatus)?.label
-                  : t("activity.selectStatus")}
-              </Text>
-              <Text style={[styles.arrow, { color: colors.textMuted }]}>▼</Text>
-            </TouchableOpacity>
-            {errors.status && (
-              <Text style={[styles.errorText, { color: colors.error }]}>{errors.status.message}</Text>
-            )}
-          </View>
-
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>
-              {t("activity.priority")}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.pickerField,
-                { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-              ]}
-              onPress={() => setPriorityModalOpen(true)}
-            >
-              <Text
-                style={[
-                  styles.pickerFieldText,
-                  { color: watchPriority ? colors.text : colors.textMuted },
-                ]}
-              >
-                {watchPriority
-                  ? priorityOptions.find((o) => o.value === watchPriority)?.label
-                  : t("activity.selectPriority")}
-              </Text>
-              <Text style={[styles.arrow, { color: colors.textMuted }]}>▼</Text>
-            </TouchableOpacity>
-          </View>
-
-          <Controller
-            control={control}
-            name="description"
-            render={({ field: { onChange, value } }) => (
-              <FormField
-                label={t("activity.description")}
-                value={value || ""}
-                onChangeText={onChange}
-                multiline
-                numberOfLines={4}
-                maxLength={500}
-              />
-            )}
-          />
-
-          <View style={styles.fieldContainer}>
-            <Text style={[styles.label, { color: colors.textSecondary }]}>{t("activity.reminders")}</Text>
-            <View style={styles.reminderPresetRow}>
-              {[15, 30, 60, 1440].map((offset) => {
-                const selected = watchReminders.includes(offset);
-                const label = offset >= 1440 ? t("activity.oneDayBefore") : `${offset} dk`;
-                return (
+                <View style={styles.fieldContainer}>
+                  <Text style={[styles.label, { color: mutedText }]}>
+                    {t("activity.activityType")} <Text style={{ color: colors.error }}>*</Text>
+                  </Text>
                   <TouchableOpacity
-                    key={String(offset)}
                     style={[
-                      styles.reminderChip,
+                      styles.pickerField,
                       {
-                        borderColor: selected ? colors.accent : colors.border,
-                        backgroundColor: selected ? colors.activeBackground : colors.backgroundSecondary,
+                        backgroundColor: innerBg,
+                        borderColor: errors.activityType ? colors.error : innerBorder,
                       },
                     ]}
-                    onPress={() => handleToggleReminder(offset)}
+                    onPress={() => setTypeModalOpen(true)}
                   >
-                    <Text style={[styles.reminderChipText, { color: selected ? colors.accent : colors.textSecondary }]}>
-                      {label}
-                    </Text>
+                    <View style={styles.fieldLeftWrap}>
+                      <View
+                        style={[
+                          styles.fieldIconWrap,
+                          { backgroundColor: `${accent}10`, borderColor: `${accent}18` },
+                        ]}
+                      >
+                        <TaskDaily01Icon size={13} color={accent} variant="stroke" />
+                      </View>
+                      {typesLoading ? (
+                        <ActivityIndicator size="small" color={accent} />
+                      ) : (
+                        <Text
+                          style={[
+                            styles.pickerFieldText,
+                            { color: selectedTypeName ? titleText : mutedText },
+                          ]}
+                          numberOfLines={1}
+                        >
+                          {selectedTypeName || t("activity.selectType")}
+                        </Text>
+                      )}
+                    </View>
+                    <ArrowDown01Icon size={15} color={softText} variant="stroke" />
                   </TouchableOpacity>
-                );
-              })}
-            </View>
-          </View>
+                  {errors.activityType ? (
+                    <Text style={[styles.errorText, { color: colors.error }]}>
+                      {errors.activityType.message}
+                    </Text>
+                  ) : null}
+                </View>
 
-          <TouchableOpacity
-            style={[styles.submitButton, { backgroundColor: colors.accent }]}
-            onPress={handleSubmit(onSubmit, onInvalidSubmit)}
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator size="small" color="#FFFFFF" />
-            ) : (
-              <Text style={styles.submitButtonText}>
-                {isEditMode ? t("common.update") : t("common.save")}
-              </Text>
-            )}
-          </TouchableOpacity>
-            </>
+                <View style={styles.dateGrid}>
+                  <View style={styles.dateCell}>
+                    <Text style={[styles.label, { color: mutedText }]}>
+                      {t("activity.activityDate")} <Text style={{ color: colors.error }}>*</Text>
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.pickerField,
+                        {
+                          backgroundColor: innerBg,
+                          borderColor: errors.startDateTime ? colors.error : innerBorder,
+                        },
+                      ]}
+                      onPress={handleOpenStartDateModal}
+                    >
+                      <View style={styles.fieldLeftWrap}>
+                        <View
+                          style={[
+                            styles.fieldIconWrap,
+                            { backgroundColor: `${accent}10`, borderColor: `${accent}18` },
+                          ]}
+                        >
+                          <Calendar03Icon size={13} color={accent} variant="stroke" />
+                        </View>
+                        <Text style={[styles.pickerFieldText, { color: titleText }]} numberOfLines={1}>
+                          {formatDisplayDate(watchStartDateTime)}
+                        </Text>
+                      </View>
+                      <Calendar03Icon size={14} color={softText} variant="stroke" />
+                    </TouchableOpacity>
+                    {errors.startDateTime ? (
+                      <Text style={[styles.errorText, { color: colors.error }]}>
+                        {errors.startDateTime.message}
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View style={styles.dateCell}>
+                    <Text style={[styles.label, { color: mutedText }]}>
+                      {t("activity.endDate")} <Text style={{ color: colors.error }}>*</Text>
+                    </Text>
+                    <TouchableOpacity
+                      style={[
+                        styles.pickerField,
+                        {
+                          backgroundColor: innerBg,
+                          borderColor: errors.endDateTime ? colors.error : innerBorder,
+                        },
+                      ]}
+                      onPress={handleOpenEndDateModal}
+                    >
+                      <View style={styles.fieldLeftWrap}>
+                        <View
+                          style={[
+                            styles.fieldIconWrap,
+                            {
+                              backgroundColor: `${accentSecondary}12`,
+                              borderColor: `${accentSecondary}18`,
+                            },
+                          ]}
+                        >
+                          <Clock01Icon size={13} color={accentSecondary} variant="stroke" />
+                        </View>
+                        <Text style={[styles.pickerFieldText, { color: titleText }]} numberOfLines={1}>
+                          {watchEndDateTime ? formatDisplayDate(watchEndDateTime) : "-"}
+                        </Text>
+                      </View>
+                      <Clock01Icon size={14} color={softText} variant="stroke" />
+                    </TouchableOpacity>
+                    {errors.endDateTime ? (
+                      <Text style={[styles.errorText, { color: colors.error }]}>
+                        {errors.endDateTime.message}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.toggleRow,
+                    {
+                      borderColor: innerBorder,
+                      backgroundColor: innerBg,
+                    },
+                  ]}
+                  onPress={() => setValue("isAllDay", !watchIsAllDay)}
+                  activeOpacity={0.82}
+                >
+                  <View style={styles.toggleLeft}>
+                    <View
+                      style={[
+                        styles.fieldIconWrap,
+                        { backgroundColor: `${accent}10`, borderColor: `${accent}18` },
+                      ]}
+                    >
+                      <Calendar03Icon size={13} color={accent} variant="stroke" />
+                    </View>
+                    <Text style={[styles.toggleLabel, { color: titleText }]}>{t("activity.isAllDay")}</Text>
+                  </View>
+                  <View
+                    style={[
+                      styles.toggleIndicator,
+                      {
+                        backgroundColor: watchIsAllDay ? accent : "transparent",
+                        borderColor: watchIsAllDay ? `${accent}40` : innerBorder,
+                      },
+                    ]}
+                  >
+                    {watchIsAllDay ? <Tick02Icon size={12} color="#FFFFFF" variant="stroke" /> : null}
+                  </View>
+                </TouchableOpacity>
+
+                <View style={styles.fieldBlock}>
+                  <CustomerPicker
+                    label={t("activity.customer")}
+                    value={watchCustomerId ?? undefined}
+                    customerName={selectedCustomer?.name}
+                    onChange={handleCustomerChange}
+                  />
+                </View>
+
+                <View style={styles.fieldBlockLast}>
+                  <ContactPicker
+                    label={t("activity.contact")}
+                    value={watch("contactId") ?? undefined}
+                    contactName={selectedContact?.fullName}
+                    customerId={watchCustomerId ?? undefined}
+                    onChange={handleContactChange}
+                  />
+                </View>
+              </View>
+
+              <View style={[styles.formSection, { backgroundColor: shellBg, borderColor: shellBorder }]}>
+                <View style={styles.fieldContainer}>
+                  <Text style={[styles.label, { color: mutedText }]}>
+                    {t("activity.status")} <Text style={{ color: colors.error }}>*</Text>
+                  </Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.pickerField,
+                      {
+                        backgroundColor: innerBg,
+                        borderColor: errors.status ? colors.error : innerBorder,
+                      },
+                    ]}
+                    onPress={() => setStatusModalOpen(true)}
+                  >
+                    <View style={styles.fieldLeftWrap}>
+                      <View
+                        style={[
+                          styles.fieldIconWrap,
+                          {
+                            backgroundColor: selectedStatusMeta.bg,
+                            borderColor: `${selectedStatusMeta.color}22`,
+                          },
+                        ]}
+                      >
+                        <selectedStatusMeta.Icon size={13} color={selectedStatusMeta.color} variant="stroke" />
+                      </View>
+                      <Text
+                        style={[
+                          styles.pickerFieldText,
+                          { color: watchStatus ? titleText : mutedText },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {selectedStatusLabel}
+                      </Text>
+                    </View>
+                    <ArrowDown01Icon size={15} color={softText} variant="stroke" />
+                  </TouchableOpacity>
+                  {errors.status ? (
+                    <Text style={[styles.errorText, { color: colors.error }]}>
+                      {errors.status.message}
+                    </Text>
+                  ) : null}
+                </View>
+
+                <View style={styles.fieldContainerLast}>
+                  <Text style={[styles.label, { color: mutedText }]}>{t("activity.priority")}</Text>
+                  <TouchableOpacity
+                    style={[
+                      styles.pickerField,
+                      {
+                        backgroundColor: innerBg,
+                        borderColor: innerBorder,
+                      },
+                    ]}
+                    onPress={() => setPriorityModalOpen(true)}
+                  >
+                    <View style={styles.fieldLeftWrap}>
+                      <View
+                        style={[
+                          styles.fieldIconWrap,
+                          {
+                            backgroundColor: selectedPriorityMeta.bg,
+                            borderColor: `${selectedPriorityMeta.color}22`,
+                          },
+                        ]}
+                      >
+                        <Alert02Icon size={13} color={selectedPriorityMeta.color} variant="stroke" />
+                      </View>
+                      <Text
+                        style={[
+                          styles.pickerFieldText,
+                          { color: watchPriority ? titleText : mutedText },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {selectedPriorityLabel}
+                      </Text>
+                    </View>
+                    <ArrowDown01Icon size={15} color={softText} variant="stroke" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              <View style={[styles.formSection, { backgroundColor: shellBg, borderColor: shellBorder }]}>
+                <Controller
+                  control={control}
+                  name="description"
+                  render={({ field: { onChange, value } }) => (
+                    <FormField
+                      label={t("activity.description")}
+                      value={value || ""}
+                      onChangeText={onChange}
+                      multiline
+                      numberOfLines={4}
+                      maxLength={500}
+                    />
+                  )}
+                />
+              </View>
+
+              <View style={[styles.formSection, { backgroundColor: shellBg, borderColor: shellBorder }]}>
+                <View style={styles.sectionHeader}>
+                  <View
+                    style={[
+                      styles.sectionHeaderIcon,
+                      { backgroundColor: `${accent}10`, borderColor: `${accent}18` },
+                    ]}
+                  >
+                    <Notification03Icon size={14} color={accent} variant="stroke" />
+                  </View>
+                  <Text style={[styles.sectionTitle, { color: titleText }]}>{t("activity.reminders")}</Text>
+                </View>
+
+                <View style={styles.reminderPresetRow}>
+                  {reminderPresets.map((preset) => {
+                    const selected = watchReminders.includes(preset.value);
+
+                    return (
+                      <TouchableOpacity
+                        key={String(preset.value)}
+                        style={[
+                          styles.reminderChip,
+                          {
+                            borderColor: selected ? `${accent}22` : innerBorder,
+                            backgroundColor: selected ? `${accent}10` : innerBg,
+                          },
+                        ]}
+                        onPress={() => handleToggleReminder(preset.value)}
+                        activeOpacity={0.82}
+                      >
+                        {selected ? (
+                          <View
+                            style={[
+                              styles.reminderCheck,
+                              { backgroundColor: `${accent}12`, borderColor: `${accent}18` },
+                            ]}
+                          >
+                            <Tick02Icon size={10} color={accent} variant="stroke" />
+                          </View>
+                        ) : null}
+                        <Text
+                          style={[
+                            styles.reminderChipText,
+                            { color: selected ? accent : mutedText },
+                          ]}
+                        >
+                          {preset.label}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.submitButtonWrap,
+                  { backgroundColor: shellBg, borderColor: shellBorder },
+                ]}
+                onPress={handleSubmit(onSubmit, onInvalidSubmit)}
+                disabled={isSubmitting}
+                activeOpacity={0.86}
+              >
+                <LinearGradient
+                  colors={[accent, accentSecondary]}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.submitButton}
+                >
+                  {isSubmitting ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={styles.submitButtonText}>
+                      {isEditMode ? t("common.update") : t("common.save")}
+                    </Text>
+                  )}
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
           )}
         />
+
+        {Platform.OS === "android" &&
+        (androidPickerStep === "start-date" || androidPickerStep === "start-time") ? (
+          <DateTimePicker
+            value={tempStartDate}
+            mode={androidPickerStep === "start-date" ? "date" : "time"}
+            display="default"
+            onChange={handleStartDateChange}
+            locale="tr-TR"
+          />
+        ) : null}
+
+        {Platform.OS === "android" &&
+        (androidPickerStep === "end-date" || androidPickerStep === "end-time") ? (
+          <DateTimePicker
+            value={tempEndDate}
+            mode={androidPickerStep === "end-date" ? "date" : "time"}
+            display="default"
+            onChange={handleEndDateChange}
+            locale="tr-TR"
+          />
+        ) : null}
       </View>
 
       <Modal
@@ -818,25 +1227,24 @@ export function ActivityFormScreen(): React.ReactElement {
         onRequestClose={() => setTypeModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={() => setTypeModalOpen(false)}
-          />
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setTypeModalOpen(false)} />
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+              {
+                backgroundColor: shellBgAlt,
+                borderColor: shellBorder,
+                paddingBottom: insets.bottom + 16,
+              },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[styles.handle, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {t("activity.selectType")}
-              </Text>
+            <View style={[styles.modalHeader, { borderBottomColor: innerBorder }]}>
+              <View style={[styles.handle, { backgroundColor: innerBorder }]} />
+              <Text style={[styles.modalTitle, { color: titleText }]}>{t("activity.selectType")}</Text>
             </View>
             {typesLoading ? (
               <View style={styles.modalLoadingContainer}>
-                <ActivityIndicator size="large" color={colors.accent} />
+                <ActivityIndicator size="large" color={accent} />
               </View>
             ) : (
               <FlatList
@@ -858,26 +1266,27 @@ export function ActivityFormScreen(): React.ReactElement {
         onRequestClose={() => setStatusModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={() => setStatusModalOpen(false)}
-          />
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setStatusModalOpen(false)} />
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+              {
+                backgroundColor: shellBgAlt,
+                borderColor: shellBorder,
+                paddingBottom: insets.bottom + 16,
+              },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[styles.handle, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {t("activity.selectStatus")}
-              </Text>
+            <View style={[styles.modalHeader, { borderBottomColor: innerBorder }]}>
+              <View style={[styles.handle, { backgroundColor: innerBorder }]} />
+              <Text style={[styles.modalTitle, { color: titleText }]}>{t("activity.selectStatus")}</Text>
             </View>
             <FlatList
               data={statusOptions}
               keyExtractor={(item) => item.value}
-              renderItem={({ item }) => renderPickerItem({ item, onSelect: handleStatusSelect, selectedValue: watchStatus })}
+              renderItem={({ item }) =>
+                renderPickerItem({ item, onSelect: handleStatusSelect, selectedValue: watchStatus })
+              }
               style={styles.list}
               showsVerticalScrollIndicator={false}
             />
@@ -892,26 +1301,27 @@ export function ActivityFormScreen(): React.ReactElement {
         onRequestClose={() => setPriorityModalOpen(false)}
       >
         <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={() => setPriorityModalOpen(false)}
-          />
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setPriorityModalOpen(false)} />
           <View
             style={[
               styles.modalContent,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
+              {
+                backgroundColor: shellBgAlt,
+                borderColor: shellBorder,
+                paddingBottom: insets.bottom + 16,
+              },
             ]}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[styles.handle, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {t("activity.selectPriority")}
-              </Text>
+            <View style={[styles.modalHeader, { borderBottomColor: innerBorder }]}>
+              <View style={[styles.handle, { backgroundColor: innerBorder }]} />
+              <Text style={[styles.modalTitle, { color: titleText }]}>{t("activity.selectPriority")}</Text>
             </View>
             <FlatList
               data={priorityOptions}
               keyExtractor={(item) => item.value}
-              renderItem={({ item }) => renderPickerItem({ item, onSelect: handlePrioritySelect, selectedValue: watchPriority })}
+              renderItem={({ item }) =>
+                renderPickerItem({ item, onSelect: handlePrioritySelect, selectedValue: watchPriority })
+              }
               style={styles.list}
               showsVerticalScrollIndicator={false}
             />
@@ -919,115 +1329,137 @@ export function ActivityFormScreen(): React.ReactElement {
         </View>
       </Modal>
 
-      <Modal
-        visible={startDateModalOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setStartDateModalOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={() => setStartDateModalOpen(false)}
-          />
-          <View
-            style={[
-              styles.dateModalContent,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
-            ]}
+      {Platform.OS === "ios" ? (
+        <>
+          <Modal
+            visible={startDateModalOpen}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setStartDateModalOpen(false)}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[styles.handle, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {t("activity.activityDate")}
-              </Text>
-            </View>
-            <View style={styles.datePickerContainer}>
-              <DateTimePicker
-                value={tempStartDate}
-                mode="datetime"
-                display="spinner"
-                onChange={handleStartDateChange}
-                textColor={colors.text}
-                locale="tr-TR"
-              />
-            </View>
-            <View style={styles.dateModalActions}>
-              <TouchableOpacity
-                style={[styles.dateModalButton, { borderColor: colors.border }]}
-                onPress={() => setStartDateModalOpen(false)}
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity style={styles.modalBackdrop} onPress={() => setStartDateModalOpen(false)} />
+              <View
+                style={[
+                  styles.dateModalContent,
+                  {
+                    backgroundColor: shellBgAlt,
+                    borderColor: shellBorder,
+                    paddingBottom: insets.bottom + 16,
+                  },
+                ]}
               >
-                <Text style={[styles.dateModalButtonText, { color: colors.textSecondary }]}>
-                  {t("common.cancel")}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dateModalButton, styles.dateModalButtonPrimary, { backgroundColor: colors.accent }]}
-                onPress={handleConfirmStartDate}
-              >
-                <Text style={[styles.dateModalButtonText, { color: "#FFFFFF" }]}>
-                  {t("common.confirm")}
-                </Text>
-              </TouchableOpacity>
+                <View style={[styles.modalHeader, { borderBottomColor: innerBorder }]}>
+                  <View style={[styles.handle, { backgroundColor: innerBorder }]} />
+                  <Text style={[styles.modalTitle, { color: titleText }]}>{t("activity.activityDate")}</Text>
+                </View>
+                <View style={styles.datePickerContainer}>
+                  <DateTimePicker
+                    value={tempStartDate}
+                    mode="datetime"
+                    display="spinner"
+                    onChange={handleStartDateChange}
+                    textColor={titleText}
+                    locale="tr-TR"
+                  />
+                </View>
+                <View style={styles.dateModalActions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.dateModalButton,
+                      { borderColor: innerBorder, backgroundColor: innerBg },
+                    ]}
+                    onPress={() => setStartDateModalOpen(false)}
+                  >
+                    <Text style={[styles.dateModalButtonText, { color: mutedText }]}>
+                      {t("common.cancel")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.dateModalButton, styles.dateModalButtonPrimary]}
+                    onPress={handleConfirmStartDate}
+                  >
+                    <LinearGradient
+                      colors={[accent, accentSecondary]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.dateModalButtonGradient}
+                    >
+                      <Text style={[styles.dateModalButtonText, { color: "#FFFFFF" }]}>
+                        {t("common.confirm")}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
-      </Modal>
+          </Modal>
 
-      <Modal
-        visible={endDateModalOpen}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setEndDateModalOpen(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <TouchableOpacity
-            style={styles.modalBackdrop}
-            onPress={() => setEndDateModalOpen(false)}
-          />
-          <View
-            style={[
-              styles.dateModalContent,
-              { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 },
-            ]}
+          <Modal
+            visible={endDateModalOpen}
+            transparent
+            animationType="slide"
+            onRequestClose={() => setEndDateModalOpen(false)}
           >
-            <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
-              <View style={[styles.handle, { backgroundColor: colors.border }]} />
-              <Text style={[styles.modalTitle, { color: colors.text }]}>
-                {t("activity.endDate")}
-              </Text>
-            </View>
-            <View style={styles.datePickerContainer}>
-              <DateTimePicker
-                value={tempEndDate}
-                mode="datetime"
-                display="spinner"
-                onChange={handleEndDateChange}
-                textColor={colors.text}
-                locale="tr-TR"
-              />
-            </View>
-            <View style={styles.dateModalActions}>
-              <TouchableOpacity
-                style={[styles.dateModalButton, { borderColor: colors.border }]}
-                onPress={() => setEndDateModalOpen(false)}
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity style={styles.modalBackdrop} onPress={() => setEndDateModalOpen(false)} />
+              <View
+                style={[
+                  styles.dateModalContent,
+                  {
+                    backgroundColor: shellBgAlt,
+                    borderColor: shellBorder,
+                    paddingBottom: insets.bottom + 16,
+                  },
+                ]}
               >
-                <Text style={[styles.dateModalButtonText, { color: colors.textSecondary }]}>
-                  {t("common.cancel")}
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.dateModalButton, styles.dateModalButtonPrimary, { backgroundColor: colors.accent }]}
-                onPress={handleConfirmEndDate}
-              >
-                <Text style={[styles.dateModalButtonText, { color: "#FFFFFF" }]}>
-                  {t("common.confirm")}
-                </Text>
-              </TouchableOpacity>
+                <View style={[styles.modalHeader, { borderBottomColor: innerBorder }]}>
+                  <View style={[styles.handle, { backgroundColor: innerBorder }]} />
+                  <Text style={[styles.modalTitle, { color: titleText }]}>{t("activity.endDate")}</Text>
+                </View>
+                <View style={styles.datePickerContainer}>
+                  <DateTimePicker
+                    value={tempEndDate}
+                    mode="datetime"
+                    display="spinner"
+                    onChange={handleEndDateChange}
+                    textColor={titleText}
+                    locale="tr-TR"
+                  />
+                </View>
+                <View style={styles.dateModalActions}>
+                  <TouchableOpacity
+                    style={[
+                      styles.dateModalButton,
+                      { borderColor: innerBorder, backgroundColor: innerBg },
+                    ]}
+                    onPress={() => setEndDateModalOpen(false)}
+                  >
+                    <Text style={[styles.dateModalButtonText, { color: mutedText }]}>
+                      {t("common.cancel")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.dateModalButton, styles.dateModalButtonPrimary]}
+                    onPress={handleConfirmEndDate}
+                  >
+                    <LinearGradient
+                      colors={[accent, accentSecondary]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.dateModalButtonGradient}
+                    >
+                      <Text style={[styles.dateModalButtonText, { color: "#FFFFFF" }]}>
+                        {t("common.confirm")}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
-      </Modal>
+          </Modal>
+        </>
+      ) : null}
     </>
   );
 }
@@ -1038,71 +1470,142 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
+    backgroundColor: "transparent",
   },
   contentContainer: {
-    padding: 20,
+    paddingHorizontal: 14,
+    paddingTop: 12,
+  },
+  screenStack: {
+    gap: 14,
   },
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
+    minHeight: 300,
+  },
+  loadingCard: {
+    width: "100%",
+    borderRadius: 20,
+    borderWidth: 1,
+    paddingVertical: 28,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  formSection: {
+    borderWidth: 1,
+    borderRadius: 24,
+    paddingHorizontal: 14,
+    paddingVertical: 14,
   },
   fieldContainer: {
-    marginBottom: 16,
+    marginBottom: 18,
+  },
+  fieldContainerLast: {
+    marginBottom: 0,
+  },
+  fieldBlock: {
+    marginBottom: 18,
+  },
+  fieldBlockLast: {
+    marginBottom: 0,
   },
   label: {
-    fontSize: 14,
-    fontWeight: "500",
-    marginBottom: 6,
+    fontSize: 12,
+    fontWeight: "400",
+    marginBottom: 8,
   },
   pickerField: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 18,
     paddingHorizontal: 14,
-    height: 48,
+    minHeight: 54,
+    gap: 8,
+  },
+  fieldLeftWrap: {
+    flex: 1,
+    minWidth: 0,
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  fieldIconWrap: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 9,
   },
   pickerFieldText: {
-    fontSize: 15,
+    fontSize: 12,
+    fontWeight: "500",
     flex: 1,
-  },
-  arrow: {
-    fontSize: 10,
-    marginLeft: 8,
+    lineHeight: 16,
   },
   errorText: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
+    marginTop: 6,
+    lineHeight: 14,
+  },
+  dateGrid: {
+    gap: 16,
+    marginBottom: 4,
+  },
+  dateCell: {
+    flex: 1,
   },
   toggleRow: {
-    height: 48,
+    minHeight: 54,
     borderWidth: 1,
-    borderRadius: 10,
-    marginBottom: 16,
+    borderRadius: 18,
+    marginBottom: 18,
     paddingHorizontal: 14,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
+  toggleLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    flex: 1,
+    minWidth: 0,
+  },
   toggleLabel: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: "500",
+    lineHeight: 16,
   },
   toggleIndicator: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
-  toggleIndicatorText: {
-    color: "#FFFFFF",
+  sectionHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 12,
+  },
+  sectionHeaderIcon: {
+    width: 30,
+    height: 30,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginRight: 8,
+  },
+  sectionTitle: {
     fontSize: 12,
-    fontWeight: "700",
+    fontWeight: "500",
+    lineHeight: 16,
   },
   reminderPresetRow: {
     flexDirection: "row",
@@ -1111,25 +1614,43 @@ const styles = StyleSheet.create({
   },
   reminderChip: {
     borderWidth: 1,
-    borderRadius: 16,
+    borderRadius: 999,
     paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingVertical: 7,
+    minHeight: 32,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
-  reminderChipText: {
-    fontSize: 12,
-    fontWeight: "600",
-  },
-  submitButton: {
-    height: 52,
-    borderRadius: 12,
+  reminderCheck: {
+    width: 16,
+    height: 16,
+    borderRadius: 6,
+    borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+  },
+  reminderChipText: {
+    fontSize: 10,
+    fontWeight: "500",
+    lineHeight: 12,
+  },
+  submitButtonWrap: {
+    borderWidth: 1,
+    borderRadius: 22,
+    padding: 6,
+  },
+  submitButton: {
+    minHeight: 54,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
   },
   submitButtonText: {
     color: "#FFFFFF",
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: "600",
+    letterSpacing: 0.1,
   },
   modalOverlay: {
     flex: 1,
@@ -1137,12 +1658,14 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     flex: 1,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
+    backgroundColor: "rgba(0,0,0,0.45)",
   },
   modalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: "60%",
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderWidth: 1,
+    borderBottomWidth: 0,
+    maxHeight: "62%",
   },
   modalHeader: {
     alignItems: "center",
@@ -1150,64 +1673,83 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
   },
   handle: {
-    width: 40,
+    width: 42,
     height: 4,
     borderRadius: 2,
     marginBottom: 12,
   },
   modalTitle: {
-    fontSize: 17,
-    fontWeight: "600",
+    fontSize: 15,
+    fontWeight: "500",
+    lineHeight: 18,
   },
   modalLoadingContainer: {
-    padding: 40,
+    padding: 36,
     alignItems: "center",
   },
   list: {
     flexGrow: 0,
   },
   pickerItem: {
+    minHeight: 56,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     paddingVertical: 14,
-    paddingHorizontal: 20,
+    paddingHorizontal: 18,
     borderBottomWidth: 1,
   },
   pickerItemText: {
-    fontSize: 16,
+    fontSize: 13,
+    fontWeight: "500",
     flex: 1,
+    lineHeight: 16,
   },
-  checkmark: {
-    fontSize: 18,
-    fontWeight: "600",
+  checkIconWrap: {
+    width: 22,
+    height: 22,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dateModalContent: {
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
+    borderWidth: 1,
+    borderBottomWidth: 0,
   },
   datePickerContainer: {
     alignItems: "center",
-    paddingVertical: 16,
+    paddingVertical: 12,
   },
   dateModalActions: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    gap: 12,
+    paddingHorizontal: 16,
+    gap: 10,
   },
   dateModalButton: {
     flex: 1,
-    height: 48,
-    borderRadius: 12,
+    minHeight: 48,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 1,
+    overflow: "hidden",
   },
   dateModalButtonPrimary: {
     borderWidth: 0,
+    padding: 0,
+  },
+  dateModalButtonGradient: {
+    width: "100%",
+    minHeight: 48,
+    alignItems: "center",
+    justifyContent: "center",
   },
   dateModalButtonText: {
-    fontSize: 16,
+    fontSize: 13,
     fontWeight: "600",
+    lineHeight: 16,
   },
 });
