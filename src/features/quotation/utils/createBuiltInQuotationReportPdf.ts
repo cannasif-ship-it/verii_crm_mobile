@@ -15,6 +15,11 @@ interface CreateBuiltInQuotationReportPdfParams {
   lines: QuotationLineFormState[];
 }
 
+interface CurrencyPresentation {
+  code: string;
+  label: string;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replace(/&/g, "&amp;")
@@ -36,6 +41,28 @@ function formatCurrency(value: number, currencyCode: string): string {
   }
 }
 
+function getCurrencyPresentation(value: string | null | undefined): CurrencyPresentation {
+  const normalized = String(value ?? "TRY").trim().toUpperCase();
+
+  switch (normalized) {
+    case "0":
+    case "TL":
+    case "TRY":
+      return { code: "TRY", label: "Türk Lirası" };
+    case "1":
+    case "USD":
+      return { code: "USD", label: "ABD Doları" };
+    case "2":
+    case "EUR":
+      return { code: "EUR", label: "Euro" };
+    case "3":
+    case "GBP":
+      return { code: "GBP", label: "İngiliz Sterlini" };
+    default:
+      return { code: normalized || "TRY", label: normalized || "Türk Lirası" };
+  }
+}
+
 function normalizeCustomerName(value?: string | null): string {
   const trimmed = value?.trim() ?? "";
   if (!trimmed) return "";
@@ -48,44 +75,23 @@ function normalizeCustomerName(value?: string | null): string {
   return trimmed;
 }
 
-function buildDiscountText(line: QuotationLineFormState, currencyCode: string): string {
-  const parts: string[] = [];
-
-  if ((line.discountRate1 ?? 0) > 0 || (line.discountAmount1 ?? 0) > 0) {
-    parts.push(`1:%${line.discountRate1 ?? 0}`);
-  }
-  if ((line.discountRate2 ?? 0) > 0 || (line.discountAmount2 ?? 0) > 0) {
-    parts.push(`2:%${line.discountRate2 ?? 0}`);
-  }
-  if ((line.discountRate3 ?? 0) > 0 || (line.discountAmount3 ?? 0) > 0) {
-    parts.push(`3:%${line.discountRate3 ?? 0}`);
-  }
-
-  const totalDiscountAmount =
-    (line.discountAmount1 ?? 0) +
-    (line.discountAmount2 ?? 0) +
-    (line.discountAmount3 ?? 0);
-
-  if (totalDiscountAmount > 0) {
-    parts.push(`Toplam: ${formatCurrency(totalDiscountAmount, currencyCode)}`);
-  }
-
-  return parts.join(" | ") || "-";
-}
-
 function buildHtml(params: CreateBuiltInQuotationReportPdfParams): string {
   const customerName = normalizeCustomerName(params.customerName);
+  const currency = getCurrencyPresentation(params.currencyCode);
   const rowsHtml = params.lines
     .map((line) => {
       return `
         <tr>
           <td>${escapeHtml(line.productCode ?? "")}</td>
           <td>${escapeHtml(line.productName ?? "")}</td>
-          <td>${escapeHtml(buildDiscountText(line, params.currencyCode))}</td>
+          <td class="num">%${escapeHtml(String(line.discountRate1 ?? 0))}</td>
+          <td class="num">%${escapeHtml(String(line.discountRate2 ?? 0))}</td>
+          <td class="num">%${escapeHtml(String(line.discountRate3 ?? 0))}</td>
           <td class="num">${escapeHtml(String(line.quantity ?? 0))}</td>
-          <td class="num">${escapeHtml(formatCurrency(line.unitPrice ?? 0, params.currencyCode))}</td>
+          <td class="num">${escapeHtml(formatCurrency(line.unitPrice ?? 0, currency.code))}</td>
+          <td>${escapeHtml(currency.label)}</td>
           <td class="num">%${escapeHtml(String(line.vatRate ?? 0))}</td>
-          <td class="num">${escapeHtml(formatCurrency(line.lineTotal ?? 0, params.currencyCode))}</td>
+          <td class="num">${escapeHtml(formatCurrency(line.lineTotal ?? 0, currency.code))}</td>
         </tr>
       `;
     })
@@ -97,15 +103,24 @@ function buildHtml(params: CreateBuiltInQuotationReportPdfParams): string {
       <head>
         <meta charset="utf-8" />
         <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #111827; padding: 28px; }
+          @page { size: A4 portrait; margin: 16mm 10mm 14mm 10mm; }
+          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #111827; }
           h1 { font-size: 24px; margin: 0 0 10px; }
           .meta { margin-bottom: 18px; font-size: 13px; }
           .meta-row { margin-bottom: 6px; }
           .label { font-weight: 700; }
           table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-          th, td { border: 1px solid #d1d5db; padding: 8px; font-size: 11px; vertical-align: top; word-wrap: break-word; }
+          th, td { border: 1px solid #d1d5db; padding: 5px; font-size: 9px; vertical-align: top; word-wrap: break-word; }
           th { background: #f3f4f6; text-align: left; }
           .num { text-align: right; }
+          .w-code { width: 11%; }
+          .w-name { width: 28%; }
+          .w-disc { width: 7%; }
+          .w-qty { width: 7%; }
+          .w-price { width: 10%; }
+          .w-currency { width: 9%; }
+          .w-vat { width: 6%; }
+          .w-total { width: 11%; }
         </style>
       </head>
       <body>
@@ -113,18 +128,22 @@ function buildHtml(params: CreateBuiltInQuotationReportPdfParams): string {
         <div class="meta">
           <div class="meta-row"><span class="label">Tarih:</span> ${escapeHtml(new Date().toLocaleDateString("tr-TR"))}</div>
           <div class="meta-row"><span class="label">Teklif No:</span> ${escapeHtml(params.offerNo ?? "-")}</div>
+          <div class="meta-row"><span class="label">Döviz:</span> ${escapeHtml(currency.label)}</div>
           ${customerName ? `<div class="meta-row"><span class="label">Müşteri Hesabı:</span> ${escapeHtml(customerName)}</div>` : ""}
         </div>
         <table>
           <thead>
             <tr>
-              <th>Stok Kodu</th>
-              <th>Stok Adı</th>
-              <th>İskonto</th>
-              <th class="num">Miktar</th>
-              <th class="num">Birim Fiyat</th>
-              <th class="num">KDV</th>
-              <th class="num">Toplam</th>
+              <th class="w-code">Stok Kodu</th>
+              <th class="w-name">Stok Adı</th>
+              <th class="w-disc num">İskonto 1</th>
+              <th class="w-disc num">İskonto 2</th>
+              <th class="w-disc num">İskonto 3</th>
+              <th class="w-qty num">Miktar</th>
+              <th class="w-price num">Birim Fiyat</th>
+              <th class="w-currency">Döviz</th>
+              <th class="w-vat num">KDV</th>
+              <th class="w-total num">Toplam</th>
             </tr>
           </thead>
           <tbody>${rowsHtml}</tbody>
