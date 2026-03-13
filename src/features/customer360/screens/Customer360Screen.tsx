@@ -17,23 +17,27 @@ import {
   useCustomer360AnalyticsSummary,
   useCustomer360AnalyticsCharts,
   useCustomer360QuickQuotations,
+  useCustomer360ErpMovements,
+  useCustomer360ErpBalance,
 } from "../hooks";
 import { CurrencyPicker } from "../components";
 import { Customer360OverviewTab } from "./Customer360OverviewTab";
 import { Customer360AnalyticsTab } from "./Customer360AnalyticsTab";
 import { Customer360MailLogsTab } from "./Customer360MailLogsTab";
 import { Customer360QuickQuotationsTab } from "./Customer360QuickQuotationsTab";
+import { Customer360ErpMovementsTab } from "./Customer360ErpMovementsTab";
 import {
   AnalyticsUpIcon,
   ChartAverageIcon,
   Invoice03Icon,
   Mail01Icon,
+  ArrowDataTransferHorizontalIcon,
   Rotate360Icon,
   Alert02Icon,
   UserIcon,
 } from "hugeicons-react-native";
 
-type TabType = "overview" | "analytics" | "quickQuotations" | "mailLogs";
+type TabType = "overview" | "analytics" | "quickQuotations" | "erpMovements" | "mailLogs";
 
 function collectCurrencyOptions(
   summaryCurrencies: { currency: string }[],
@@ -84,6 +88,8 @@ export function Customer360Screen(): React.ReactElement {
   const summaryQuery = useCustomer360AnalyticsSummary(customerId, currencyParam);
   const chartsQuery = useCustomer360AnalyticsCharts(customerId, 12, currencyParam);
   const quickQuotationsQuery = useCustomer360QuickQuotations(customerId);
+  const erpMovementsQuery = useCustomer360ErpMovements(customerId);
+  const erpBalanceQuery = useCustomer360ErpBalance(customerId);
 
   const currencyOptions = useMemo(() => {
     const summary = summaryQuery.data?.totalsByCurrency ?? [];
@@ -119,6 +125,7 @@ export function Customer360Screen(): React.ReactElement {
     { key: "overview" as const, label: t("customer360.tabs.overview"), icon: AnalyticsUpIcon },
     { key: "analytics" as const, label: t("customer360.tabs.analytics"), icon: ChartAverageIcon },
     { key: "quickQuotations" as const, label: t("customer360.tabs.quickQuotations"), icon: Invoice03Icon },
+    { key: "erpMovements" as const, label: t("customer360.tabs.erpMovements"), icon: ArrowDataTransferHorizontalIcon },
     { key: "mailLogs" as const, label: t("customer360.tabs.mailLogs"), icon: Mail01Icon },
   ];
 
@@ -376,6 +383,23 @@ export function Customer360Screen(): React.ReactElement {
                   items={quickQuotationsQuery.data ?? []}
                   colors={colors}
                   emptyText={t("customer360.quickQuotations.empty")}
+                />
+              )
+            ) : activeTab === "erpMovements" ? (
+              erpMovementsQuery.isLoading || erpBalanceQuery.isLoading ? (
+                renderLoading()
+              ) : erpMovementsQuery.isError || erpBalanceQuery.isError ? (
+                renderError(
+                  erpMovementsQuery.error?.message ??
+                    erpBalanceQuery.error?.message ??
+                    t("customer360.erpMovements.error")
+                )
+              ) : (
+                <Customer360ErpMovementsTab
+                  balance={erpBalanceQuery.data}
+                  items={erpMovementsQuery.data ?? []}
+                  colors={colors}
+                  emptyText={t("common.noData")}
                 />
               )
             ) : (
