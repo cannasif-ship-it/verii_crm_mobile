@@ -1,8 +1,8 @@
-import { Asset } from "expo-asset";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Print from "expo-print";
 import { PDFDocument } from "pdf-lib";
 import { Buffer } from "buffer";
+import { Image } from "react-native";
 
 import type { QuotationLineFormState } from "../types";
 
@@ -161,6 +161,29 @@ async function readPdfBytesFromUri(uri: string): Promise<Uint8Array> {
   return Uint8Array.from(Buffer.from(base64, "base64"));
 }
 
+async function readPdfBytesWithFallback(uri: string): Promise<Uint8Array> {
+  try {
+    return await readPdfBytesFromUri(uri);
+  } catch {
+    const response = await fetch(uri);
+    if (!response.ok) {
+      throw new Error(`PDF okunamadı: ${response.status}`);
+    }
+
+    const buffer = await response.arrayBuffer();
+    return new Uint8Array(buffer);
+  }
+}
+
+function resolveBundledCoverUri(): string | null {
+  try {
+    const resolved = Image.resolveAssetSource(COVER_TEMPLATE_ASSET);
+    return resolved?.uri ?? null;
+  } catch {
+    return null;
+  }
+}
+
 export async function createBuiltInQuotationReportPdf(
   params: CreateBuiltInQuotationReportPdfParams
 ): Promise<string> {
@@ -168,17 +191,14 @@ export async function createBuiltInQuotationReportPdf(
   const generated = await Print.printToFileAsync({ html });
   const generatedUri = generated.uri.startsWith("file://") ? generated.uri : `file://${generated.uri}`;
 
-  const coverAsset = Asset.fromModule(COVER_TEMPLATE_ASSET);
-  await coverAsset.downloadAsync();
-
-  const coverUri = coverAsset.localUri ?? coverAsset.uri;
+  const coverUri = resolveBundledCoverUri();
   if (!coverUri) {
     return generatedUri;
   }
 
   const [coverBytes, linesBytes] = await Promise.all([
-    readPdfBytesFromUri(coverUri),
-    readPdfBytesFromUri(generatedUri),
+    readPdfBytesWithFallback(coverUri),
+    readPdfBytesWithFallback(generatedUri),
   ]);
 
   const mergedPdf = await PDFDocument.create();
