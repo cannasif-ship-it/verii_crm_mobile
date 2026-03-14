@@ -63,6 +63,13 @@ import {
   notesFromDto,
   notesToPutPayload,
 } from "../components";
+
+function addDaysToDateOnly(dateValue: string, days: number): string {
+  const date = new Date(`${dateValue}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateValue;
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split("T")[0];
+}
 import { CustomerSelectDialog, type CustomerSelectionResult } from "../../customer";
 import type { CustomerDto } from "../../customer/types";
 import { createQuotationSchema, type CreateQuotationSchema } from "../schemas";
@@ -184,7 +191,7 @@ const gradientColors = isDark
         offerType: "YURTICI",
         currency: "",
         offerDate: new Date().toISOString().split("T")[0],
-        deliveryDate: new Date().toISOString().split("T")[0],
+        deliveryDate: addDaysToDateOnly(new Date().toISOString().split("T")[0], 21),
         representativeId: user?.id ?? null,
       },
     },
@@ -196,6 +203,22 @@ const gradientColors = isDark
   const watchedRepresentativeId = watch("quotation.representativeId");
   const watchedOfferDate = watch("quotation.offerDate");
   const watchedDeliveryDate = watch("quotation.deliveryDate");
+  const offerDateSyncInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!watchedOfferDate) return;
+    if (!offerDateSyncInitializedRef.current) {
+      offerDateSyncInitializedRef.current = true;
+      return;
+    }
+    const nextDeliveryDate = addDaysToDateOnly(watchedOfferDate, 21);
+    if (watch("quotation.deliveryDate") !== nextDeliveryDate) {
+      setValue("quotation.deliveryDate", nextDeliveryDate, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [watchedOfferDate, setValue, watch]);
 
   const { data: customer } = useCustomer(watchedCustomerId ?? undefined);
   const { data: shippingAddresses } = useCustomerShippingAddresses(watchedCustomerId ?? undefined);
@@ -360,7 +383,9 @@ const gradientColors = isDark
     (_: DateTimePickerEvent, d?: Date) => {
       if (d) {
         setTempOfferDate(d);
-        setValue("quotation.offerDate", d.toISOString().split("T")[0]);
+        const nextOfferDate = d.toISOString().split("T")[0];
+        setValue("quotation.offerDate", nextOfferDate);
+        setValue("quotation.deliveryDate", addDaysToDateOnly(nextOfferDate, 21));
       }
     },
     [setValue]

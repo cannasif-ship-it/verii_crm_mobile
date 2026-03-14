@@ -8,7 +8,9 @@ import {
   Alert,
   Modal,
   Platform,
+  Image,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -33,9 +35,12 @@ import {
   ReminderChannel,
   type ActivityTypeDto,
   type ActivityDto,
+  type ActivityImageDto,
 } from "../types";
 import type { CustomerDto } from "../../customer/types";
 import type { ContactDto } from "../../contact/types";
+import { activityImageApi } from "../api";
+import { getApiBaseUrl } from "../../../constants/config";
 import {
   Calendar03Icon,
   Clock01Icon,
@@ -118,6 +123,10 @@ export function ActivityFormScreen(): React.ReactElement {
 
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerDto | undefined>();
   const [selectedContact, setSelectedContact] = useState<ContactDto | undefined>();
+  const [activityImages, setActivityImages] = useState<ActivityImageDto[]>([]);
+  const [imagesLoading, setImagesLoading] = useState(false);
+  const [imagesUploading, setImagesUploading] = useState(false);
+  const [deletingImageId, setDeletingImageId] = useState<number | null>(null);
 
   const user = useAuthStore((state) => state.user);
   const { data: existingActivity, isLoading: activityLoading } = useActivity(activityId);
@@ -227,6 +236,13 @@ export function ActivityFormScreen(): React.ReactElement {
       return activityType.name;
     }
     return "";
+  }, []);
+
+  const toAbsoluteImageUrl = useCallback((path: string | null | undefined): string | undefined => {
+    if (!path) return undefined;
+    if (/^https?:\/\//i.test(path)) return path;
+    const normalized = path.startsWith("/") ? path : `/${path}`;
+    return `${getApiBaseUrl()}${normalized}`;
   }, []);
 
   useEffect(() => {
@@ -341,6 +357,40 @@ export function ActivityFormScreen(): React.ReactElement {
     toDefaultStartDateTime,
     user?.id,
   ]);
+
+  useEffect(() => {
+    if (!activityId) {
+      setActivityImages([]);
+      return;
+    }
+
+    let cancelled = false;
+    setImagesLoading(true);
+
+    activityImageApi
+      .getByActivityId(activityId)
+      .then((images) => {
+        if (!cancelled) {
+          setActivityImages(images);
+        }
+      })
+      .catch((error) => {
+        if (!cancelled) {
+          const message =
+            error instanceof Error && error.message ? error.message : t("activity.imageLoadError");
+          Alert.alert(t("common.error"), message);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setImagesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activityId, t]);
 
   useEffect(() => {
     if (!watchIsAllDay || isEditMode) return;
@@ -621,6 +671,77 @@ export function ActivityFormScreen(): React.ReactElement {
       t("validation.fillRequiredFields", "Lütfen zorunlu alanları doldurun")
     );
   }, [t]);
+
+  const handlePickAndUploadImages = useCallback(async () => {
+    if (!activityId) {
+      Alert.alert(t("common.warning"), t("activity.imageSaveFirst"));
+      return;
+    }
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (permission.status !== "granted") {
+      Alert.alert(t("common.warning"), t("activity.imagePermissionRequired"));
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      quality: 0.85,
+      allowsMultipleSelection: true,
+      selectionLimit: 5,
+    });
+
+    if (result.canceled || result.assets.length === 0) {
+      return;
+    }
+
+    setImagesUploading(true);
+    try {
+      const uploaded = await activityImageApi.upload(
+        activityId,
+        result.assets.map((asset) => ({
+          uri: asset.uri,
+          description: t("activity.imageDefaultDescription"),
+        }))
+      );
+
+      setActivityImages((prev) => {
+        const existingIds = new Set(prev.map((item) => item.id));
+        const next = [...prev];
+        uploaded.forEach((item) => {
+          if (!existingIds.has(item.id)) {
+            next.push(item);
+          }
+        });
+        return next;
+      });
+
+      Alert.alert("", t("activity.imageUploadSuccess"));
+    } catch (error) {
+      const message =
+        error instanceof Error && error.message ? error.message : t("activity.imageUploadError");
+      Alert.alert(t("common.error"), message);
+    } finally {
+      setImagesUploading(false);
+    }
+  }, [activityId, t]);
+
+  const handleDeleteImage = useCallback(
+    async (imageId: number) => {
+      setDeletingImageId(imageId);
+      try {
+        await activityImageApi.delete(imageId);
+        setActivityImages((prev) => prev.filter((item) => item.id !== imageId));
+      } catch (error) {
+        const message =
+          error instanceof Error && error.message ? error.message : t("activity.imageDeleteError");
+        Alert.alert(t("common.error"), message);
+      } finally {
+        setDeletingImageId(null);
+      }
+    },
+    [t]
+  );
 
   const renderTypeItem = useCallback(
     ({ item }: { item: ActivityTypeDto }) => {
@@ -1169,6 +1290,81 @@ export function ActivityFormScreen(): React.ReactElement {
                 </View>
               </View>
 
+              <View style={[styles.formSection, { backgroundColor: shellBg, borderColor: shellBorder }]}>
+                <View style={styles.sectionHeader}>
+                  <View
+                    style={[
+                      styles.sectionHeaderIcon,
+                      { backgroundColor: `${accent}10`, borderColor: `${accent}18` },
+                    ]}
+                  >
+                    <TaskDaily01Icon size={14} color={accent} variant="stroke" />
+                  </View>
+                  <Text style={[styles.sectionTitle, { color: titleText }]}>{t("activity.images")}</Text>
+                </View>
+
+                <TouchableOpacity
+                  style={[
+                    styles.secondaryActionButton,
+                    {
+                      borderColor: innerBorder,
+                      backgroundColor: innerBg,
+                      opacity: !activityId || imagesUploading ? 0.7 : 1,
+                    },
+                  ]}
+                  onPress={handlePickAndUploadImages}
+                  disabled={!activityId || imagesUploading}
+                  activeOpacity={0.82}
+                >
+                  {imagesUploading ? (
+                    <ActivityIndicator size="small" color={accent} />
+                  ) : (
+                    <Text style={[styles.secondaryActionButtonText, { color: titleText }]}>
+                      {activityId ? t("activity.addImage") : t("activity.imageSaveFirst")}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+
+                {imagesLoading ? (
+                  <ActivityIndicator size="small" color={accent} style={styles.imageLoadingIndicator} />
+                ) : activityImages.length === 0 ? (
+                  <Text style={[styles.emptyHelperText, { color: mutedText }]}>{t("activity.noImages")}</Text>
+                ) : (
+                  <View style={styles.imageGrid}>
+                    {activityImages.map((image) => {
+                      const imageUri = toAbsoluteImageUrl(image.imageUrl);
+                      if (!imageUri) return null;
+
+                      return (
+                        <View
+                          key={image.id}
+                          style={[
+                            styles.imageCard,
+                            { backgroundColor: innerBg, borderColor: innerBorder },
+                          ]}
+                        >
+                          <Image source={{ uri: imageUri }} style={styles.activityImage} resizeMode="cover" />
+                          <TouchableOpacity
+                            style={[
+                              styles.deleteImageButton,
+                              { backgroundColor: isDark ? "rgba(15,23,42,0.78)" : "rgba(255,255,255,0.92)" },
+                            ]}
+                            onPress={() => handleDeleteImage(image.id)}
+                            disabled={deletingImageId === image.id}
+                          >
+                            {deletingImageId === image.id ? (
+                              <ActivityIndicator size="small" color={accent} />
+                            ) : (
+                              <Text style={[styles.deleteImageButtonText, { color: accent }]}>Sil</Text>
+                            )}
+                          </TouchableOpacity>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
+              </View>
+
               <TouchableOpacity
                 style={[
                   styles.submitButtonWrap,
@@ -1634,6 +1830,55 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: "500",
     lineHeight: 12,
+  },
+  secondaryActionButton: {
+    minHeight: 52,
+    borderRadius: 16,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 2,
+  },
+  secondaryActionButtonText: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  imageLoadingIndicator: {
+    marginTop: 16,
+  },
+  emptyHelperText: {
+    marginTop: 14,
+    fontSize: 13,
+  },
+  imageGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 16,
+  },
+  imageCard: {
+    width: "48%",
+    aspectRatio: 1,
+    borderRadius: 18,
+    borderWidth: 1,
+    overflow: "hidden",
+    position: "relative",
+  },
+  activityImage: {
+    width: "100%",
+    height: "100%",
+  },
+  deleteImageButton: {
+    position: "absolute",
+    right: 10,
+    top: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+  },
+  deleteImageButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   submitButtonWrap: {
     borderWidth: 1,

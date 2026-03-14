@@ -1,8 +1,10 @@
 import { apiClient } from "../../../lib/axios";
+import * as FileSystem from "expo-file-system/legacy";
 import i18n from "../../../locales";
 import type { ApiResponse } from "../../auth/types";
 import type {
   ActivityDto,
+  ActivityImageDto,
   ActivityTypeDto,
   CreateActivityDto,
   UpdateActivityDto,
@@ -71,6 +73,48 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
   return queryParams;
 };
 
+const EXTENSION_TO_MIME: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  gif: "image/gif",
+  heic: "image/heic",
+  heif: "image/heif",
+};
+
+function getSafeUploadMeta(imageUri: string): { name: string; type: string; uri: string } {
+  const cleanedUri = imageUri.split("?")[0]?.split("#")[0] ?? imageUri;
+  const rawTail = cleanedUri.split("/").pop()?.trim() || `activity_${Date.now()}.jpg`;
+  const hasDot = rawTail.includes(".");
+  const baseName = hasDot ? rawTail.substring(0, rawTail.lastIndexOf(".")) : rawTail;
+  const rawExt = hasDot ? rawTail.substring(rawTail.lastIndexOf(".") + 1).toLowerCase() : "";
+  const safeExt = EXTENSION_TO_MIME[rawExt] ? rawExt : "jpg";
+
+  return {
+    uri: imageUri,
+    name: `${baseName.replace(/[^a-zA-Z0-9_-]/g, "_")}.${safeExt}`,
+    type: EXTENSION_TO_MIME[safeExt] ?? "image/jpeg",
+  };
+}
+
+async function ensureReadableUploadUri(imageUri: string): Promise<string> {
+  if (!imageUri) return imageUri;
+  if (imageUri.startsWith("file://")) return imageUri;
+  if (!imageUri.startsWith("content://")) return imageUri;
+
+  const cacheBase = FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+  if (!cacheBase) return imageUri;
+
+  const target = `${cacheBase}activity_upload_${Date.now()}.jpg`;
+  try {
+    await FileSystem.copyAsync({ from: imageUri, to: target });
+    return target;
+  } catch {
+    return imageUri;
+  }
+}
+
 export const activityApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<ActivityDto>> => {
     const queryParams = buildQueryParams(params);
@@ -129,6 +173,69 @@ export const activityApi = {
     if (!response.data.success) {
       throw new Error(
         response.data.message || response.data.exceptionMessage || i18n.t("activity.errors.delete")
+      );
+    }
+  },
+};
+
+export const activityImageApi = {
+  getByActivityId: async (activityId: number): Promise<ActivityImageDto[]> => {
+    const response = await apiClient.get<ApiResponse<ActivityImageDto[]>>(`/api/ActivityImage/by-activity/${activityId}`);
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || i18n.t("activity.imageLoadError")
+      );
+    }
+
+    return response.data.data ?? [];
+  },
+
+  upload: async (
+    activityId: number,
+    images: Array<{ uri: string; description?: string }>
+  ): Promise<ActivityImageDto[]> => {
+    const formData = new FormData();
+
+    for (const image of images) {
+      const readableUri = await ensureReadableUploadUri(image.uri);
+      const meta = getSafeUploadMeta(readableUri);
+      formData.append("files", {
+        uri: meta.uri,
+        name: meta.name,
+        type: meta.type,
+      } as any);
+
+      if (image.description) {
+        formData.append("resimAciklamalar", image.description);
+      }
+    }
+
+    const response = await apiClient.post<ApiResponse<ActivityImageDto[]>>(
+      `/api/ActivityImage/upload/${activityId}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || i18n.t("activity.imageUploadError")
+      );
+    }
+
+    return response.data.data ?? [];
+  },
+
+  delete: async (id: number): Promise<void> => {
+    const response = await apiClient.delete<ApiResponse<void>>(`/api/ActivityImage/${id}`);
+
+    if (!response.data.success) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || i18n.t("activity.imageDeleteError")
       );
     }
   },

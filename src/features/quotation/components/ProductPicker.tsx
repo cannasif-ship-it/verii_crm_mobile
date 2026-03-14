@@ -297,6 +297,9 @@ function scoreStock(stock: StockGetDto, query: string): number {
   const groupName = stock.grupAdi || "";
   const code1 = [stock.kod1, stock.kod1Adi].filter(Boolean).join(" ");
   const code2 = [stock.kod2, stock.kod2Adi].filter(Boolean).join(" ");
+  const code3 = stock.kod3 || "";
+  const code4 = stock.kod4 || "";
+  const code5 = stock.kod5 || "";
   const manufacturerCode = stock.ureticiKodu || "";
 
   const wholeName = scoreWholeQueryAgainstField(normalizedQuery, name) + 35;
@@ -305,6 +308,9 @@ function scoreStock(stock: StockGetDto, query: string): number {
   const wholeGroupName = scoreWholeQueryAgainstField(normalizedQuery, groupName) + 10;
   const wholeCode1 = scoreWholeQueryAgainstField(normalizedQuery, code1) + 16;
   const wholeCode2 = scoreWholeQueryAgainstField(normalizedQuery, code2) + 16;
+  const wholeCode3 = scoreWholeQueryAgainstField(normalizedQuery, code3) + 12;
+  const wholeCode4 = scoreWholeQueryAgainstField(normalizedQuery, code4) + 10;
+  const wholeCode5 = scoreWholeQueryAgainstField(normalizedQuery, code5) + 10;
   const wholeManufacturerCode = scoreWholeQueryAgainstField(normalizedQuery, manufacturerCode) + 8;
 
   const tokenName = scoreFieldWithTokens(name, normalizedQuery) + 25;
@@ -313,6 +319,9 @@ function scoreStock(stock: StockGetDto, query: string): number {
   const tokenGroupName = scoreFieldWithTokens(groupName, normalizedQuery) + 8;
   const tokenCode1 = scoreFieldWithTokens(code1, normalizedQuery) + 12;
   const tokenCode2 = scoreFieldWithTokens(code2, normalizedQuery) + 12;
+  const tokenCode3 = scoreFieldWithTokens(code3, normalizedQuery) + 10;
+  const tokenCode4 = scoreFieldWithTokens(code4, normalizedQuery) + 8;
+  const tokenCode5 = scoreFieldWithTokens(code5, normalizedQuery) + 8;
   const tokenManufacturerCode = scoreFieldWithTokens(manufacturerCode, normalizedQuery) + 6;
 
   let score = Math.max(
@@ -322,6 +331,9 @@ function scoreStock(stock: StockGetDto, query: string): number {
     wholeGroupName,
     wholeCode1,
     wholeCode2,
+    wholeCode3,
+    wholeCode4,
+    wholeCode5,
     wholeManufacturerCode,
     tokenName,
     tokenCode,
@@ -329,10 +341,13 @@ function scoreStock(stock: StockGetDto, query: string): number {
     tokenGroupName,
     tokenCode1,
     tokenCode2,
+    tokenCode3,
+    tokenCode4,
+    tokenCode5,
     tokenManufacturerCode
   );
 
-  const combinedField = [name, code, groupCode, groupName, code1, code2, manufacturerCode].filter(Boolean).join(" ");
+  const combinedField = [name, code, groupCode, groupName, code1, code2, code3, code4, code5, manufacturerCode].filter(Boolean).join(" ");
   const combinedWhole = scoreWholeQueryAgainstField(normalizedQuery, combinedField);
   const combinedToken = scoreFieldWithTokens(combinedField, normalizedQuery);
   score = Math.max(score, combinedWhole + 18, combinedToken + 12);

@@ -77,6 +77,14 @@ export interface ActivityReminderDto {
   isDeleted: boolean;
 }
 
+export interface ActivityImageDto {
+  id: number;
+  activityId: number;
+  imageUrl: string;
+  imageDescription?: string;
+  createdDate?: string;
+}
+
 export interface CreateActivityReminderDto {
   offsetMinutes: number;
   channel: ReminderChannel;

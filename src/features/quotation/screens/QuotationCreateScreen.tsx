@@ -74,6 +74,13 @@ import type { ExchangeRateDto } from "../types";
 import { UserIcon } from "hugeicons-react-native";
 import { LinearGradient } from "expo-linear-gradient";
 
+function addDaysToDateOnly(dateValue: string, days: number): string {
+  const date = new Date(`${dateValue}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return dateValue;
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split("T")[0];
+}
+
 function findExchangeRateByCurrency(
   currency: string,
   formRates: QuotationExchangeRateFormState[],
@@ -156,7 +163,7 @@ export function QuotationCreateScreen(): React.ReactElement {
         offerType: "YURTICI",
         currency: "",
         offerDate: new Date().toISOString().split("T")[0],
-        deliveryDate: new Date().toISOString().split("T")[0],
+        deliveryDate: addDaysToDateOnly(new Date().toISOString().split("T")[0], 21),
         representativeId: user?.id || null,
       },
     },
@@ -168,6 +175,22 @@ export function QuotationCreateScreen(): React.ReactElement {
   const watchedRepresentativeId = watch("quotation.representativeId");
   const watchedOfferDate = watch("quotation.offerDate");
   const watchedDeliveryDate = watch("quotation.deliveryDate");
+  const offerDateSyncInitializedRef = useRef(false);
+
+  useEffect(() => {
+    if (!watchedOfferDate) return;
+    if (!offerDateSyncInitializedRef.current) {
+      offerDateSyncInitializedRef.current = true;
+      return;
+    }
+    const nextDeliveryDate = addDaysToDateOnly(watchedOfferDate, 21);
+    if (watch("quotation.deliveryDate") !== nextDeliveryDate) {
+      setValue("quotation.deliveryDate", nextDeliveryDate, {
+        shouldDirty: true,
+        shouldValidate: true,
+      });
+    }
+  }, [watchedOfferDate, setValue, watch]);
 
   useEffect(() => {
     if (deliveryDateModalOpen) {
@@ -309,7 +332,9 @@ export function QuotationCreateScreen(): React.ReactElement {
     (_: DateTimePickerEvent, selectedDate?: Date) => {
       if (selectedDate) {
         setTempOfferDate(selectedDate);
-        setValue("quotation.offerDate", selectedDate.toISOString().split("T")[0]);
+        const nextOfferDate = selectedDate.toISOString().split("T")[0];
+        setValue("quotation.offerDate", nextOfferDate);
+        setValue("quotation.deliveryDate", addDaysToDateOnly(nextOfferDate, 21));
       }
     },
     [setValue]

@@ -84,6 +84,9 @@ export function QuotationLineForm({
   const [discountRate3, setDiscountRate3] = useState<string>("0");
   const [vatRate, setVatRate] = useState<string>("18");
   const [description, setDescription] = useState<string>("");
+  const [description1, setDescription1] = useState<string>("");
+  const [description2, setDescription2] = useState<string>("");
+  const [description3, setDescription3] = useState<string>("");
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<number>(0);
   const [approvalMessage, setApprovalMessage] = useState<string>("");
@@ -121,6 +124,9 @@ export function QuotationLineForm({
       lineTotal: 0,
       lineGrandTotal: 0,
       description: description || null,
+      description1: description1 || null,
+      description2: description2 || null,
+      description3: description3 || null,
       erpProjectCode: erpProjectCode || null,
       isEditing: false,
       approvalStatus,
@@ -140,6 +146,9 @@ export function QuotationLineForm({
     discountRate3,
     vatRate,
     description,
+    description1,
+    description2,
+    description3,
     erpProjectCode,
     approvalStatus,
   ]);
@@ -153,6 +162,9 @@ export function QuotationLineForm({
       setDiscountRate3(String(line.discountRate3));
       setVatRate(String(line.vatRate));
       setDescription(line.description || "");
+      setDescription1(line.description1 || "");
+      setDescription2(line.description2 || "");
+      setDescription3(line.description3 || "");
       setErpProjectCode(line.erpProjectCode ?? null);
       setApprovalStatus(line.approvalStatus || 0);
       setRelatedLinesDisplay(line.relatedLines ?? []);
@@ -197,6 +209,9 @@ export function QuotationLineForm({
     setDiscountRate3("0");
     setVatRate("18");
     setDescription("");
+    setDescription1("");
+    setDescription2("");
+    setDescription3("");
     setErpProjectCode(null);
     setApprovalStatus(0);
     setApprovalMessage("");
@@ -639,6 +654,48 @@ export function QuotationLineForm({
                 placeholderTextColor={mutedColor}
                 multiline
                 numberOfLines={3}
+              />
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: mutedColor }]}>Profile</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
+                ]}
+                value={description1}
+                onChangeText={setDescription1}
+                placeholder="Profile bilgisi"
+                placeholderTextColor={mutedColor}
+              />
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: mutedColor }]}>Demir</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
+                ]}
+                value={description2}
+                onChangeText={setDescription2}
+                placeholder="Demir bilgisi"
+                placeholderTextColor={mutedColor}
+              />
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: mutedColor }]}>Vida</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
+                ]}
+                value={description3}
+                onChangeText={setDescription3}
+                placeholder="Vida bilgisi"
+                placeholderTextColor={mutedColor}
               />
             </View>
 
