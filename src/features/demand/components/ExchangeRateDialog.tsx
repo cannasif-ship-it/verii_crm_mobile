@@ -12,6 +12,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { parseDecimalInput, sanitizeDecimalInput } from "../../../lib/decimal-input";
 import { useToastStore } from "../../../store/toast";
 import type { DemandExchangeRateFormState, CurrencyOptionDto, ExchangeRateDto } from "../types";
 
@@ -250,10 +251,14 @@ export function ExchangeRateDialog({
                               : ""
                           }
                           onChangeText={(text) =>
-                            handleRateChange(rate.id, "exchangeRate", parseFloat(text.replace(",", ".")) || 0)
+                            handleRateChange(
+                              rate.id,
+                              "exchangeRate",
+                              parseDecimalInput(sanitizeDecimalInput(text))
+                            )
                           }
                           onFocus={isInUse ? handleFocusInUseField : undefined}
-                          placeholder="0.0000"
+                          placeholder="0.000001"
                           keyboardType="decimal-pad"
                           editable={!isInUse}
                         />

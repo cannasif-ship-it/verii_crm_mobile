@@ -17,6 +17,7 @@ import type { StockRelationDto } from "../../stocks/types";
 import { demandApi } from "../api";
 import { stockApi } from "../../stocks/api";
 import { useStock } from "../../stocks/hooks";
+import { parseDecimalInput, sanitizeDecimalInput } from "../../../lib/decimal-input";
 import type {
   DemandLineFormState,
   PricingRuleLineGetDto,
@@ -80,12 +81,12 @@ export function DemandLineForm({
   const productPickerRef = useRef<ProductPickerRef>(null);
 
   const currentLine: DemandLineFormState = useMemo(() => {
-    const qty = parseFloat(quantity) || 0;
-    const price = parseFloat(unitPrice) || 0;
-    const disc1 = parseFloat(discountRate1) || 0;
-    const disc2 = parseFloat(discountRate2) || 0;
-    const disc3 = parseFloat(discountRate3) || 0;
-    const vat = parseFloat(vatRate) || 0;
+    const qty = parseDecimalInput(quantity);
+    const price = parseDecimalInput(unitPrice);
+    const disc1 = parseDecimalInput(discountRate1);
+    const disc2 = parseDecimalInput(discountRate2);
+    const disc3 = parseDecimalInput(discountRate3);
+    const vat = parseDecimalInput(vatRate);
 
     const baseLine: DemandLineFormState = {
       id: line?.id || `temp-${Date.now()}`,
@@ -129,12 +130,12 @@ export function DemandLineForm({
 
   useEffect(() => {
     if (line && visible) {
-      setQuantity(String(line.quantity));
-      setUnitPrice(String(line.unitPrice));
-      setDiscountRate1(String(line.discountRate1));
-      setDiscountRate2(String(line.discountRate2));
-      setDiscountRate3(String(line.discountRate3));
-      setVatRate(String(line.vatRate));
+      setQuantity(sanitizeDecimalInput(String(line.quantity)));
+      setUnitPrice(sanitizeDecimalInput(String(line.unitPrice)));
+      setDiscountRate1(sanitizeDecimalInput(String(line.discountRate1)));
+      setDiscountRate2(sanitizeDecimalInput(String(line.discountRate2)));
+      setDiscountRate3(sanitizeDecimalInput(String(line.discountRate3)));
+      setVatRate(sanitizeDecimalInput(String(line.vatRate)));
       setDescription(line.description || "");
       setApprovalStatus(line.approvalStatus || 0);
       setRelatedLinesDisplay(line.relatedLines ?? []);
@@ -154,7 +155,7 @@ export function DemandLineForm({
 
   const displayedRelatedLines = useMemo((): DemandLineFormState[] => {
     if (relatedLinesDisplay.length === 0) return [];
-    const mainQty = parseFloat(quantity) || 0;
+    const mainQty = parseDecimalInput(quantity);
     return relatedLinesDisplay.map((rel) =>
       calculateLineTotals({
         ...rel,
@@ -259,7 +260,7 @@ export function DemandLineForm({
         }
 
         if (pricingRules && stockToUse.erpStockCode) {
-          const qty = parseFloat(quantity) || 1;
+          const qty = parseDecimalInput(quantity, 1);
           const matchingRule = pricingRules.find(
             (rule) =>
               rule.stokCode === stockToUse.erpStockCode &&
@@ -288,7 +289,7 @@ export function DemandLineForm({
 
   useEffect(() => {
     if (selectedStock && pricingRules && selectedStock.erpStockCode) {
-      const qty = parseFloat(quantity) || 1;
+      const qty = parseDecimalInput(quantity, 1);
       const matchingRule = pricingRules.find(
         (rule) =>
           rule.stokCode === selectedStock.erpStockCode &&
@@ -327,9 +328,9 @@ export function DemandLineForm({
       );
 
       if (matchingLimit) {
-        const disc1 = parseFloat(discountRate1) || 0;
-        const disc2 = parseFloat(discountRate2) || 0;
-        const disc3 = parseFloat(discountRate3) || 0;
+        const disc1 = parseDecimalInput(discountRate1);
+        const disc2 = parseDecimalInput(discountRate2);
+        const disc3 = parseDecimalInput(discountRate3);
 
         const exceedsLimit1 = disc1 > matchingLimit.maxDiscount1;
         const exceedsLimit2 =
@@ -377,43 +378,46 @@ export function DemandLineForm({
   const normalizeDiscountOnBlur = useCallback((value: string): string => {
     const trimmed = value.trim();
     if (trimmed === "" || trimmed === ".") return "0";
-    const num = parseFloat(trimmed);
+    const num = parseDecimalInput(trimmed);
     return String(clampDiscount(Number.isNaN(num) ? 0 : num));
   }, [clampDiscount]);
 
   const handleDiscount1Change = useCallback(
     (text: string) => {
-      const num = parseFloat(text.replace(",", "."));
-      if (text === "" || text === ".") {
-        setDiscountRate1(text);
+      const sanitized = sanitizeDecimalInput(text);
+      if (sanitized === "" || sanitized === ".") {
+        setDiscountRate1(sanitized);
         return;
       }
-      if (!Number.isNaN(num)) setDiscountRate1(String(clampDiscount(num)));
-      else setDiscountRate1(text);
+      const num = parseDecimalInput(sanitized);
+      if (!Number.isNaN(num)) setDiscountRate1(sanitizeDecimalInput(String(clampDiscount(num))));
+      else setDiscountRate1(sanitized);
     },
     [clampDiscount]
   );
   const handleDiscount2Change = useCallback(
     (text: string) => {
-      const num = parseFloat(text.replace(",", "."));
-      if (text === "" || text === ".") {
-        setDiscountRate2(text);
+      const sanitized = sanitizeDecimalInput(text);
+      if (sanitized === "" || sanitized === ".") {
+        setDiscountRate2(sanitized);
         return;
       }
-      if (!Number.isNaN(num)) setDiscountRate2(String(clampDiscount(num)));
-      else setDiscountRate2(text);
+      const num = parseDecimalInput(sanitized);
+      if (!Number.isNaN(num)) setDiscountRate2(sanitizeDecimalInput(String(clampDiscount(num))));
+      else setDiscountRate2(sanitized);
     },
     [clampDiscount]
   );
   const handleDiscount3Change = useCallback(
     (text: string) => {
-      const num = parseFloat(text.replace(",", "."));
-      if (text === "" || text === ".") {
-        setDiscountRate3(text);
+      const sanitized = sanitizeDecimalInput(text);
+      if (sanitized === "" || sanitized === ".") {
+        setDiscountRate3(sanitized);
         return;
       }
-      if (!Number.isNaN(num)) setDiscountRate3(String(clampDiscount(num)));
-      else setDiscountRate3(text);
+      const num = parseDecimalInput(sanitized);
+      if (!Number.isNaN(num)) setDiscountRate3(sanitizeDecimalInput(String(clampDiscount(num))));
+      else setDiscountRate3(sanitized);
     },
     [clampDiscount]
   );
@@ -491,9 +495,9 @@ export function DemandLineForm({
                   { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
                 ]}
                 value={quantity}
-                onChangeText={setQuantity}
+                onChangeText={(text) => setQuantity(sanitizeDecimalInput(text))}
                 placeholder="Miktar"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
             </View>
 
@@ -507,9 +511,9 @@ export function DemandLineForm({
                   { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
                 ]}
                 value={unitPrice}
-                onChangeText={setUnitPrice}
+                onChangeText={(text) => setUnitPrice(sanitizeDecimalInput(text))}
                 placeholder="Birim fiyat"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
             </View>
 
@@ -524,7 +528,7 @@ export function DemandLineForm({
                 onChangeText={handleDiscount1Change}
                 onBlur={() => setDiscountRate1(normalizeDiscountOnBlur(discountRate1))}
                 placeholder="0"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
             </View>
 
@@ -539,7 +543,7 @@ export function DemandLineForm({
                 onChangeText={handleDiscount2Change}
                 onBlur={() => setDiscountRate2(normalizeDiscountOnBlur(discountRate2))}
                 placeholder="0"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
             </View>
 
@@ -554,7 +558,7 @@ export function DemandLineForm({
                 onChangeText={handleDiscount3Change}
                 onBlur={() => setDiscountRate3(normalizeDiscountOnBlur(discountRate3))}
                 placeholder="0"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
             </View>
 
@@ -566,9 +570,9 @@ export function DemandLineForm({
                   { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
                 ]}
                 value={vatRate}
-                onChangeText={setVatRate}
+                onChangeText={(text) => setVatRate(sanitizeDecimalInput(text))}
                 placeholder="18"
-                keyboardType="numeric"
+                keyboardType="decimal-pad"
               />
             </View>
 

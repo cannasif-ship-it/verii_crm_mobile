@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { resolveDocumentSerialCustomerTypeId } from "@/lib/resolve-document-serial-customer-type-id";
+import { parseDecimalInput, sanitizeDecimalInput } from "@/lib/decimal-input";
 import {
   buildEffectiveExchangeRates,
   findCurrencyOptionByValue,
@@ -1213,9 +1214,10 @@ export function QuotationCreateScreen(): React.ReactElement {
                         },
                       ]}
                       value={value != null ? String(value) : ""}
-                      onChangeText={(v) =>
-                        onChange(v === "" ? null : parseFloat(v) || 0)
-                      }
+                      onChangeText={(v) => {
+                        const sanitized = sanitizeDecimalInput(v);
+                        onChange(sanitized === "" ? null : parseDecimalInput(sanitized));
+                      }}
                       placeholder="0"
                       keyboardType="decimal-pad"
                     />
@@ -1241,9 +1243,10 @@ export function QuotationCreateScreen(): React.ReactElement {
                         },
                       ]}
                       value={value != null ? String(value) : ""}
-                      onChangeText={(v) =>
-                        onChange(v === "" ? null : parseFloat(v) || 0)
-                      }
+                      onChangeText={(v) => {
+                        const sanitized = sanitizeDecimalInput(v);
+                        onChange(sanitized === "" ? null : parseDecimalInput(sanitized));
+                      }}
                       placeholder="0"
                       keyboardType="decimal-pad"
                     />

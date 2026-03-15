@@ -12,7 +12,7 @@ interface FormFieldProps {
   required?: boolean;
   multiline?: boolean;
   numberOfLines?: number;
-  keyboardType?: "default" | "email-address" | "numeric" | "phone-pad";
+  keyboardType?: "default" | "email-address" | "numeric" | "phone-pad" | "decimal-pad";
   autoCapitalize?: "none" | "sentences" | "words" | "characters";
   editable?: boolean;
   maxLength?: number;
