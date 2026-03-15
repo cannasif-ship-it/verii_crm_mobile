@@ -844,7 +844,12 @@
     "code2": "Kod-2",
     "balance": "Bakiye",
     "noSearchResults": "Sonuç bulunamadı",
-    "minSearchChars": "Arama yapmak için en az 2 karakter giriniz"
+    "minSearchChars": "Arama yapmak için en az 2 karakter giriniz",
+    "advancedFilterTitle": "Gelişmiş Filtre",
+    "filterId": "ID",
+    "filterCode": "ERP Kodu",
+    "filterName": "Stok Adı",
+    "filterUnit": "Birim"
   },
   "quotation": {
     "list": "Teklif Listesi",
