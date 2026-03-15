@@ -106,6 +106,13 @@ export function TempQuickQuotationListScreen(): React.ReactElement {
     });
   };
 
+  const handleOpenDetail = (id: number): void => {
+    router.push({
+      pathname: "/(tabs)/sales/quotations/quick/[id]",
+      params: { id: String(id) },
+    });
+  };
+
   const handleConvert = (id: number): void => {
     convertMutation.mutate(id);
   };
@@ -119,7 +126,11 @@ export function TempQuickQuotationListScreen(): React.ReactElement {
     const isConvertDisabled = convertMutation.isPending || item.isApproved;
 
     return (
-      <View style={[styles.card, { borderColor, backgroundColor: cardBg }]}>
+      <TouchableOpacity
+        activeOpacity={0.85}
+        onPress={() => handleOpenDetail(item.id)}
+        style={[styles.card, { borderColor, backgroundColor: cardBg }]}
+      >
         <View style={styles.cardHeader}>
           <View style={styles.idBadge}>
             <Text style={[styles.idText, { color: brandColor }]}>
@@ -219,7 +230,7 @@ export function TempQuickQuotationListScreen(): React.ReactElement {
             )}
           </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
   };
 

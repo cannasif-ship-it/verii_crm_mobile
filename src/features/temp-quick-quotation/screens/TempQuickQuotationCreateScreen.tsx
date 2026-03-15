@@ -7,19 +7,23 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  useWindowDimensions,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
+import * as Sharing from "expo-sharing";
 import {
   Add01Icon, 
   Edit02Icon, 
   Delete02Icon, 
   Note01Icon, 
-  Coins01Icon 
+  Coins01Icon,
+  File01Icon,
 } from "hugeicons-react-native";
+import { WebView } from "react-native-webview";
 
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
@@ -45,6 +49,7 @@ import {
   resolveExchangeRateByCurrency,
 } from "../../../lib/resolve-exchange-rate";
 import { calculateLineTotals } from "../../quotation/utils";
+import { createBuiltInTempQuickQuotationReportPdf } from "../utils/createBuiltInTempQuickQuotationReportPdf";
 
 function numberValue(value: string): number {
   const parsed = Number(value.replace(",", "."));
@@ -133,6 +138,7 @@ function mapRateToUpdateDto(
 export function TempQuickQuotationCreateScreen(): React.ReactElement {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { height: windowHeight } = useWindowDimensions();
   const { colors, themeMode } = useUIStore();
   const { showError, showSuccess } = useToast();
   const params = useLocalSearchParams<{
@@ -175,6 +181,8 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
   const [exchangeRate, setExchangeRate] = useState("1.00");
   const [description, setDescription] = useState("");
   const [currencyModalVisible, setCurrencyModalVisible] = useState(false);
+  const [pdfFileUri, setPdfFileUri] = useState<string | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const [lines, setLines] = useState<QuotationLineFormState[]>([]);
   const [editingLine, setEditingLine] = useState<QuotationLineFormState | null>(null);
@@ -565,6 +573,68 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
 
   const pending = createMutation.isPending || updateMutation.isPending;
   const loading = detailQuery.isLoading || linesQuery.isLoading || exchangeLinesQuery.isLoading;
+  const pdfViewerHeight = useMemo(() => Math.max(420, windowHeight * 0.55), [windowHeight]);
+
+  const handleGeneratePdf = useCallback(async () => {
+    if (lines.length === 0) {
+      showError("PDF oluşturmak için en az 1 stok satırı eklemelisin");
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+    try {
+      const fileUri = await createBuiltInTempQuickQuotationReportPdf({
+        tempQuotationId: editId,
+        customerName: selectedCustomer?.name ?? detailQuery.data?.customerName ?? null,
+        customerCode: selectedCustomer?.customerCode ?? params.customerCode ?? null,
+        currencyCode,
+        lines,
+        offerDate,
+        description,
+      });
+
+      setPdfFileUri(fileUri);
+      showSuccess("PDF oluşturuldu");
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "PDF oluşturulamadı");
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  }, [
+    currencyCode,
+    description,
+    detailQuery.data?.customerName,
+    editId,
+    lines,
+    offerDate,
+    params.customerCode,
+    selectedCustomer?.customerCode,
+    selectedCustomer?.name,
+    showError,
+    showSuccess,
+  ]);
+
+  const handleSharePdf = useCallback(async () => {
+    if (pdfFileUri == null) {
+      return;
+    }
+
+    try {
+      const shareUri = pdfFileUri.startsWith("file://") ? pdfFileUri : `file://${pdfFileUri}`;
+      const isAvailable = await Sharing.isAvailableAsync();
+      if (!isAvailable) {
+        showError("Paylaşım bu cihazda kullanılamıyor");
+        return;
+      }
+
+      await Sharing.shareAsync(shareUri, {
+        mimeType: "application/pdf",
+        dialogTitle: "Hızlı Teklif PDF Paylaş",
+      });
+    } catch (error) {
+      showError(error instanceof Error ? error.message : "PDF paylaşılamadı");
+    }
+  }, [pdfFileUri, showError]);
 
   return (
     <View style={[styles.container, { backgroundColor: mainBg }]}>
@@ -716,6 +786,65 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
                 ))}
               </View>
             )}
+
+            <View style={styles.sectionHeaderRow}>
+              <View style={styles.sectionHeaderLeft}>
+                <File01Icon size={18} color={brandColor} variant="stroke" />
+                <Text style={[styles.sectionTitle, { color: textColor }]}>PDF Çıktısı</Text>
+              </View>
+            </View>
+
+            <View style={[styles.reportCard, { borderColor, backgroundColor: cardBg }]}>
+              <Text style={[styles.label, { color: mutedColor, marginLeft: 0 }]}>Rapor Şablonu</Text>
+              <View style={[styles.reportTemplateBox, { borderColor, backgroundColor: inputBg }]}>
+                <Text style={[styles.reportTemplateText, { color: textColor }]}>Windo Teklif Yap</Text>
+              </View>
+
+              <TouchableOpacity
+                style={[
+                  styles.reportPrimaryButton,
+                  { backgroundColor: isGeneratingPdf ? mutedColor : brandColor },
+                ]}
+                onPress={() => {
+                  void handleGeneratePdf();
+                }}
+                disabled={isGeneratingPdf}
+              >
+                {isGeneratingPdf ? (
+                  <ActivityIndicator color="#FFFFFF" size="small" />
+                ) : (
+                  <Text style={styles.reportPrimaryButtonText}>PDF Oluştur</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.reportSecondaryButton,
+                  { backgroundColor: pdfFileUri ? "#60A5FA" : mutedColor, opacity: pdfFileUri ? 1 : 0.6 },
+                ]}
+                onPress={() => {
+                  void handleSharePdf();
+                }}
+                disabled={!pdfFileUri}
+              >
+                <Text style={styles.reportSecondaryButtonText}>Paylaş</Text>
+              </TouchableOpacity>
+
+              {pdfFileUri ? (
+                <View style={[styles.previewSection, { borderColor, backgroundColor: inputBg }]}>
+                  <Text style={[styles.previewTitle, { color: textColor }]}>PDF Önizleme</Text>
+                  <View style={[styles.pdfViewerWrapper, { height: pdfViewerHeight }]}>
+                    <WebView
+                      source={{ uri: pdfFileUri }}
+                      originWhitelist={["file://", "content://"]}
+                      style={styles.pdfWebView}
+                      scalesPageToFit
+                      nestedScrollEnabled
+                    />
+                  </View>
+                </View>
+              ) : null}
+            </View>
 
             {!loading && (
               <View style={styles.submitContainer}>
@@ -933,6 +1062,62 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
+  },
+  reportCard: {
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 16,
+    gap: 12,
+  },
+  reportTemplateBox: {
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+  },
+  reportTemplateText: {
+    fontSize: 15,
+    fontWeight: "600",
+  },
+  reportPrimaryButton: {
+    minHeight: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportPrimaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  reportSecondaryButton: {
+    minHeight: 52,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  reportSecondaryButtonText: {
+    color: "#FFFFFF",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  previewSection: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    gap: 10,
+  },
+  previewTitle: {
+    fontSize: 14,
+    fontWeight: "700",
+  },
+  pdfViewerWrapper: {
+    borderRadius: 10,
+    overflow: "hidden",
+  },
+  pdfWebView: {
+    flex: 1,
+    backgroundColor: "transparent",
   },
   submitContainer: {
     marginTop: 20,
