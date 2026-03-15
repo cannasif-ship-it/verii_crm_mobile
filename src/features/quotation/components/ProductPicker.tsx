@@ -586,7 +586,35 @@ function ProductPickerInner(
   const [tempIdFilter, setTempIdFilter] = useState("");
   const [tempCodeFilter, setTempCodeFilter] = useState("");
   const [tempNameFilter, setTempNameFilter] = useState("");
+  const [tempGroupCodeFilter, setTempGroupCodeFilter] = useState("");
+  const [tempGroupNameFilter, setTempGroupNameFilter] = useState("");
+  const [tempCode1Filter, setTempCode1Filter] = useState("");
+  const [tempCode1NameFilter, setTempCode1NameFilter] = useState("");
+  const [tempCode2Filter, setTempCode2Filter] = useState("");
+  const [tempCode2NameFilter, setTempCode2NameFilter] = useState("");
+  const [tempCode3Filter, setTempCode3Filter] = useState("");
+  const [tempCode3NameFilter, setTempCode3NameFilter] = useState("");
+  const [tempCode4Filter, setTempCode4Filter] = useState("");
+  const [tempCode4NameFilter, setTempCode4NameFilter] = useState("");
+  const [tempCode5Filter, setTempCode5Filter] = useState("");
+  const [tempCode5NameFilter, setTempCode5NameFilter] = useState("");
+  const [tempManufacturerCodeFilter, setTempManufacturerCodeFilter] = useState("");
+  const [tempBranchCodeFilter, setTempBranchCodeFilter] = useState("");
   const [tempUnitFilter, setTempUnitFilter] = useState("");
+  const [appliedGroupCodeFilter, setAppliedGroupCodeFilter] = useState("");
+  const [appliedGroupNameFilter, setAppliedGroupNameFilter] = useState("");
+  const [appliedCode1Filter, setAppliedCode1Filter] = useState("");
+  const [appliedCode1NameFilter, setAppliedCode1NameFilter] = useState("");
+  const [appliedCode2Filter, setAppliedCode2Filter] = useState("");
+  const [appliedCode2NameFilter, setAppliedCode2NameFilter] = useState("");
+  const [appliedCode3Filter, setAppliedCode3Filter] = useState("");
+  const [appliedCode3NameFilter, setAppliedCode3NameFilter] = useState("");
+  const [appliedCode4Filter, setAppliedCode4Filter] = useState("");
+  const [appliedCode4NameFilter, setAppliedCode4NameFilter] = useState("");
+  const [appliedCode5Filter, setAppliedCode5Filter] = useState("");
+  const [appliedCode5NameFilter, setAppliedCode5NameFilter] = useState("");
+  const [appliedManufacturerCodeFilter, setAppliedManufacturerCodeFilter] = useState("");
+  const [appliedBranchCodeFilter, setAppliedBranchCodeFilter] = useState("");
 
   const relatedMandatory = useMemo(
     () => (relatedStocksSelection?.stock.parentRelations ?? []).filter((r) => r.isMandatory),
@@ -625,11 +653,53 @@ function ProductPickerInner(
     if (appliedNameFilter.trim()) {
       filters.push({ column: "StockName", operator: "contains", value: appliedNameFilter.trim() });
     }
+    if (appliedGroupCodeFilter.trim()) {
+      filters.push({ column: "GrupKodu", operator: "contains", value: appliedGroupCodeFilter.trim() });
+    }
+    if (appliedGroupNameFilter.trim()) {
+      filters.push({ column: "GrupAdi", operator: "contains", value: appliedGroupNameFilter.trim() });
+    }
+    if (appliedCode1Filter.trim()) {
+      filters.push({ column: "Kod1", operator: "contains", value: appliedCode1Filter.trim() });
+    }
+    if (appliedCode1NameFilter.trim()) {
+      filters.push({ column: "Kod1Adi", operator: "contains", value: appliedCode1NameFilter.trim() });
+    }
+    if (appliedCode2Filter.trim()) {
+      filters.push({ column: "Kod2", operator: "contains", value: appliedCode2Filter.trim() });
+    }
+    if (appliedCode2NameFilter.trim()) {
+      filters.push({ column: "Kod2Adi", operator: "contains", value: appliedCode2NameFilter.trim() });
+    }
+    if (appliedCode3Filter.trim()) {
+      filters.push({ column: "Kod3", operator: "contains", value: appliedCode3Filter.trim() });
+    }
+    if (appliedCode3NameFilter.trim()) {
+      filters.push({ column: "Kod3Adi", operator: "contains", value: appliedCode3NameFilter.trim() });
+    }
+    if (appliedCode4Filter.trim()) {
+      filters.push({ column: "Kod4", operator: "contains", value: appliedCode4Filter.trim() });
+    }
+    if (appliedCode4NameFilter.trim()) {
+      filters.push({ column: "Kod4Adi", operator: "contains", value: appliedCode4NameFilter.trim() });
+    }
+    if (appliedCode5Filter.trim()) {
+      filters.push({ column: "Kod5", operator: "contains", value: appliedCode5Filter.trim() });
+    }
+    if (appliedCode5NameFilter.trim()) {
+      filters.push({ column: "Kod5Adi", operator: "contains", value: appliedCode5NameFilter.trim() });
+    }
+    if (appliedManufacturerCodeFilter.trim()) {
+      filters.push({ column: "UreticiKodu", operator: "contains", value: appliedManufacturerCodeFilter.trim() });
+    }
     if (appliedUnitFilter.trim()) {
       filters.push({ column: "unit", operator: "contains", value: appliedUnitFilter.trim() });
     }
+    if (appliedBranchCodeFilter.trim()) {
+      filters.push({ column: "BranchCode", operator: "eq", value: appliedBranchCodeFilter.trim() });
+    }
     return filters;
-  }, [appliedCodeFilter, appliedIdFilter, appliedNameFilter, appliedUnitFilter]);
+  }, [appliedBranchCodeFilter, appliedCode1Filter, appliedCode1NameFilter, appliedCode2Filter, appliedCode2NameFilter, appliedCode3Filter, appliedCode3NameFilter, appliedCode4Filter, appliedCode4NameFilter, appliedCode5Filter, appliedCode5NameFilter, appliedCodeFilter, appliedGroupCodeFilter, appliedGroupNameFilter, appliedIdFilter, appliedManufacturerCodeFilter, appliedNameFilter, appliedUnitFilter]);
   const hasAdvancedFilters = apiFilters.length > 0;
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks(
@@ -725,26 +795,82 @@ function ProductPickerInner(
     setTempIdFilter(appliedIdFilter);
     setTempCodeFilter(appliedCodeFilter);
     setTempNameFilter(appliedNameFilter);
+    setTempGroupCodeFilter(appliedGroupCodeFilter);
+    setTempGroupNameFilter(appliedGroupNameFilter);
+    setTempCode1Filter(appliedCode1Filter);
+    setTempCode1NameFilter(appliedCode1NameFilter);
+    setTempCode2Filter(appliedCode2Filter);
+    setTempCode2NameFilter(appliedCode2NameFilter);
+    setTempCode3Filter(appliedCode3Filter);
+    setTempCode3NameFilter(appliedCode3NameFilter);
+    setTempCode4Filter(appliedCode4Filter);
+    setTempCode4NameFilter(appliedCode4NameFilter);
+    setTempCode5Filter(appliedCode5Filter);
+    setTempCode5NameFilter(appliedCode5NameFilter);
+    setTempManufacturerCodeFilter(appliedManufacturerCodeFilter);
+    setTempBranchCodeFilter(appliedBranchCodeFilter);
     setTempUnitFilter(appliedUnitFilter);
     setIsFilterModalVisible(true);
-  }, [appliedCodeFilter, appliedIdFilter, appliedNameFilter, appliedUnitFilter]);
+  }, [appliedBranchCodeFilter, appliedCode1Filter, appliedCode1NameFilter, appliedCode2Filter, appliedCode2NameFilter, appliedCode3Filter, appliedCode3NameFilter, appliedCode4Filter, appliedCode4NameFilter, appliedCode5Filter, appliedCode5NameFilter, appliedCodeFilter, appliedGroupCodeFilter, appliedGroupNameFilter, appliedIdFilter, appliedManufacturerCodeFilter, appliedNameFilter, appliedUnitFilter]);
 
   const applyFilters = useCallback(() => {
     setAppliedIdFilter(tempIdFilter);
     setAppliedCodeFilter(tempCodeFilter);
     setAppliedNameFilter(tempNameFilter);
+    setAppliedGroupCodeFilter(tempGroupCodeFilter);
+    setAppliedGroupNameFilter(tempGroupNameFilter);
+    setAppliedCode1Filter(tempCode1Filter);
+    setAppliedCode1NameFilter(tempCode1NameFilter);
+    setAppliedCode2Filter(tempCode2Filter);
+    setAppliedCode2NameFilter(tempCode2NameFilter);
+    setAppliedCode3Filter(tempCode3Filter);
+    setAppliedCode3NameFilter(tempCode3NameFilter);
+    setAppliedCode4Filter(tempCode4Filter);
+    setAppliedCode4NameFilter(tempCode4NameFilter);
+    setAppliedCode5Filter(tempCode5Filter);
+    setAppliedCode5NameFilter(tempCode5NameFilter);
+    setAppliedManufacturerCodeFilter(tempManufacturerCodeFilter);
+    setAppliedBranchCodeFilter(tempBranchCodeFilter);
     setAppliedUnitFilter(tempUnitFilter);
     setIsFilterModalVisible(false);
-  }, [tempCodeFilter, tempIdFilter, tempNameFilter, tempUnitFilter]);
+  }, [tempBranchCodeFilter, tempCode1Filter, tempCode1NameFilter, tempCode2Filter, tempCode2NameFilter, tempCode3Filter, tempCode3NameFilter, tempCode4Filter, tempCode4NameFilter, tempCode5Filter, tempCode5NameFilter, tempCodeFilter, tempGroupCodeFilter, tempGroupNameFilter, tempIdFilter, tempManufacturerCodeFilter, tempNameFilter, tempUnitFilter]);
 
   const clearFilters = useCallback(() => {
     setTempIdFilter("");
     setTempCodeFilter("");
     setTempNameFilter("");
+    setTempGroupCodeFilter("");
+    setTempGroupNameFilter("");
+    setTempCode1Filter("");
+    setTempCode1NameFilter("");
+    setTempCode2Filter("");
+    setTempCode2NameFilter("");
+    setTempCode3Filter("");
+    setTempCode3NameFilter("");
+    setTempCode4Filter("");
+    setTempCode4NameFilter("");
+    setTempCode5Filter("");
+    setTempCode5NameFilter("");
+    setTempManufacturerCodeFilter("");
+    setTempBranchCodeFilter("");
     setTempUnitFilter("");
     setAppliedIdFilter("");
     setAppliedCodeFilter("");
     setAppliedNameFilter("");
+    setAppliedGroupCodeFilter("");
+    setAppliedGroupNameFilter("");
+    setAppliedCode1Filter("");
+    setAppliedCode1NameFilter("");
+    setAppliedCode2Filter("");
+    setAppliedCode2NameFilter("");
+    setAppliedCode3Filter("");
+    setAppliedCode3NameFilter("");
+    setAppliedCode4Filter("");
+    setAppliedCode4NameFilter("");
+    setAppliedCode5Filter("");
+    setAppliedCode5NameFilter("");
+    setAppliedManufacturerCodeFilter("");
+    setAppliedBranchCodeFilter("");
     setAppliedUnitFilter("");
     setIsFilterModalVisible(false);
   }, []);
@@ -1190,6 +1316,7 @@ function ProductPickerInner(
             </View>
 
             <View style={styles.filterFields}>
+              <View style={styles.filterFieldRow}>
               <View style={styles.filterField}>
                 <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterId")}</Text>
                 <TextInput
@@ -1211,6 +1338,8 @@ function ProductPickerInner(
                   style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]}
                 />
               </View>
+              </View>
+              <View style={styles.filterFieldRow}>
               <View style={styles.filterField}>
                 <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterName")}</Text>
                 <TextInput
@@ -1231,9 +1360,96 @@ function ProductPickerInner(
                   style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]}
                 />
               </View>
+              </View>
+              <View style={styles.filterFieldRow}>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterGroupCode")}</Text>
+                <TextInput value={tempGroupCodeFilter} onChangeText={setTempGroupCodeFilter} placeholder={t("stockPicker.filterGroupCode")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterGroupName")}</Text>
+                <TextInput value={tempGroupNameFilter} onChangeText={setTempGroupNameFilter} placeholder={t("stockPicker.filterGroupName")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              </View>
+              <View style={styles.filterFieldRow}>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode1")}</Text>
+                <TextInput value={tempCode1Filter} onChangeText={setTempCode1Filter} placeholder={t("stockPicker.filterCode1")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode1Name")}</Text>
+                <TextInput value={tempCode1NameFilter} onChangeText={setTempCode1NameFilter} placeholder={t("stockPicker.filterCode1Name")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              </View>
+              <View style={styles.filterFieldRow}>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode2")}</Text>
+                <TextInput value={tempCode2Filter} onChangeText={setTempCode2Filter} placeholder={t("stockPicker.filterCode2")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode2Name")}</Text>
+                <TextInput value={tempCode2NameFilter} onChangeText={setTempCode2NameFilter} placeholder={t("stockPicker.filterCode2Name")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              </View>
+              <View style={styles.filterFieldRow}>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode3")}</Text>
+                <TextInput value={tempCode3Filter} onChangeText={setTempCode3Filter} placeholder={t("stockPicker.filterCode3")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode3Name")}</Text>
+                <TextInput value={tempCode3NameFilter} onChangeText={setTempCode3NameFilter} placeholder={t("stockPicker.filterCode3Name")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              </View>
+              <View style={styles.filterFieldRow}>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode4")}</Text>
+                <TextInput value={tempCode4Filter} onChangeText={setTempCode4Filter} placeholder={t("stockPicker.filterCode4")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode4Name")}</Text>
+                <TextInput value={tempCode4NameFilter} onChangeText={setTempCode4NameFilter} placeholder={t("stockPicker.filterCode4Name")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              </View>
+              <View style={styles.filterFieldRow}>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode5")}</Text>
+                <TextInput value={tempCode5Filter} onChangeText={setTempCode5Filter} placeholder={t("stockPicker.filterCode5")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterCode5Name")}</Text>
+                <TextInput value={tempCode5NameFilter} onChangeText={setTempCode5NameFilter} placeholder={t("stockPicker.filterCode5Name")} placeholderTextColor={mutedColor} style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]} />
+              </View>
+              </View>
+              <View style={styles.filterFieldRow}>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterManufacturerCode")}</Text>
+                <TextInput
+                  value={tempManufacturerCodeFilter}
+                  onChangeText={setTempManufacturerCodeFilter}
+                  placeholder={t("stockPicker.filterManufacturerCode")}
+                  placeholderTextColor={mutedColor}
+                  style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]}
+                />
+              </View>
+              <View style={styles.filterField}>
+                <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>{t("stockPicker.filterBranchCode")}</Text>
+                <TextInput
+                  value={tempBranchCodeFilter}
+                  onChangeText={setTempBranchCodeFilter}
+                  keyboardType="number-pad"
+                  placeholder={t("stockPicker.filterBranchCode")}
+                  placeholderTextColor={mutedColor}
+                  style={[styles.filterFieldInput, { color: textColor, borderColor, backgroundColor: inputBg }]}
+                />
+              </View>
+              </View>
             </View>
 
             <View style={[styles.filterModalFooter, { borderTopColor: borderColor }]}>
+              <TouchableOpacity style={[styles.filterSecondaryButton, { borderColor }]} onPress={() => setIsFilterModalVisible(false)} activeOpacity={0.85}>
+                <Text style={[styles.filterSecondaryButtonText, { color: textColor }]}>{t("common.cancel")}</Text>
+              </TouchableOpacity>
               <TouchableOpacity style={[styles.filterSecondaryButton, { borderColor }]} onPress={clearFilters} activeOpacity={0.85}>
                 <Text style={[styles.filterSecondaryButtonText, { color: textColor }]}>{t("common.clear")}</Text>
               </TouchableOpacity>
@@ -1465,8 +1681,13 @@ const styles = StyleSheet.create({
     padding: 18,
     gap: 14,
   },
+  filterFieldRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
   filterField: {
     gap: 6,
+    flex: 1,
   },
   filterFieldLabel: {
     fontSize: 12,

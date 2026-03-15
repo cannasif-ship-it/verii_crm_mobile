@@ -849,7 +849,21 @@
     "filterId": "ID",
     "filterCode": "ERP Kodu",
     "filterName": "Stok Adı",
-    "filterUnit": "Birim"
+    "filterUnit": "Birim",
+    "filterGroupCode": "Grup Kodu",
+    "filterGroupName": "Grup Adı",
+    "filterCode1": "Kod-1",
+    "filterCode1Name": "Kod-1 Adı",
+    "filterCode2": "Kod-2",
+    "filterCode2Name": "Kod-2 Adı",
+    "filterCode3": "Kod-3",
+    "filterCode3Name": "Kod-3 Adı",
+    "filterCode4": "Kod-4",
+    "filterCode4Name": "Kod-4 Adı",
+    "filterCode5": "Kod-5",
+    "filterCode5Name": "Kod-5 Adı",
+    "filterManufacturerCode": "Üretici Kodu",
+    "filterBranchCode": "Şube Kodu"
   },
   "quotation": {
     "list": "Teklif Listesi",
