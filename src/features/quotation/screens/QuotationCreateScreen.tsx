@@ -13,7 +13,11 @@ import {
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { resolveDocumentSerialCustomerTypeId } from "@/lib/resolve-document-serial-customer-type-id";
-import { resolveExchangeRateByCurrency as findExchangeRateByCurrency } from "@/lib/resolve-exchange-rate";
+import {
+  buildEffectiveExchangeRates,
+  findCurrencyOptionByValue,
+  resolveExchangeRateByCurrency as findExchangeRateByCurrency,
+} from "@/lib/resolve-exchange-rate";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -224,6 +228,15 @@ export function QuotationCreateScreen(): React.ReactElement {
       hasFilledErpRates.current = true;
     }
   }, [exchangeRatesData]);
+
+  useEffect(() => {
+    if (watchedCurrency || !currencyOptions?.length) return;
+    const tlOption =
+      findCurrencyOptionByValue("TL", currencyOptions) ??
+      findCurrencyOptionByValue("TRY", currencyOptions);
+
+    setValue("quotation.currency", tlOption?.code ?? currencyOptions[0]?.code ?? "TRY");
+  }, [watchedCurrency, currencyOptions, setValue]);
 
   const effectiveRatesForLines = useMemo(() => {
     return erpRatesForQuotation.map((erp) => {
@@ -711,7 +724,14 @@ export function QuotationCreateScreen(): React.ReactElement {
         };
       });
 
-      const cleanedExchangeRates = exchangeRates.map((rate) => {
+      const effectiveExchangeRatePayload = buildEffectiveExchangeRates(
+        exchangeRates,
+        erpRatesForQuotation,
+        currencyOptions,
+        formData.quotation.offerDate || new Date().toISOString().split("T")[0]
+      );
+
+      const cleanedExchangeRates = effectiveExchangeRatePayload.map((rate) => {
         const { id, dovizTipi, ...rest } = rate;
         return {
           ...rest,
@@ -741,7 +761,7 @@ export function QuotationCreateScreen(): React.ReactElement {
         quotationNotes: hasNotes ? quotationNotes : undefined,
       });
     },
-    [lines, exchangeRates, notes, createQuotation, setError]
+    [lines, exchangeRates, erpRatesForQuotation, currencyOptions, notes, createQuotation, setError]
   );
 
   const onInvalidSubmit = useCallback(() => {

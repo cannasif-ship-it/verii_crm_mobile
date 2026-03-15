@@ -1,6 +1,9 @@
 type ExchangeRateFormLike = {
+  id?: string;
   currency: string;
   exchangeRate: number;
+  exchangeRateDate?: string;
+  isOfficial?: boolean;
   dovizTipi?: number;
 };
 
@@ -14,6 +17,15 @@ type CurrencyOptionLike = {
   code: string;
   dovizTipi: number;
   dovizIsmi: string | null;
+};
+
+export type ExchangeRatePayloadLike = {
+  id: string;
+  currency: string;
+  exchangeRate: number;
+  exchangeRateDate: string;
+  isOfficial?: boolean;
+  dovizTipi?: number;
 };
 
 function normalizeCurrencyValue(value: string | null | undefined): string {
@@ -73,7 +85,7 @@ function resolveCurrencyAliases(value: string): string[] {
   return Array.from(aliases);
 }
 
-function findCurrencyOption(
+export function findCurrencyOptionByValue(
   currency: string,
   currencyOptions?: CurrencyOptionLike[]
 ): CurrencyOptionLike | undefined {
@@ -151,6 +163,91 @@ function findErpRate(
   return undefined;
 }
 
+function buildRateIdentity(
+  currency: string,
+  currencyOptions?: CurrencyOptionLike[]
+): { currencyCode: string; dovizTipi?: number } {
+  const currencyOption = findCurrencyOptionByValue(currency, currencyOptions);
+  if (currencyOption) {
+    return {
+      currencyCode: String(currencyOption.dovizTipi),
+      dovizTipi: currencyOption.dovizTipi,
+    };
+  }
+
+  const trimmed = normalizeCurrencyValue(currency);
+  const numeric = Number(trimmed);
+  if (!Number.isNaN(numeric)) {
+    return {
+      currencyCode: String(numeric),
+      dovizTipi: numeric,
+    };
+  }
+
+  return { currencyCode: trimmed };
+}
+
+export function buildEffectiveExchangeRates(
+  formRates: ExchangeRateFormLike[],
+  erpRates: ExchangeRateLike[] | undefined,
+  currencyOptions: CurrencyOptionLike[] | undefined,
+  exchangeRateDate: string
+): ExchangeRatePayloadLike[] {
+  const merged = new Map<string, ExchangeRatePayloadLike>();
+
+  const upsert = (rate: ExchangeRatePayloadLike) => {
+    if (!rate.currency || !(rate.exchangeRate > 0)) return;
+    merged.set(rate.currency, rate);
+  };
+
+  for (const erpRate of erpRates ?? []) {
+    const identity = buildRateIdentity(
+      String(erpRate.dovizTipi),
+      currencyOptions
+    );
+
+    upsert({
+      id: `erp-${identity.currencyCode}`,
+      currency: identity.currencyCode,
+      exchangeRate: erpRate.kurDegeri,
+      exchangeRateDate,
+      isOfficial: true,
+      dovizTipi: identity.dovizTipi ?? erpRate.dovizTipi,
+    });
+  }
+
+  for (const formRate of formRates) {
+    const identity = buildRateIdentity(formRate.currency, currencyOptions);
+
+    upsert({
+      id: formRate.id ?? `form-${identity.currencyCode}`,
+      currency: identity.currencyCode,
+      exchangeRate: formRate.exchangeRate,
+      exchangeRateDate: formRate.exchangeRateDate || exchangeRateDate,
+      isOfficial: formRate.isOfficial ?? false,
+      dovizTipi: formRate.dovizTipi ?? identity.dovizTipi,
+    });
+  }
+
+  const tlOption =
+    findCurrencyOptionByValue("TL", currencyOptions) ??
+    findCurrencyOptionByValue("TRY", currencyOptions);
+
+  const tlCurrencyCode = tlOption ? String(tlOption.dovizTipi) : "TRY";
+  if (!merged.has(tlCurrencyCode)) {
+    upsert({
+      id: "default-tl",
+      currency: tlCurrencyCode,
+      exchangeRate: 1,
+      exchangeRateDate,
+      isOfficial: true,
+      dovizTipi: tlOption?.dovizTipi,
+    });
+  }
+
+  return Array.from(merged.values());
+}
+
 export function resolveExchangeRateByCurrency(
   currency: string,
   formRates: ExchangeRateFormLike[],
@@ -159,7 +256,7 @@ export function resolveExchangeRateByCurrency(
 ): number | undefined {
   if (!currency) return undefined;
 
-  const currencyOption = findCurrencyOption(currency, currencyOptions);
+  const currencyOption = findCurrencyOptionByValue(currency, currencyOptions);
   const formRate = findFormRate(currency, formRates, currencyOption);
   if (formRate != null && formRate > 0) return formRate;
 

@@ -39,6 +39,10 @@ import type { QuotationLineFormState, QuotationExchangeRateFormState } from "../
 import { useExchangeRate, useCurrencyOptions } from "../../quotation/hooks";
 import { CustomerPicker } from "../../customer/components";
 import type { CustomerDto } from "../../customer/types";
+import {
+  buildEffectiveExchangeRates,
+  findCurrencyOptionByValue,
+} from "../../../lib/resolve-exchange-rate";
 
 function numberValue(value: string): number {
   const parsed = Number(value.replace(",", "."));
@@ -231,14 +235,24 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     if (isEdit) return;
     if (!currencyOptions || currencyOptions.length === 0) return;
     if (currencyCode && currencyOptions.some((x) => x.code === currencyCode)) return;
-    const tryOption = currencyOptions.find((x) => x.code === "TRY");
-    setCurrencyCode((tryOption?.code || currencyOptions[0]?.code || "TRY").toUpperCase());
+    const tlOption =
+      findCurrencyOptionByValue("TL", currencyOptions) ??
+      findCurrencyOptionByValue("TRY", currencyOptions);
+    setCurrencyCode((tlOption?.code || currencyOptions[0]?.code || "TRY").toUpperCase());
   }, [currencyOptions, currencyCode, isEdit]);
 
   useEffect(() => {
     const normalized = currencyCode.trim().toUpperCase();
     if (!normalized) return;
-    if (normalized === "TRY") {
+    const tlOption =
+      findCurrencyOptionByValue("TL", currencyOptions) ??
+      findCurrencyOptionByValue("TRY", currencyOptions);
+    const isTlCurrency =
+      normalized === "TRY" ||
+      normalized === "TL" ||
+      (tlOption != null && normalized === String(tlOption.dovizTipi).toUpperCase());
+
+    if (isTlCurrency) {
       setExchangeRate("1.00");
       return;
     }
@@ -251,7 +265,7 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     if (erpRate && erpRate > 0) {
       setExchangeRate(String(erpRate));
     }
-  }, [currencyCode, exchangeRates, erpExchangeRates]);
+  }, [currencyCode, exchangeRates, erpExchangeRates, currencyOptions]);
 
   useEffect(() => {
     if (!linesQuery.data) return;
@@ -297,23 +311,30 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
   }, [exchangeLinesQuery.data]);
 
   const effectiveExchangeRates = useMemo<QuotationExchangeRateFormState[]>(() => {
-    const validRates = exchangeRates.filter((x) => x.currency && x.exchangeRate > 0);
-    if (validRates.length > 0) {
-      return validRates;
+    const mergedRates = buildEffectiveExchangeRates(
+      exchangeRates,
+      erpExchangeRates,
+      currencyOptions,
+      offerDate
+    );
+
+    const hasSelectedCurrency = mergedRates.some((rate) => rate.currency === currencyCode);
+    if (hasSelectedCurrency) {
+      return mergedRates;
     }
-    const normalizedCurrency = currencyCode.trim().toUpperCase() || "TRY";
+
     const normalizedExchangeRate = numberValue(exchangeRate) > 0 ? numberValue(exchangeRate) : 1;
     return [
+      ...mergedRates,
       {
-        id: "auto-default",
-        currency: normalizedCurrency,
+        id: "selected-currency",
+        currency: currencyCode.trim().toUpperCase() || "TRY",
         exchangeRate: normalizedExchangeRate,
         exchangeRateDate: offerDate,
         isOfficial: false,
-        dovizTipi: Number(normalizedCurrency),
       },
     ];
-  }, [currencyCode, exchangeRate, exchangeRates, offerDate]);
+  }, [currencyCode, exchangeRate, exchangeRates, erpExchangeRates, currencyOptions, offerDate]);
 
   const createMutation = useMutation({
     mutationFn: async (payload: TempQuotattionCreateDto) => {
