@@ -290,6 +290,12 @@ const gradientColors = isDark
     ];
   }, [header, relatedUsers, paymentTypes, documentSerialTypeList, salesTypeList]);
 
+  const reportHeaderRaw = header as unknown as Record<string, unknown> | undefined;
+  const reportValidUntil = (reportHeaderRaw?.validUntil as string | null | undefined) ?? null;
+  const reportSalesTypeName =
+    (reportHeaderRaw?.salesTypeDefinitionName as string | null | undefined) ?? null;
+  const reportProjectCode = (reportHeaderRaw?.erpProjectCode as string | null | undefined) ?? null;
+
   const effectiveRatesForLines = useMemo(() => {
     return erpRatesForQuotation.map((erp) => {
       const override = exchangeRates.find(
@@ -904,6 +910,18 @@ const gradientColors = isDark
             customerName={header?.potentialCustomerName ?? null}
             currency={header?.currency ?? "TRY"}
             lines={lines}
+            representativeName={header?.representativeName ?? null}
+            address={header?.shippingAddressText ?? null}
+            shippingAddress={header?.shippingAddressText ?? null}
+            erpCustomerCode={header?.erpCustomerCode ?? null}
+            offerDate={header?.offerDate ?? null}
+            deliveryDate={header?.deliveryDate ?? null}
+            validUntil={reportValidUntil}
+            paymentTypeName={header?.paymentTypeName ?? null}
+            salesTypeName={reportSalesTypeName}
+            projectCode={reportProjectCode}
+            description={header?.description ?? null}
+            notes={notes.filter((note) => note.trim().length > 0)}
             metaFields={builtInReportMetaFields}
           />
         ) : (

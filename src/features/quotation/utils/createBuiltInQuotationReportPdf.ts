@@ -7,12 +7,44 @@ import { Buffer } from "buffer";
 import type { QuotationLineFormState } from "../types";
 
 const COVER_TEMPLATE_ASSET = require("../../../../assets/pdf-templates/atlas-cover-first-3-pages.pdf");
+const BRAND_LOGO_ASSET = require("../../../../assets/veriicrmlogo.png");
+const REFERENCE_IMAGE_ASSETS = [
+  require("../../../../assets/veriicrmlogo.png"),
+  require("../../../../assets/v3logo.png"),
+  require("../../../../assets/icon.png"),
+] as const;
+
+const COMPANY_NAME = "WINDOFORM KAPI & PENCERE AKS.";
+const COMPANY_CONTACT_LINES = [
+  "Kazım Karabekir Mah. 8501 Sokak No:7-B D:18 Buca / İzmir",
+  "(0232) 854 70 00",
+  "info@windoform.com.tr",
+];
+const TERMS_LINES = [
+  "Yukarıdaki fiyatlara KDV dahil değildir.",
+  "Bu teklif oluşturulduktan sonra 15 gün geçerlidir.",
+  "Fiyatlara fabrika teslimi (veya belirtilen teslim şekline göre) fiyatlandırma dahildir.",
+  "Ödemeler sipariş onayı ile %30 peşin, kalan teslimatta yapılır.",
+  "Belirtilen teslim tarihi sipariş onayından itibaren geçerlidir.",
+];
 
 interface CreateBuiltInQuotationReportPdfParams {
   offerNo?: string | null;
   customerName?: string | null;
   currencyCode: string;
   lines: QuotationLineFormState[];
+  representativeName?: string | null;
+  address?: string | null;
+  shippingAddress?: string | null;
+  erpCustomerCode?: string | null;
+  offerDate?: string | null;
+  deliveryDate?: string | null;
+  validUntil?: string | null;
+  paymentTypeName?: string | null;
+  salesTypeName?: string | null;
+  projectCode?: string | null;
+  description?: string | null;
+  notes?: string[];
   metaFields?: Array<{ label: string; value?: string | null }>;
 }
 
@@ -40,6 +72,14 @@ function formatCurrency(value: number, currencyCode: string): string {
   } catch {
     return `${(value || 0).toFixed(2)} ${currencyCode || "TRY"}`;
   }
+}
+
+function formatDate(value: string | null | undefined): string {
+  if (!value) return "";
+  const normalized = value.includes("T") ? value.split("T")[0] : value;
+  const date = new Date(`${normalized}T12:00:00`);
+  if (Number.isNaN(date.getTime())) return normalized;
+  return date.toLocaleDateString("tr-TR");
 }
 
 function getCurrencyPresentation(value: string | null | undefined): CurrencyPresentation {
@@ -87,96 +127,42 @@ function normalizeMetaFields(
     .filter((field) => field.label && field.value);
 }
 
-function buildHtml(params: CreateBuiltInQuotationReportPdfParams): string {
-  const customerName = normalizeCustomerName(params.customerName);
-  const currency = getCurrencyPresentation(params.currencyCode);
-  const metaFields = [
-    ...(customerName ? [{ label: "Müşteri Hesabı", value: customerName }] : []),
-    ...normalizeMetaFields(params.metaFields),
-  ];
-  const metaRows = metaFields
-    .map(
-      (field) => `
-        <div class="meta-row">
-          <span class="label">${escapeHtml(field.label)}:</span> ${escapeHtml(field.value)}
-        </div>
-      `
-    )
-    .join("");
-  const rowsHtml = params.lines
-    .map((line) => {
-      return `
-        <tr>
-          <td>${escapeHtml(line.productCode ?? "")}</td>
-          <td>${escapeHtml(line.productName ?? "")}</td>
-          <td class="num">%${escapeHtml(String(line.discountRate1 ?? 0))}</td>
-          <td class="num">%${escapeHtml(String(line.discountRate2 ?? 0))}</td>
-          <td class="num">%${escapeHtml(String(line.discountRate3 ?? 0))}</td>
-          <td class="num">${escapeHtml(String(line.quantity ?? 0))}</td>
-          <td class="num">${escapeHtml(formatCurrency(line.unitPrice ?? 0, currency.code))}</td>
-          <td>${escapeHtml(currency.label)}</td>
-          <td class="num">%${escapeHtml(String(line.vatRate ?? 0))}</td>
-          <td class="num">${escapeHtml(formatCurrency(line.lineTotal ?? 0, currency.code))}</td>
-        </tr>
-      `;
-    })
-    .join("");
+function buildDescription(line: QuotationLineFormState): string {
+  const extra = [line.description1, line.description2, line.description3]
+    .map((value) => value?.trim() ?? "")
+    .filter(Boolean)
+    .join(" • ");
 
-  return `
-    <!doctype html>
-    <html lang="tr">
-      <head>
-        <meta charset="utf-8" />
-        <style>
-          @page { size: A4 portrait; margin: 16mm 10mm 14mm 10mm; }
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; color: #111827; }
-          h1 { font-size: 24px; margin: 0 0 10px; }
-          .meta { margin-bottom: 18px; font-size: 13px; }
-          .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 18px; margin-top: 8px; }
-          .meta-row { margin-bottom: 0; }
-          .label { font-weight: 700; }
-          table { width: 100%; border-collapse: collapse; table-layout: fixed; }
-          th, td { border: 1px solid #d1d5db; padding: 5px; font-size: 9px; vertical-align: top; word-wrap: break-word; }
-          th { background: #f3f4f6; text-align: left; }
-          .num { text-align: right; }
-          .w-code { width: 11%; }
-          .w-name { width: 28%; }
-          .w-disc { width: 7%; }
-          .w-qty { width: 7%; }
-          .w-price { width: 10%; }
-          .w-currency { width: 9%; }
-          .w-vat { width: 6%; }
-          .w-total { width: 11%; }
-        </style>
-      </head>
-      <body>
-        <h1>Teklif Kalemleri</h1>
-        <div class="meta">
-          <div class="meta-row"><span class="label">Tarih:</span> ${escapeHtml(new Date().toLocaleDateString("tr-TR"))}</div>
-          <div class="meta-row"><span class="label">Teklif No:</span> ${escapeHtml(params.offerNo ?? "-")}</div>
-          <div class="meta-row"><span class="label">Döviz:</span> ${escapeHtml(currency.label)}</div>
-          ${metaRows ? `<div class="meta-grid">${metaRows}</div>` : ""}
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th class="w-code">Stok Kodu</th>
-              <th class="w-name">Stok Adı</th>
-              <th class="w-disc num">İskonto 1</th>
-              <th class="w-disc num">İskonto 2</th>
-              <th class="w-disc num">İskonto 3</th>
-              <th class="w-qty num">Miktar</th>
-              <th class="w-price num">Birim Fiyat</th>
-              <th class="w-currency">Döviz</th>
-              <th class="w-vat num">KDV</th>
-              <th class="w-total num">Toplam</th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-      </body>
-    </html>
-  `;
+  return extra ? `${line.productName}\n${extra}` : line.productName;
+}
+
+function buildDiscountSummary(line: QuotationLineFormState): string {
+  return [
+    line.discountRate1 ? `%${line.discountRate1}` : "%0",
+    line.discountRate2 ? `%${line.discountRate2}` : "%0",
+    line.discountRate3 ? `%${line.discountRate3}` : "%0",
+  ].join(" / ");
+}
+
+function calculateTotals(lines: QuotationLineFormState[]) {
+  return lines.reduce(
+    (acc, line) => {
+      const grossLineTotal = (line.quantity || 0) * (line.unitPrice || 0);
+      const discountAmount =
+        (line.discountAmount1 || 0) + (line.discountAmount2 || 0) + (line.discountAmount3 || 0);
+      const netTotal = line.lineTotal || 0;
+      const vatTotal = line.vatAmount || Math.max((line.lineGrandTotal || 0) - netTotal, 0);
+      const grandTotal = line.lineGrandTotal || netTotal + vatTotal;
+
+      acc.grossTotal += grossLineTotal;
+      acc.discountTotal += discountAmount;
+      acc.netTotal += netTotal;
+      acc.vatTotal += vatTotal;
+      acc.grandTotal += grandTotal;
+      return acc;
+    },
+    { grossTotal: 0, discountTotal: 0, netTotal: 0, vatTotal: 0, grandTotal: 0 }
+  );
 }
 
 async function readPdfBytesFromUri(uri: string): Promise<Uint8Array> {
@@ -185,6 +171,33 @@ async function readPdfBytesFromUri(uri: string): Promise<Uint8Array> {
   });
 
   return Uint8Array.from(Buffer.from(base64, "base64"));
+}
+
+async function readAssetAsDataUri(moduleId: number): Promise<string | null> {
+  try {
+    const asset = Asset.fromModule(moduleId);
+    if (!asset.localUri) {
+      await asset.downloadAsync();
+    }
+
+    const sourceUri = asset.localUri ?? asset.uri;
+    if (!sourceUri) return null;
+
+    const base64 = await FileSystem.readAsStringAsync(sourceUri, {
+      encoding: FileSystem.EncodingType.Base64,
+    });
+    const extension = sourceUri.split(".").pop()?.toLowerCase();
+    const mimeType =
+      extension === "jpg" || extension === "jpeg"
+        ? "image/jpeg"
+        : extension === "png"
+          ? "image/png"
+          : "application/octet-stream";
+
+    return `data:${mimeType};base64,${base64}`;
+  } catch {
+    return null;
+  }
 }
 
 async function resolveBundledCoverUri(): Promise<string | null> {
@@ -200,10 +213,448 @@ async function resolveBundledCoverUri(): Promise<string | null> {
   }
 }
 
+function buildHtml(
+  params: CreateBuiltInQuotationReportPdfParams,
+  logoDataUri: string | null,
+  referenceImages: Array<string | null>
+): string {
+  const customerName = normalizeCustomerName(params.customerName);
+  const currency = getCurrencyPresentation(params.currencyCode);
+  const totals = calculateTotals(params.lines);
+  const customerDetailLines = [
+    customerName,
+    params.representativeName ? `Satınalma Departmanı: ${params.representativeName}` : "",
+    params.address || params.shippingAddress || "",
+    params.erpCustomerCode || "",
+  ].filter(Boolean);
+  const noteLines = [
+    ...normalizeMetaFields(params.metaFields).map((field) => `${field.label}: ${field.value}`),
+    ...(params.description ? [params.description] : []),
+    ...(params.notes ?? []).filter((item) => item.trim().length > 0),
+  ].slice(0, 6);
+  const renderedTerms = noteLines.length > 0 ? noteLines : TERMS_LINES;
+
+  const rowsHtml = params.lines
+    .map(
+      (line) => `
+        <tr>
+          <td class="img-col">
+            <div class="thumb-box">
+              ${
+                logoDataUri
+                  ? `<img src="${logoDataUri}" alt="thumb" class="thumb-image" />`
+                  : `<div class="thumb-fallback">WF</div>`
+              }
+            </div>
+          </td>
+          <td>${escapeHtml(line.productCode ?? "")}</td>
+          <td>
+            <div class="product-name">${escapeHtml(line.productName ?? "")}</div>
+            <div class="product-desc">${escapeHtml(buildDescription(line))}</div>
+          </td>
+          <td class="center">${escapeHtml(String(line.quantity ?? 0))}</td>
+          <td class="num">${escapeHtml(formatCurrency(line.unitPrice ?? 0, currency.code))}</td>
+          <td class="num">${escapeHtml(buildDiscountSummary(line))}</td>
+          <td class="num">${escapeHtml(formatCurrency(line.lineTotal ?? 0, currency.code))}</td>
+        </tr>
+      `
+    )
+    .join("");
+
+  const refCardsHtml = referenceImages
+    .map(
+      (image, index) => `
+        <div class="reference-card">
+          ${
+            image
+              ? `<img src="${image}" alt="reference-${index + 1}" class="reference-image" />`
+              : `<div class="reference-image reference-fallback">Referans ${index + 1}</div>`
+          }
+          <div class="reference-caption">Referans ${index + 1}</div>
+        </div>
+      `
+    )
+    .join("");
+
+  return `
+    <!doctype html>
+    <html lang="tr">
+      <head>
+        <meta charset="utf-8" />
+        <style>
+          @page { size: A4 portrait; margin: 8mm; }
+          * { box-sizing: border-box; }
+          body {
+            margin: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            color: #334155;
+            background: #ffffff;
+          }
+          .page {
+            border-top: 4px solid #345a99;
+            padding: 6mm 4mm 6mm;
+          }
+          .top-grid, .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+          }
+          .card {
+            border: 1px solid #d9e0ea;
+            border-radius: 10px;
+            background: #ffffff;
+          }
+          .logo-card {
+            min-height: 118px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+          }
+          .logo-card img {
+            width: 180px;
+            max-width: 85%;
+            object-fit: contain;
+          }
+          .logo-fallback {
+            color: #345a99;
+            font-size: 32px;
+            font-weight: 800;
+            letter-spacing: 1px;
+          }
+          .offer-card {
+            padding: 16px 18px;
+            min-height: 118px;
+          }
+          .offer-title {
+            color: #345a99;
+            font-size: 14px;
+            font-weight: 800;
+            letter-spacing: 0.6px;
+            margin-bottom: 12px;
+          }
+          .meta-line {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 8px;
+            font-size: 11px;
+          }
+          .meta-line .label {
+            color: #64748b;
+          }
+          .meta-line .value {
+            font-weight: 700;
+            color: #334155;
+          }
+          .company-card, .customer-card {
+            padding: 14px 16px;
+            min-height: 108px;
+          }
+          .card-title {
+            color: #345a99;
+            font-size: 13px;
+            font-weight: 800;
+            margin-bottom: 10px;
+          }
+          .muted-tag {
+            color: #a8b1bf;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: 0.6px;
+            margin-bottom: 4px;
+          }
+          .company-line, .customer-line {
+            font-size: 10px;
+            line-height: 1.55;
+            margin: 0 0 4px;
+          }
+          .table-wrap {
+            margin-top: 14px;
+            border: 1px solid #d9e0ea;
+            border-radius: 10px;
+            overflow: hidden;
+          }
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            table-layout: fixed;
+          }
+          thead th {
+            background: #345a99;
+            color: #ffffff;
+            font-size: 9px;
+            padding: 8px 6px;
+            text-align: left;
+          }
+          tbody td {
+            border-top: 1px solid #e4e9f1;
+            font-size: 9px;
+            padding: 8px 6px;
+            vertical-align: top;
+          }
+          .img-col { width: 11%; }
+          .code-col { width: 15%; }
+          .name-col { width: 33%; }
+          .qty-col { width: 10%; }
+          .price-col { width: 13%; }
+          .discount-col { width: 10%; }
+          .total-col { width: 15%; }
+          .thumb-box {
+            width: 34px;
+            height: 34px;
+            border: 1px solid #d5dde8;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #ffffff;
+          }
+          .thumb-image {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+          }
+          .thumb-fallback {
+            color: #345a99;
+            font-size: 10px;
+            font-weight: 700;
+          }
+          .product-name {
+            font-weight: 700;
+            color: #334155;
+            margin-bottom: 3px;
+          }
+          .product-desc {
+            color: #64748b;
+            white-space: pre-line;
+            line-height: 1.35;
+          }
+          .center { text-align: center; }
+          .num { text-align: right; }
+          .summary-grid {
+            display: grid;
+            grid-template-columns: 1fr 200px;
+            gap: 16px;
+            margin-top: 16px;
+            align-items: start;
+          }
+          .approval-box {
+            border: 1px dashed #b8c1cf;
+            border-radius: 8px;
+            min-height: 88px;
+            padding: 12px;
+          }
+          .approval-title {
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 700;
+            margin-bottom: 28px;
+          }
+          .approval-line {
+            border-top: 1px solid #c9d1de;
+            width: 70%;
+            margin: 0 auto 8px;
+          }
+          .approval-caption {
+            color: #94a3b8;
+            font-size: 9px;
+            text-align: center;
+          }
+          .total-box {
+            border: 1px solid #d9e0ea;
+            border-radius: 10px;
+            padding: 12px 14px;
+          }
+          .total-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 10px;
+          }
+          .total-row.discount {
+            color: #d14b4b;
+          }
+          .grand-total {
+            border-top: 1px solid #d9e0ea;
+            margin-top: 10px;
+            padding-top: 10px;
+            display: flex;
+            justify-content: space-between;
+            color: #345a99;
+            font-size: 14px;
+            font-weight: 800;
+          }
+          .notes-section {
+            margin-top: 18px;
+            background: #f8fafc;
+            border-top: 1px solid #dbe3ef;
+            border-bottom: 1px solid #dbe3ef;
+            padding: 14px 12px;
+          }
+          .notes-title {
+            color: #345a99;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 10px;
+          }
+          .delivery-chip {
+            display: inline-block;
+            border: 1px solid #cfd7e4;
+            background: #ffffff;
+            border-radius: 6px;
+            padding: 7px 10px;
+            font-size: 10px;
+            margin-bottom: 12px;
+          }
+          .terms-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px 24px;
+          }
+          .term-item {
+            font-size: 9.5px;
+            line-height: 1.45;
+            color: #475569;
+          }
+          .references-section {
+            margin-top: 16px;
+          }
+          .references-title {
+            color: #345a99;
+            font-size: 12px;
+            font-weight: 800;
+            margin-bottom: 10px;
+          }
+          .reference-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+          }
+          .reference-card {
+            border: 1px solid #d9e0ea;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ffffff;
+          }
+          .reference-image {
+            width: 100%;
+            height: 78px;
+            object-fit: cover;
+            background: #eef2f7;
+          }
+          .reference-fallback {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #345a99;
+            font-size: 12px;
+            font-weight: 700;
+          }
+          .reference-caption {
+            padding: 6px 8px;
+            font-size: 9px;
+            color: #64748b;
+            text-align: center;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="page">
+          <div class="top-grid">
+            <div class="card logo-card">
+              ${
+                logoDataUri
+                  ? `<img src="${logoDataUri}" alt="logo" />`
+                  : `<div class="logo-fallback">WINDOFORM</div>`
+              }
+            </div>
+            <div class="card offer-card">
+              <div class="offer-title">FİYAT TEKLİFİ</div>
+              <div class="meta-line"><span class="label">Teklif No:</span><span class="value">${escapeHtml(params.offerNo ?? "-")}</span></div>
+              <div class="meta-line"><span class="label">Tarih:</span><span class="value">${escapeHtml(formatDate(params.offerDate) || new Date().toLocaleDateString("tr-TR"))}</span></div>
+              <div class="meta-line"><span class="label">Teslim:</span><span class="value">${escapeHtml(formatDate(params.deliveryDate) || "-")}</span></div>
+            </div>
+          </div>
+
+          <div class="info-grid" style="margin-top:12px;">
+            <div class="card company-card">
+              <div class="card-title">${escapeHtml(COMPANY_NAME)}</div>
+              ${COMPANY_CONTACT_LINES.map((line) => `<div class="company-line">${escapeHtml(line)}</div>`).join("")}
+            </div>
+            <div class="card customer-card">
+              <div class="muted-tag">MÜŞTERİ (CARİ)</div>
+              ${customerDetailLines
+                .map((line, index) =>
+                  `<div class="customer-line" style="${index === 0 ? "font-weight:700;color:#345a99;" : ""}">${escapeHtml(line)}</div>`
+                )
+                .join("")}
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th class="img-col">GÖRSEL</th>
+                  <th class="code-col">STOK KODU</th>
+                  <th class="name-col">STOK ADI / AÇIKLAMA</th>
+                  <th class="qty-col center">MİKTAR</th>
+                  <th class="price-col num">BİRİM FİYAT</th>
+                  <th class="discount-col num">İSKONTO</th>
+                  <th class="total-col num">NET TOPLAM</th>
+                </tr>
+              </thead>
+              <tbody>${rowsHtml}</tbody>
+            </table>
+          </div>
+
+          <div class="summary-grid">
+            <div class="approval-box">
+              <div class="approval-title">MÜŞTERİ ONAYI</div>
+              <div class="approval-line"></div>
+              <div class="approval-caption">Kaşe ve imza</div>
+            </div>
+            <div class="total-box">
+              <div class="total-row"><span>Brüt Toplam:</span><span>${escapeHtml(formatCurrency(totals.grossTotal, currency.code))}</span></div>
+              <div class="total-row discount"><span>İskonto Toplam:</span><span>${escapeHtml(formatCurrency(totals.discountTotal, currency.code))}</span></div>
+              <div class="total-row"><span>Net Ara Toplam:</span><span>${escapeHtml(formatCurrency(totals.netTotal, currency.code))}</span></div>
+              <div class="total-row"><span>KDV:</span><span>${escapeHtml(formatCurrency(totals.vatTotal, currency.code))}</span></div>
+              <div class="grand-total"><span>Genel Toplam:</span><span>${escapeHtml(formatCurrency(totals.grandTotal, currency.code))}</span></div>
+            </div>
+          </div>
+
+          <div class="notes-section">
+            <div class="notes-title">TEKLİF ŞARTLARI VE ÖNEMLİ NOTLAR</div>
+            <div class="delivery-chip">TESLİM ŞEKLİ (DELIVERY TERMS): ${escapeHtml(params.salesTypeName || "Belirtilecektir")}</div>
+            <div class="terms-grid">
+              ${renderedTerms
+                .map((line) => `<div class="term-item">• ${escapeHtml(line)}</div>`)
+                .join("")}
+            </div>
+          </div>
+
+          <div class="references-section">
+            <div class="references-title">SAHA VE KEŞİF GÖRSELLERİ (REFERANS)</div>
+            <div class="reference-grid">${refCardsHtml}</div>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+}
+
 export async function createBuiltInQuotationReportPdf(
   params: CreateBuiltInQuotationReportPdfParams
 ): Promise<string> {
-  const html = buildHtml(params);
+  const [logoDataUri, ...referenceImages] = await Promise.all([
+    readAssetAsDataUri(BRAND_LOGO_ASSET),
+    ...REFERENCE_IMAGE_ASSETS.map((asset) => readAssetAsDataUri(asset)),
+  ]);
+
+  const html = buildHtml(params, logoDataUri, referenceImages);
   const generated = await Print.printToFileAsync({ html });
   const generatedUri = generated.uri.startsWith("file://") ? generated.uri : `file://${generated.uri}`;
 
