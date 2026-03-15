@@ -13,6 +13,7 @@ import {
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { resolveDocumentSerialCustomerTypeId } from "@/lib/resolve-document-serial-customer-type-id";
+import { resolveExchangeRateByCurrency as findExchangeRateByCurrency } from "@/lib/resolve-exchange-rate";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -79,18 +80,6 @@ function addDaysToDateOnly(dateValue: string, days: number): string {
   if (Number.isNaN(date.getTime())) return dateValue;
   date.setDate(date.getDate() + days);
   return date.toISOString().split("T")[0];
-}
-
-function findExchangeRateByCurrency(
-  currency: string,
-  formRates: QuotationExchangeRateFormState[],
-  erpRates: ExchangeRateDto[] | undefined
-): number | undefined {
-  const formRate = formRates.find((r) => r.currency === currency)?.exchangeRate;
-  if (formRate != null && formRate > 0) return formRate;
-  const erpRate = erpRates?.find((r) => String(r.dovizTipi) === currency)?.kurDegeri;
-  if (erpRate != null && erpRate > 0) return erpRate;
-  return undefined;
 }
 
 export function QuotationCreateScreen(): React.ReactElement {
@@ -350,12 +339,14 @@ export function QuotationCreateScreen(): React.ReactElement {
       const oldRate = findExchangeRateByCurrency(
         oldCurrency,
         exchangeRates,
-        erpRatesForQuotation
+        erpRatesForQuotation,
+        currencyOptions
       );
       const newRate = findExchangeRateByCurrency(
         newCurrency,
         exchangeRates,
-        erpRatesForQuotation
+        erpRatesForQuotation,
+        currencyOptions
       );
       if (oldRate == null || newRate == null || newRate <= 0) {
         setValue("quotation.currency", newCurrency);
@@ -490,17 +481,19 @@ export function QuotationCreateScreen(): React.ReactElement {
         const oldRate = findExchangeRateByCurrency(
           priceCurrency,
           exchangeRates,
-          erpRatesForQuotation
+          erpRatesForQuotation,
+          currencyOptions
         );
         const newRate = findExchangeRateByCurrency(
           watchedCurrency,
           exchangeRates,
-          erpRatesForQuotation
+          erpRatesForQuotation,
+          currencyOptions
         );
         if (oldRate == null || oldRate <= 0 || newRate == null || newRate <= 0) {
           return listPrice;
         }
-        return (listPrice * newRate) / oldRate;
+        return (listPrice * oldRate) / newRate;
       };
 
       let filteredRelations = (stock.parentRelations || []).filter(

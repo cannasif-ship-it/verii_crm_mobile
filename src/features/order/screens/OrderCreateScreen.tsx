@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { resolveDocumentSerialCustomerTypeId } from "@/lib/resolve-document-serial-customer-type-id";
+import { resolveExchangeRateByCurrency as findExchangeRateByCurrency } from "@/lib/resolve-exchange-rate";
 import { useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -60,18 +61,6 @@ import type {
 import type { StockRelationDto } from "../../stocks/types";
 import { calculateLineTotals, calculateTotals } from "../utils";
 import type { ExchangeRateDto } from "../types";
-
-function findExchangeRateByCurrency(
-  currency: string,
-  formRates: OrderExchangeRateFormState[],
-  erpRates: ExchangeRateDto[] | undefined
-): number | undefined {
-  const formRate = formRates.find((r) => r.currency === currency)?.exchangeRate;
-  if (formRate != null && formRate > 0) return formRate;
-  const erpRate = erpRates?.find((r) => String(r.dovizTipi) === currency)?.kurDegeri;
-  if (erpRate != null && erpRate > 0) return erpRate;
-  return undefined;
-}
 
 export function OrderCreateScreen(): React.ReactElement {
   const { t } = useTranslation();
@@ -267,8 +256,8 @@ export function OrderCreateScreen(): React.ReactElement {
         setValue("order.currency", newCurrency);
         return;
       }
-      const oldRate = findExchangeRateByCurrency(oldCurrency, exchangeRates, erpRatesForOrder);
-      const newRate = findExchangeRateByCurrency(newCurrency, exchangeRates, erpRatesForOrder);
+      const oldRate = findExchangeRateByCurrency(oldCurrency, exchangeRates, erpRatesForOrder, currencyOptions);
+      const newRate = findExchangeRateByCurrency(newCurrency, exchangeRates, erpRatesForOrder, currencyOptions);
       if (oldRate == null || newRate == null || newRate <= 0) {
         setValue("order.currency", newCurrency);
         setLines((prev) => prev);
@@ -383,10 +372,10 @@ export function OrderCreateScreen(): React.ReactElement {
 
       const applyCurrencyToPrice = (listPrice: number, priceCurrency: string): number => {
         if (!watchedCurrency || priceCurrency === watchedCurrency) return listPrice;
-        const oldRate = findExchangeRateByCurrency(priceCurrency, exchangeRates, erpRatesForOrder);
-        const newRate = findExchangeRateByCurrency(watchedCurrency, exchangeRates, erpRatesForOrder);
+        const oldRate = findExchangeRateByCurrency(priceCurrency, exchangeRates, erpRatesForOrder, currencyOptions);
+        const newRate = findExchangeRateByCurrency(watchedCurrency, exchangeRates, erpRatesForOrder, currencyOptions);
         if (oldRate == null || oldRate <= 0 || newRate == null || newRate <= 0) return listPrice;
-        return (listPrice * newRate) / oldRate;
+        return (listPrice * oldRate) / newRate;
       };
 
       let filteredRelations = (stock.parentRelations || []).filter(

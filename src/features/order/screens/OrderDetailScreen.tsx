@@ -12,6 +12,7 @@ import {
 } from "react-native";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { resolveDocumentSerialCustomerTypeId } from "@/lib/resolve-document-serial-customer-type-id";
+import { resolveExchangeRateByCurrency as findExchangeRateByCurrency } from "@/lib/resolve-exchange-rate";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -86,18 +87,6 @@ import {
   totalsFromDetailLines,
 } from "../utils";
 import { calculateLineTotals, calculateTotals } from "../utils";
-
-function findExchangeRateByCurrency(
-  currency: string,
-  formRates: OrderExchangeRateFormState[],
-  erpRates: ExchangeRateDto[] | undefined
-): number | undefined {
-  const formRate = formRates.find((r) => r.currency === currency)?.exchangeRate;
-  if (formRate != null && formRate > 0) return formRate;
-  const erpRate = erpRates?.find((r) => String(r.dovizTipi) === currency)?.kurDegeri;
-  if (erpRate != null && erpRate > 0) return erpRate;
-  return undefined;
-}
 
 export function OrderDetailScreen(): React.ReactElement {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -485,10 +474,10 @@ export function OrderDetailScreen(): React.ReactElement {
 
       const applyCurrencyToPrice = (listPrice: number, priceCurrency: string): number => {
         if (!watchedCurrency || priceCurrency === watchedCurrency) return listPrice;
-        const oldRate = findExchangeRateByCurrency(priceCurrency, exchangeRates, erpRatesForOrder);
-        const newRate = findExchangeRateByCurrency(watchedCurrency, exchangeRates, erpRatesForOrder);
+        const oldRate = findExchangeRateByCurrency(priceCurrency, exchangeRates, erpRatesForOrder, currencyOptions);
+        const newRate = findExchangeRateByCurrency(watchedCurrency, exchangeRates, erpRatesForOrder, currencyOptions);
         if (oldRate == null || oldRate <= 0 || newRate == null || newRate <= 0) return listPrice;
-        return (listPrice * newRate) / oldRate;
+        return (listPrice * oldRate) / newRate;
       };
 
       const stockWithRelations = stock as StockGetDto & { parentRelations?: StockRelationDto[] };

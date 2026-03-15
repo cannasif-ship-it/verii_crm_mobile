@@ -13,6 +13,7 @@ import {
 import { LinearGradient } from "expo-linear-gradient";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { resolveDocumentSerialCustomerTypeId } from "@/lib/resolve-document-serial-customer-type-id";
+import { resolveExchangeRateByCurrency as findExchangeRateByCurrency } from "@/lib/resolve-exchange-rate";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -102,18 +103,6 @@ import {
   totalsFromDetailLines,
 } from "../utils";
 import { calculateLineTotals, calculateTotals } from "../utils";
-
-function findExchangeRateByCurrency(
-  currency: string,
-  formRates: QuotationExchangeRateFormState[],
-  erpRates: ExchangeRateDto[] | undefined
-): number | undefined {
-  const formRate = formRates.find((r) => r.currency === currency)?.exchangeRate;
-  if (formRate != null && formRate > 0) return formRate;
-  const erpRate = erpRates?.find((r) => String(r.dovizTipi) === currency)?.kurDegeri;
-  if (erpRate != null && erpRate > 0) return erpRate;
-  return undefined;
-}
 
 export function QuotationDetailScreen(): React.ReactElement {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -598,10 +587,20 @@ const gradientColors = isDark
 
       const applyCurrencyToPrice = (listPrice: number, priceCurrency: string): number => {
         if (!watchedCurrency || priceCurrency === watchedCurrency) return listPrice;
-        const oldRate = findExchangeRateByCurrency(priceCurrency, exchangeRates, erpRatesForQuotation);
-        const newRate = findExchangeRateByCurrency(watchedCurrency, exchangeRates, erpRatesForQuotation);
+        const oldRate = findExchangeRateByCurrency(
+          priceCurrency,
+          exchangeRates,
+          erpRatesForQuotation,
+          currencyOptions
+        );
+        const newRate = findExchangeRateByCurrency(
+          watchedCurrency,
+          exchangeRates,
+          erpRatesForQuotation,
+          currencyOptions
+        );
         if (oldRate == null || oldRate <= 0 || newRate == null || newRate <= 0) return listPrice;
-        return (listPrice * newRate) / oldRate;
+        return (listPrice * oldRate) / newRate;
       };
 
       const stockWithRelations = stock as StockGetDto & { parentRelations?: StockRelationDto[] };
