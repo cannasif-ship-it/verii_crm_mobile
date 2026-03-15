@@ -461,6 +461,8 @@
     "imagePermissionError": "Galeri izni gerekli",
     "imagePermissionRequired": "Galeri izni verilmeden resim seçilemez.",
     "invalidImage": "Geçersiz görsel seçildi.",
+    "ocrCreateError": "Kartvizitten müşteri oluşturulamadı.",
+    "ocrConflictMessage": "Aynı e-posta veya telefon bilgileri birden fazla müşteriyle eşleşti. Önce eşleşmeleri düzeltin, sonra tekrar kaydedin.",
     "unnamedCustomer": "İsimsiz Müşteri",
     "cameraPermissionError": "Kamera izni gerekli",
     "chooseImageSource": "Görsel kaynağı seçin",

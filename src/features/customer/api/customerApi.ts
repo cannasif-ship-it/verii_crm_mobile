@@ -1,5 +1,6 @@
 import { apiClient } from "../../../lib/axios";
 import * as FileSystem from "expo-file-system/legacy";
+import i18n from "../../../locales";
 import type { ApiResponse } from "../../auth/types";
 import type {
   CustomerGetDto,
@@ -118,6 +119,42 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
   return queryParams;
 };
 
+function normalizeMobileOcrCreateError(error: unknown): Error {
+  if (error instanceof Error) {
+    const enhanced = error as Error & {
+      status?: number;
+      response?: { data?: { message?: string; exceptionMessage?: string } };
+    };
+
+    const message = enhanced.message ?? "";
+    const responseMessage = enhanced.response?.data?.message ?? "";
+    const responseDetail = enhanced.response?.data?.exceptionMessage ?? "";
+    const combined = `${message} ${responseMessage}`.trim();
+
+    if (
+      enhanced.status === 409 ||
+      combined.includes("CustomerService.ConflictingCustomerMatches") ||
+      responseMessage.includes("CustomerService.ConflictingCustomerMatches")
+    ) {
+      const fallback = i18n.t(
+        "customer.ocrConflictMessage",
+        "Aynı e-posta veya telefon bilgileri birden fazla müşteriyle eşleşti. Önce eşleşmeleri düzeltin, sonra tekrar kaydedin."
+      );
+
+      const detailIsResourceKey = responseDetail.includes("CustomerService.");
+      const detail = responseDetail && !detailIsResourceKey ? responseDetail : "";
+
+      return new Error(detail ? `${fallback}\n\n${detail}` : fallback);
+    }
+  }
+
+  if (error instanceof Error) {
+    return error;
+  }
+
+  return new Error(i18n.t("customer.ocrCreateError", "Kartvizitten müşteri oluşturulamadı"));
+}
+
 export const customerApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<CustomerGetDto>> => {
     const queryParams = buildQueryParams({
@@ -209,25 +246,29 @@ export const customerApi = {
       } as any);
     }
 
-    const response = await apiClient.post<ApiResponse<CreateCustomerFromMobileResultDto>>(
-      "/api/Customer/mobile/create-from-ocr",
-      formData,
-      {
-        timeout: 120000,
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
+    try {
+      const response = await apiClient.post<ApiResponse<CreateCustomerFromMobileResultDto>>(
+        "/api/Customer/mobile/create-from-ocr",
+        formData,
+        {
+          timeout: 120000,
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
+        }
+      );
+
+      if (!response.data.success) {
+        const msg =
+          [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
+          i18n.t("customer.ocrCreateError", "Kartvizitten müşteri oluşturulamadı");
+        throw new Error(msg);
       }
-    );
 
-    if (!response.data.success) {
-      const msg =
-        [response.data.message, response.data.exceptionMessage].filter(Boolean).join(" — ") ||
-        "Mobil OCR müşteri oluşturma başarısız";
-      throw new Error(msg);
+      return response.data.data;
+    } catch (error) {
+      throw normalizeMobileOcrCreateError(error);
     }
-
-    return response.data.data;
   },
 
   update: async (id: number, data: UpdateCustomerDto): Promise<CustomerGetDto> => {
