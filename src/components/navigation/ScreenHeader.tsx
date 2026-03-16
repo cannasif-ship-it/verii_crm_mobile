@@ -1,110 +1,139 @@
-import React from "react";
+import React, { useCallback } from "react";
 import { View, StyleSheet, Pressable, Platform } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
-import { Text } from "../ui/text"; 
-import { useUIStore } from "../../store/ui"; 
+import { Text } from "../ui/text";
+import { useUIStore } from "../../store/ui";
 import { ArrowLeft02Icon, Menu01Icon } from "hugeicons-react-native";
 
 interface ScreenHeaderProps {
   title: string;
   showBackButton?: boolean;
   rightElement?: React.ReactNode;
+  homeRoute?: string;
+  menuRootRoutes?: string[];
 }
 
 export function ScreenHeader({
   title,
   showBackButton = true,
   rightElement,
+  homeRoute = "/",
+  menuRootRoutes = [
+    "/customers",
+    "/stocks",
+    "/activities",
+    "/quotations",
+    "/erp",
+    "/reports",
+    "/settings",
+  ],
 }: ScreenHeaderProps): React.ReactElement {
   const router = useRouter();
+  const pathname = usePathname();
   const insets = useSafeAreaInsets();
-  
+
   const { themeMode, colors, openSidebar } = useUIStore();
   const isDark = themeMode === "dark";
 
-  const handleBack = () => {
-    if (router.canGoBack()) {
-      router.back();
-    }
-  };
-
-  const gradientColors = isDark 
-    ? ['#232032', '#12101F'] 
-    : ['#FFFFFF', '#F1F5F9'];
+  const gradientColors = isDark
+    ? ["#232032", "#12101F"]
+    : ["#FFFFFF", "#F1F5F9"];
 
   const textColor = colors.text;
-  
-  const borderColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
+  const borderColor = isDark
+    ? "rgba(255, 255, 255, 0.08)"
+    : "rgba(0, 0, 0, 0.06)";
   const iconColor = isDark ? "#E2E8F0" : "#1E293B";
+
+  const isMenuRootPage = menuRootRoutes.some((route) => {
+    return pathname === route || pathname.startsWith(`${route}/index`);
+  });
+
+  const handleLeftAction = useCallback(() => {
+    if (!showBackButton) {
+      openSidebar();
+      return;
+    }
+
+    if (router.canGoBack() && !isMenuRootPage) {
+      router.back();
+      return;
+    }
+
+    router.replace(homeRoute);
+  }, [showBackButton, openSidebar, router, isMenuRootPage, homeRoute]);
 
   return (
     <LinearGradient
       colors={gradientColors as [string, string]}
       start={{ x: 0, y: 0 }}
-      end={{ x: 0, y: 1 }} 
+      end={{ x: 0, y: 1 }}
       style={[
-        styles.container, 
-        { 
-          height: 44 + insets.top,
+        styles.container,
+        {
+          height: 48 + insets.top,
           paddingTop: insets.top,
-          marginTop: -insets.top, 
-          borderBottomColor: borderColor, 
-        }
+          marginTop: -insets.top,
+          borderBottomColor: borderColor,
+        },
       ]}
     >
       <View style={styles.row}>
-        
-        <View style={[styles.sideBox, { borderRightColor: borderColor, borderRightWidth: 1 }]}>
-          <Pressable
-            onPress={showBackButton ? handleBack : openSidebar}
-            style={({ pressed }) => [
-              styles.iconButton, 
-              { 
-                backgroundColor: pressed 
-                  ? (isDark ? "rgba(219, 39, 119, 0.15)" : "rgba(219, 39, 119, 0.08)") 
-                  : "transparent",
-              }
-            ]}
-          >
-            {({ pressed }) => (
-               showBackButton ? (
-                <ArrowLeft02Icon 
-                  size={28}
-                  color={pressed ? "#db2777" : iconColor} 
-                  strokeWidth={3.5} 
-                />
-              ) : (
-                <Menu01Icon 
-                  size={28} 
-                  color={pressed ? "#db2777" : iconColor} 
-                  strokeWidth={3.5} 
-                />
-              )
-            )}
-          </Pressable>
-        </View>
+        <Pressable
+          onPress={handleLeftAction}
+          style={({ pressed }) => [
+            styles.leftActionBox,
+            {
+              borderRightColor: borderColor,
+              borderRightWidth: 1,
+              backgroundColor: pressed
+                ? isDark
+                  ? "rgba(219, 39, 119, 0.14)"
+                  : "rgba(219, 39, 119, 0.08)"
+                : "transparent",
+            },
+          ]}
+        >
+          {({ pressed }) =>
+            showBackButton ? (
+              <ArrowLeft02Icon 
+  size={28}
+  color={pressed ? "#db2777" : iconColor} 
+  strokeWidth={3.5}
+  style={{ marginTop: 8 ,marginLeft: 4} }
+/>
+            ) : (
+              <Menu01Icon
+                size={32}
+                color={pressed ? "#db2777" : iconColor}
+                strokeWidth={4}
+              />
+            )
+          }
+        </Pressable>
 
         <View style={styles.centerBox}>
-          <Text 
-            style={[styles.title, { color: textColor }]} 
+          <Text
+            style={[styles.title, { color: textColor }]}
             numberOfLines={1}
           >
             {title}
           </Text>
         </View>
 
-        <View style={[
-            styles.sideBox, 
-            { 
-              borderLeftColor: borderColor, 
-              borderLeftWidth: rightElement ? 1 : 0 
-            }
-        ]}>
+        <View
+          style={[
+            styles.sideBox,
+            {
+              borderLeftColor: borderColor,
+              borderLeftWidth: rightElement ? 1 : 0,
+            },
+          ]}
+        >
           {rightElement}
         </View>
-
       </View>
     </LinearGradient>
   );
@@ -113,41 +142,44 @@ export function ScreenHeader({
 const styles = StyleSheet.create({
   container: {
     width: "100%",
-    borderBottomWidth: 1, 
+    borderBottomWidth: 1,
     zIndex: 999,
-    elevation: 4,
+    elevation: 6,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.12, 
-    shadowRadius: 16,    
+    shadowOpacity: 0.14,
+    shadowRadius: 16,
   },
   row: {
     flexDirection: "row",
-    height: 44, 
-    alignItems: "stretch", 
+    height: 48,
+    alignItems: "stretch",
   },
+leftActionBox: {
+  width: 64,
+  justifyContent: "center",
+  alignItems: "center",
+  paddingTop: 2,
+},
   sideBox: {
-    width: 50, 
+    width: 52,
     justifyContent: "center",
     alignItems: "center",
   },
   centerBox: {
-    flex: 1, 
-    justifyContent: "center",
-    alignItems: "center", 
-    paddingHorizontal: 4, 
-  },
-  iconButton: {
-    width: "100%",
-    height: "100%",
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
+    paddingHorizontal: 6,
   },
   title: {
-    fontSize: 15, 
-    fontWeight: "700",
+    fontSize: 15,
+    fontWeight: "800",
     textAlign: "center",
-    letterSpacing: -0.3, 
-    fontFamily: Platform.select({ ios: 'System', android: 'sans-serif-medium' }),
+    letterSpacing: -0.35,
+    fontFamily: Platform.select({
+      ios: "System",
+      android: "sans-serif-medium",
+    }),
   },
 });
