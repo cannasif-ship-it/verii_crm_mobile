@@ -31,11 +31,7 @@ import {
   ContactCard,
   type ContactDto,
 } from "../../../../features/contact";
-import {
-  useCustomerShippingAddresses,
-  ShippingAddressCard,
-  type ShippingAddressDto,
-} from "../../../../features/shipping-address";
+import { Customer360Screen } from "../../../../features/customer360";
 import {
   Edit02Icon,
   Delete02Icon,
@@ -45,7 +41,7 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useQuotationList } from "../../../../features/quotation/hooks";
 import type { PagedFilter, QuotationGetDto } from "../../../../features/quotation/types";
 
-type TabType = "detail" | "contacts" | "addresses";
+type TabType = "detail" | "contacts" | "customer360";
 
 interface ThemeColors {
   bg: string;
@@ -65,7 +61,6 @@ interface TabBarProps {
   theme: ThemeColors;
   t: (key: string) => string;
   contactsCount: number;
-  addressesCount: number;
 }
 
 function TabBar({
@@ -74,12 +69,11 @@ function TabBar({
   theme,
   t,
   contactsCount,
-  addressesCount,
 }: TabBarProps): React.ReactElement {
   const tabs: { key: TabType; label: string; count?: number }[] = [
     { key: "detail", label: t("customer.tabDetail") },
     { key: "contacts", label: t("customer.tabContacts"), count: contactsCount },
-    { key: "addresses", label: t("customer.tabShippingAddresses"), count: addressesCount },
+    { key: "customer360", label: "360" },
   ];
 
   return (
@@ -91,9 +85,14 @@ function TabBar({
             key={tab.key}
             style={[
               styles.tab,
-              isActive && { borderBottomColor: theme.primary, borderBottomWidth: 3 },
+              isActive && {
+                borderBottomColor: theme.primary,
+                borderBottomWidth: 3,
+                backgroundColor: theme.tabActiveBg,
+              },
             ]}
             onPress={() => onTabPress(tab.key)}
+            activeOpacity={0.82}
           >
             <Text
               style={[
@@ -106,8 +105,14 @@ function TabBar({
             >
               {tab.label}
             </Text>
+
             {tab.count !== undefined && tab.count > 0 && (
-              <View style={[styles.tabBadge, { backgroundColor: isActive ? theme.primary : theme.glassBtn }]}>
+              <View
+                style={[
+                  styles.tabBadge,
+                  { backgroundColor: isActive ? theme.primary : theme.glassBtn },
+                ]}
+              >
                 <Text style={styles.tabBadgeText}>{tab.count}</Text>
               </View>
             )}
@@ -160,12 +165,26 @@ function CustomerDetailPage(): React.ReactElement {
   const [isPreviewVisible, setIsPreviewVisible] = useState(false);
 
   const customerId = id ? Number(id) : undefined;
-  const { data: customer, isLoading, isError, refetch } = useCustomer(customerId);
-  const { data: customerImages = [], refetch: refetchCustomerImages } = useCustomerImages(customerId);
+
+  const {
+    data: customer,
+    isLoading,
+    isError,
+    refetch,
+  } = useCustomer(customerId);
+
+  const {
+    data: customerImages = [],
+    refetch: refetchCustomerImages,
+  } = useCustomerImages(customerId);
+
   const deleteCustomer = useDeleteCustomer();
   const uploadCustomerImage = useUploadCustomerImage();
-  const { data: contacts = [], isLoading: isLoadingContacts } = useCustomerContacts(customerId);
-  const { data: addresses = [], isLoading: isLoadingAddresses } = useCustomerShippingAddresses(customerId);
+
+  const {
+    data: contacts = [],
+    isLoading: isLoadingContacts,
+  } = useCustomerContacts(customerId);
 
   const {
     data: crmQuotations = [],
@@ -201,18 +220,18 @@ function CustomerDetailPage(): React.ReactElement {
   });
 
   const customerQuotations = useMemo<QuotationGetDto[]>(() => {
-  if (customer?.customerCode) {
-    const erpItems = erpQuotationPages?.pages?.[0]?.items ?? [];
-    return [...erpItems]
+    if (customer?.customerCode) {
+      const erpItems = erpQuotationPages?.pages?.[0]?.items ?? [];
+      return [...erpItems]
+        .sort((a, b) => b.id - a.id)
+        .slice(0, 5);
+    }
+
+    const crmItems = crmQuotations ?? [];
+    return [...crmItems]
       .sort((a, b) => b.id - a.id)
       .slice(0, 5);
-  }
-
-  const crmItems = crmQuotations ?? [];
-  return [...crmItems]
-    .sort((a, b) => b.id - a.id)
-    .slice(0, 5);
-}, [customer?.customerCode, crmQuotations, erpQuotationPages]);
+  }, [customer?.customerCode, crmQuotations, erpQuotationPages]);
 
   const isQuotationLoading = isCrmQuotationLoading || isErpQuotationLoading;
 
@@ -224,12 +243,13 @@ function CustomerDetailPage(): React.ReactElement {
 
   const handleCustomer360Press = useCallback(() => {
     if (customerId) {
-      router.push(`/(tabs)/customers/360/${customerId}`);
+      setActiveTab("customer360");
     }
-  }, [router, customerId]);
+  }, [customerId]);
 
   const handleQuickQuotationPress = useCallback(() => {
     if (!customer) return;
+
     router.push({
       pathname: "/(tabs)/sales/quotations/quick/create",
       params: {
@@ -241,23 +261,27 @@ function CustomerDetailPage(): React.ReactElement {
   }, [router, customer]);
 
   const handleQuickActivityPress = useCallback(() => {
-    if (!customer) return;
+  if (!customer) return;
 
-    const start = new Date();
-    start.setSeconds(0, 0);
-    const end = new Date(start.getTime() + 60 * 60 * 1000);
+  const start = new Date();
+  start.setSeconds(0, 0);
 
-    router.push({
-      pathname: "/(tabs)/activities/create",
-      params: {
-        customerId: String(customer.id ?? ""),
-        customerName: customer.name ?? "",
-        customerCode: customer.customerCode ?? "",
-        initialStartDateTime: start.toISOString(),
-        initialEndDateTime: end.toISOString(),
-      },
-    });
-  }, [router, customer]);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+
+  router.push({
+    pathname: "/(tabs)/activities/create",
+    params: {
+      customerId: String(customer.id ?? ""),
+      customerName: customer.name ?? "",
+      customerCode: customer.customerCode ?? "",
+      initialStartDateTime: start.toISOString(),
+      initialEndDateTime: end.toISOString(),
+      quickActivityMode: "true",
+      lockStartDate: "true",
+      autoFillSubject: "true",
+    },
+  });
+}, [router, customer]);
 
   const handleDeletePress = useCallback(() => {
     Alert.alert(t("common.confirm"), t("customer.deleteConfirm"), [
@@ -285,10 +309,6 @@ function CustomerDetailPage(): React.ReactElement {
     router.push(`/customers/contacts/${contact.id}`);
   }, [router]);
 
-  const handleAddressPress = useCallback((address: ShippingAddressDto) => {
-    router.push(`/(tabs)/customers/shipping/${address.id}`);
-  }, [router]);
-
   const handleAddContactPress = useCallback(() => {
     if (customerId != null) {
       router.push({
@@ -298,13 +318,6 @@ function CustomerDetailPage(): React.ReactElement {
     } else {
       router.push("/customers/contacts/create");
     }
-  }, [router, customerId]);
-
-  const handleAddAddressPress = useCallback(() => {
-    router.push({
-      pathname: "/(tabs)/customers/shipping/create",
-      params: { customerId: customerId?.toString() },
-    });
   }, [router, customerId]);
 
   const openGalleryPicker = useCallback(async () => {
@@ -383,8 +396,7 @@ function CustomerDetailPage(): React.ReactElement {
       setIsPreviewVisible(false);
       setPreviewImageUri(null);
       await refetchCustomerImages();
-    } catch {
-    }
+    } catch {}
   }, [customerId, previewImageUri, customer?.name, t, uploadCustomerImage, refetchCustomerImages]);
 
   const handleQuotationPress = useCallback((quotationId: number) => {
@@ -396,17 +408,13 @@ function CustomerDetailPage(): React.ReactElement {
   }, [router]);
 
   const renderContactItem = useCallback(
-    ({ item }: { item: ContactDto }) => <ContactCard contact={item} onPress={() => handleContactPress(item)} />,
+    ({ item }: { item: ContactDto }) => (
+      <ContactCard contact={item} onPress={() => handleContactPress(item)} />
+    ),
     [handleContactPress]
   );
 
-  const renderAddressItem = useCallback(
-    ({ item }: { item: ShippingAddressDto }) => <ShippingAddressCard address={item} onPress={() => handleAddressPress(item)} />,
-    [handleAddressPress]
-  );
-
   const keyExtractorContact = useCallback((item: ContactDto) => String(item.id), []);
-  const keyExtractorAddress = useCallback((item: ShippingAddressDto) => String(item.id), []);
 
   const renderContactsContent = (): React.ReactElement => (
     <View style={styles.tabContent}>
@@ -446,49 +454,24 @@ function CustomerDetailPage(): React.ReactElement {
     </View>
   );
 
-  const renderAddressesContent = (): React.ReactElement => (
-    <View style={styles.tabContent}>
-      {isLoadingAddresses ? (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color={THEME.primary} />
-        </View>
-      ) : addresses.length === 0 ? (
-        <View style={styles.emptyContainer}>
-          <Text style={[styles.emptyText, { color: THEME.textMute }]}>
-            {t("shippingAddress.noAddresses")}
-          </Text>
-        </View>
-      ) : (
-        <FlatList
-          data={addresses}
-          renderItem={renderAddressItem}
-          keyExtractor={keyExtractorAddress}
-          contentContainerStyle={[styles.listContent, { paddingBottom: insets.bottom + 100 }]}
-          showsVerticalScrollIndicator={false}
-        />
-      )}
-      <TouchableOpacity
-        style={[
-          styles.fab,
-          {
-            backgroundColor: THEME.primary,
-            bottom: Math.max(insets.bottom, 20) + 80,
-            shadowColor: THEME.primary,
-          },
-        ]}
-        onPress={handleAddAddressPress}
-      >
-        <Add01Icon size={28} color="#FFFFFF" variant="stroke" />
-      </TouchableOpacity>
-    </View>
-  );
+  const renderCustomer360Content = (): React.ReactElement => {
+    if (!customerId) {
+      return <View style={styles.tabContent} />;
+    }
+
+    return (
+      <View style={styles.tabContent}>
+        <Customer360Screen embedded customerId={customerId} />
+      </View>
+    );
+  };
 
   const renderTabContent = (): React.ReactElement => {
     switch (activeTab) {
       case "contacts":
         return renderContactsContent();
-      case "addresses":
-        return renderAddressesContent();
+      case "customer360":
+        return renderCustomer360Content();
       default:
         return (
           <CustomerDetailContent
@@ -592,7 +575,6 @@ function CustomerDetailPage(): React.ReactElement {
                   theme={THEME}
                   t={t}
                   contactsCount={contacts.length}
-                  addressesCount={addresses.length}
                 />
 
                 {renderTabContent()}
@@ -706,6 +688,7 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     flex: 1,
+    minHeight: 0,
   },
   listContent: {
     padding: 16,
@@ -759,23 +742,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.6,
     shadowRadius: 12,
   },
-  headerActions: {
-    flexDirection: "row",
-    gap: 8,
-    marginRight: 50,
-  },
-  headerButton: {
-    width: 38,
-    height: 38,
-    borderRadius: 12,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  headerButtonText: {
-    fontSize: 14,
-    color: "#FFF",
-    fontWeight: "600",
-  },
   actionPill: {
     flexDirection: "row",
     alignItems: "center",
@@ -790,11 +756,6 @@ const styles = StyleSheet.create({
     height: "100%",
     alignItems: "center",
     justifyContent: "center",
-  },
-  pillDivider: {
-    width: 1,
-    height: 18,
-    opacity: 0.5,
   },
   previewOverlay: {
     flex: 1,

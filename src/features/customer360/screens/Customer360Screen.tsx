@@ -1,10 +1,13 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useCallback } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  LayoutChangeEvent,
 } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useTranslation } from "react-i18next";
@@ -36,21 +39,36 @@ import {
   Rotate360Icon,
   Alert02Icon,
   UserIcon,
+  ArrowLeft01Icon,
+  ArrowRight01Icon,
 } from "hugeicons-react-native";
 
-type TabType = "overview" | "analytics" | "quickQuotations" | "erpMovements" | "mailLogs";
+type TabType =
+  | "overview"
+  | "analytics"
+  | "quickQuotations"
+  | "erpMovements"
+  | "mailLogs";
+
+interface Customer360ScreenProps {
+  embedded?: boolean;
+  customerId?: number;
+}
 
 function collectCurrencyOptions(
   summaryCurrencies: { currency: string }[],
   chartsCurrencies: { currency?: string | null }[]
 ): string[] {
   const set = new Set<string>();
+
   summaryCurrencies.forEach((r) => {
     if (r.currency) set.add(r.currency);
   });
+
   chartsCurrencies.forEach((r) => {
     if (r.currency) set.add(r.currency);
   });
+
   return Array.from(set).sort();
 }
 
@@ -61,12 +79,21 @@ function isNotFoundError(error: Error | null): boolean {
   return msg === 404 || message.includes("not found") || message.includes("bulunamadı");
 }
 
-export function Customer360Screen(): React.ReactElement {
+export function Customer360Screen({
+  embedded = false,
+  customerId: customerIdProp,
+}: Customer360ScreenProps): React.ReactElement {
   const { t } = useTranslation();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { colors, themeMode } = useUIStore();
+
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [selectedCurrency, setSelectedCurrency] = useState<string>("ALL");
+
+  const tabScrollRef = useRef<ScrollView | null>(null);
+  const [tabViewportWidth, setTabViewportWidth] = useState(0);
+  const [tabContentWidth, setTabContentWidth] = useState(0);
+  const [tabScrollX, setTabScrollX] = useState(0);
 
   const isDark = themeMode === "dark";
   const mainBg = isDark ? "#0c0516" : "#FFFFFF";
@@ -78,13 +105,16 @@ export function Customer360Screen(): React.ReactElement {
     ...string[]
   ];
 
-  const customerId = useMemo(() => {
+  const routeCustomerId = useMemo(() => {
     if (id == null || id === "") return undefined;
     const num = Number(id);
     return Number.isFinite(num) && num > 0 ? num : undefined;
   }, [id]);
 
+  const customerId = customerIdProp ?? routeCustomerId;
+
   const currencyParam = selectedCurrency === "ALL" ? null : selectedCurrency;
+
   const overviewQuery = useCustomer360Overview(customerId, currencyParam);
   const summaryQuery = useCustomer360AnalyticsSummary(customerId, currencyParam);
   const chartsQuery = useCustomer360AnalyticsCharts(customerId, 12, currencyParam);
@@ -126,12 +156,60 @@ export function Customer360Screen(): React.ReactElement {
   const errorColor = colors.error;
 
   const tabs = [
-    { key: "overview" as const, label: t("customer360.tabs.overview"), icon: AnalyticsUpIcon },
-    { key: "analytics" as const, label: t("customer360.tabs.analytics"), icon: ChartAverageIcon },
-    { key: "quickQuotations" as const, label: t("customer360.tabs.quickQuotations"), icon: Invoice03Icon },
-    { key: "erpMovements" as const, label: t("customer360.tabs.erpMovements"), icon: ArrowDataTransferHorizontalIcon },
-    { key: "mailLogs" as const, label: t("customer360.tabs.mailLogs"), icon: Mail01Icon },
+    {
+      key: "overview" as const,
+      label: t("customer360.tabs.overview"),
+      icon: AnalyticsUpIcon,
+    },
+    {
+      key: "erpMovements" as const,
+      label: t("customer360.tabs.erpMovements"),
+      icon: ArrowDataTransferHorizontalIcon,
+    },
+    {
+      key: "analytics" as const,
+      label: t("customer360.tabs.analytics"),
+      icon: ChartAverageIcon,
+    },
+    {
+      key: "quickQuotations" as const,
+      label: t("customer360.tabs.quickQuotations"),
+      icon: Invoice03Icon,
+    },
+    {
+      key: "mailLogs" as const,
+      label: t("customer360.tabs.mailLogs"),
+      icon: Mail01Icon,
+    },
   ];
+
+  const canScrollTabs = tabContentWidth > tabViewportWidth + 8;
+  const isAtStart = tabScrollX <= 4;
+  const isAtEnd = tabScrollX + tabViewportWidth >= tabContentWidth - 4;
+
+  const handleTabScroll = useCallback(
+    (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+      setTabScrollX(e.nativeEvent.contentOffset.x);
+    },
+    []
+  );
+
+  const handleTabViewportLayout = useCallback((e: LayoutChangeEvent) => {
+    setTabViewportWidth(e.nativeEvent.layout.width);
+  }, []);
+
+  const scrollTabsBy = useCallback(
+    (direction: "left" | "right") => {
+      const delta = Math.max(140, Math.floor(tabViewportWidth * 0.7));
+      const nextX =
+        direction === "left"
+          ? Math.max(0, tabScrollX - delta)
+          : Math.min(Math.max(0, tabContentWidth - tabViewportWidth), tabScrollX + delta);
+
+      tabScrollRef.current?.scrollTo({ x: nextX, animated: true });
+    },
+    [tabScrollX, tabViewportWidth, tabContentWidth]
+  );
 
   const renderLoading = () => (
     <View style={styles.loadingContainer}>
@@ -155,7 +233,9 @@ export function Customer360Screen(): React.ReactElement {
         >
           <Alert02Icon size={20} color={errorColor} variant="stroke" />
         </View>
+
         <Text style={[styles.stateTitle, { color: strongText }]}>{message}</Text>
+
         {onRetry ? (
           <TouchableOpacity
             onPress={onRetry}
@@ -181,7 +261,7 @@ export function Customer360Screen(): React.ReactElement {
   if (showNotFound) {
     return (
       <View style={[styles.container, { backgroundColor: mainBg }]}>
-        <StatusBar style={isDark ? "light" : "dark"} />
+        {!embedded && <StatusBar style={isDark ? "light" : "dark"} />}
         <View style={StyleSheet.absoluteFill}>
           <LinearGradient
             colors={gradientColors}
@@ -192,8 +272,8 @@ export function Customer360Screen(): React.ReactElement {
         </View>
 
         <View style={styles.shell}>
-          <ScreenHeader title={t("customer360.title")} showBackButton />
-          <View style={styles.content}>
+          {!embedded && <ScreenHeader title={t("customer360.title")} showBackButton />}
+          <View style={[styles.content, embedded && styles.contentEmbedded]}>
             <View style={styles.centered}>
               <View style={[styles.stateCard, { backgroundColor: cardBgAlt, borderColor: cardBorder }]}>
                 <View
@@ -207,6 +287,7 @@ export function Customer360Screen(): React.ReactElement {
                 >
                   <Alert02Icon size={20} color={accent} variant="stroke" />
                 </View>
+
                 <Text style={[styles.stateTitle, { color: strongText }]}>
                   {t("customer360.notFound")}
                 </Text>
@@ -220,7 +301,7 @@ export function Customer360Screen(): React.ReactElement {
 
   return (
     <View style={[styles.container, { backgroundColor: mainBg }]}>
-      <StatusBar style={isDark ? "light" : "dark"} />
+      {!embedded && <StatusBar style={isDark ? "light" : "dark"} />}
       <View style={StyleSheet.absoluteFill}>
         <LinearGradient
           colors={gradientColors}
@@ -231,9 +312,9 @@ export function Customer360Screen(): React.ReactElement {
       </View>
 
       <View style={styles.shell}>
-        <ScreenHeader title={t("customer360.title")} showBackButton />
+        {!embedded && <ScreenHeader title={t("customer360.title")} showBackButton />}
 
-        <View style={styles.content}>
+        <View style={[styles.content, embedded && styles.contentEmbedded]}>
           <View
             style={[
               styles.customerMiniCard,
@@ -279,53 +360,93 @@ export function Customer360Screen(): React.ReactElement {
               },
             ]}
           >
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.tabBarContent}
+            <TouchableOpacity
+              activeOpacity={0.82}
+              onPress={() => scrollTabsBy("left")}
+              disabled={!canScrollTabs || isAtStart}
+              style={[
+                styles.tabArrowButton,
+                styles.tabArrowLeft,
+                {
+                  backgroundColor: isDark ? "rgba(12,5,22,0.86)" : "rgba(255,255,255,0.92)",
+                  borderRightColor: cardBorder,
+                  opacity: !canScrollTabs || isAtStart ? 0.32 : 1,
+                },
+              ]}
             >
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                const isActive = activeTab === tab.key;
+              <ArrowLeft01Icon size={16} color={accent} variant="stroke" />
+            </TouchableOpacity>
 
-                return (
-                  <TouchableOpacity
-                    key={tab.key}
-                    style={[
-                      styles.tab,
-                      {
-                        backgroundColor: isActive ? tabActiveBg : "transparent",
-                        borderColor: isActive ? tabActiveBorder : tabInactiveBorder,
-                      },
-                    ]}
-                    onPress={() => setActiveTab(tab.key)}
-                    activeOpacity={0.82}
-                  >
-                    <View
+            <View style={styles.tabScrollViewport} onLayout={handleTabViewportLayout}>
+              <ScrollView
+                ref={tabScrollRef}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.tabBarContent}
+                onScroll={handleTabScroll}
+                scrollEventThrottle={16}
+                onContentSizeChange={(width) => setTabContentWidth(width)}
+              >
+                {tabs.map((tab) => {
+                  const Icon = tab.icon;
+                  const isActive = activeTab === tab.key;
+
+                  return (
+                    <TouchableOpacity
+                      key={tab.key}
                       style={[
-                        styles.tabIconWrap,
+                        styles.tab,
                         {
-                          backgroundColor: isActive ? `${accent}10` : "transparent",
-                          borderColor: isActive ? `${accent}16` : "transparent",
+                          backgroundColor: isActive ? tabActiveBg : "transparent",
+                          borderColor: isActive ? tabActiveBorder : tabInactiveBorder,
                         },
                       ]}
+                      onPress={() => setActiveTab(tab.key)}
+                      activeOpacity={0.82}
                     >
-                      <Icon size={14} color={isActive ? accent : mutedText} variant="stroke" />
-                    </View>
+                      <View
+                        style={[
+                          styles.tabIconWrap,
+                          {
+                            backgroundColor: isActive ? `${accent}10` : "transparent",
+                            borderColor: isActive ? `${accent}16` : "transparent",
+                          },
+                        ]}
+                      >
+                        <Icon size={14} color={isActive ? accent : mutedText} variant="stroke" />
+                      </View>
 
-                    <Text
-                      style={[
-                        styles.tabText,
-                        { color: isActive ? titleText : mutedText },
-                      ]}
-                      numberOfLines={1}
-                    >
-                      {tab.label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </ScrollView>
+                      <Text
+                        style={[
+                          styles.tabText,
+                          { color: isActive ? titleText : mutedText },
+                        ]}
+                        numberOfLines={1}
+                      >
+                        {tab.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
+            </View>
+
+            <TouchableOpacity
+              activeOpacity={0.82}
+              onPress={() => scrollTabsBy("right")}
+              disabled={!canScrollTabs || isAtEnd}
+              style={[
+                styles.tabArrowButton,
+                styles.tabArrowRight,
+                {
+                  backgroundColor: isDark ? "rgba(12,5,22,0.86)" : "rgba(255,255,255,0.92)",
+                  borderLeftColor: cardBorder,
+                  opacity: !canScrollTabs || isAtEnd ? 0.32 : 1,
+                },
+              ]}
+            >
+              <ArrowRight01Icon size={16} color={accent} variant="stroke" />
+            </TouchableOpacity>
           </View>
 
           <View
@@ -428,9 +549,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+
   shell: {
     flex: 1,
   },
+
   content: {
     flex: 1,
     backgroundColor: "transparent",
@@ -438,6 +561,11 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 0,
   },
+
+  contentEmbedded: {
+    paddingTop: 12,
+  },
+
   customerMiniCard: {
     minHeight: 58,
     borderRadius: 18,
@@ -448,6 +576,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 10,
   },
+
   customerIconWrap: {
     width: 32,
     height: 32,
@@ -457,10 +586,12 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginRight: 10,
   },
+
   customerTextWrap: {
     flex: 1,
     minWidth: 0,
   },
+
   customerLabel: {
     fontSize: 10,
     fontWeight: "500",
@@ -468,11 +599,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
     letterSpacing: 0.2,
   },
+
   customerName: {
     fontSize: 13,
     fontWeight: "600",
     lineHeight: 17,
   },
+
   customerCode: {
     fontSize: 10,
     fontWeight: "400",
@@ -480,16 +613,43 @@ const styles = StyleSheet.create({
     lineHeight: 12,
     letterSpacing: 0.2,
   },
+
   tabBar: {
     borderRadius: 18,
     borderWidth: 1,
-    padding: 4,
     marginBottom: 8,
+    minHeight: 72,
+    flexDirection: "row",
+    alignItems: "stretch",
+    overflow: "hidden",
   },
+
+  tabArrowButton: {
+    width: 32,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 0,
+  },
+
+  tabArrowLeft: {
+    borderRightWidth: 1,
+  },
+
+  tabArrowRight: {
+    borderLeftWidth: 1,
+  },
+
+  tabScrollViewport: {
+    flex: 1,
+    minWidth: 0,
+  },
+
   tabBarContent: {
-    paddingRight: 4,
     gap: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 4,
   },
+
   tab: {
     minHeight: 54,
     minWidth: 108,
@@ -501,6 +661,7 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     gap: 4,
   },
+
   tabIconWrap: {
     width: 24,
     height: 24,
@@ -509,12 +670,14 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+
   tabText: {
     fontSize: 10,
     fontWeight: "500",
     textAlign: "center",
     lineHeight: 12,
   },
+
   filterShell: {
     borderRadius: 12,
     borderWidth: 1,
@@ -523,29 +686,34 @@ const styles = StyleSheet.create({
     paddingBottom: 5,
     marginBottom: 8,
   },
+
   tabContentWrap: {
     flex: 1,
     minHeight: 0,
     backgroundColor: "transparent",
   },
+
   loadingContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 20,
   },
+
   errorContainer: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingVertical: 20,
   },
+
   centered: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     padding: 20,
   },
+
   stateCard: {
     width: "100%",
     borderRadius: 20,
@@ -555,6 +723,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 22,
   },
+
   stateIconWrap: {
     width: 40,
     height: 40,
@@ -564,12 +733,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     marginBottom: 12,
   },
+
   stateTitle: {
     fontSize: 13,
     fontWeight: "500",
     textAlign: "center",
     lineHeight: 19,
   },
+
   retryButton: {
     marginTop: 14,
     paddingHorizontal: 14,
@@ -580,6 +751,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 7,
   },
+
   retryText: {
     fontSize: 12,
     fontWeight: "500",
