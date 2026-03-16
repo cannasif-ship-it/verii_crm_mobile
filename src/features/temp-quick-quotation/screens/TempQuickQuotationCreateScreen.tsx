@@ -48,6 +48,7 @@ import {
   findCurrencyOptionByValue,
   resolveExchangeRateByCurrency,
 } from "../../../lib/resolve-exchange-rate";
+import { canPreviewPdfInApp, openPdfExternallyAsync } from "../../../lib/pdf";
 import { calculateLineTotals } from "../../quotation/utils";
 import { createBuiltInTempQuickQuotationReportPdf } from "../utils/createBuiltInTempQuickQuotationReportPdf";
 
@@ -573,6 +574,7 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
 
   const pending = createMutation.isPending || updateMutation.isPending;
   const loading = detailQuery.isLoading || linesQuery.isLoading || exchangeLinesQuery.isLoading;
+  const inAppPdfPreviewAvailable = useMemo(() => canPreviewPdfInApp(), []);
   const pdfViewerHeight = useMemo(() => Math.max(420, windowHeight * 0.55), [windowHeight]);
 
   const handleGeneratePdf = useCallback(async () => {
@@ -594,6 +596,12 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
       });
 
       setPdfFileUri(fileUri);
+      if (!inAppPdfPreviewAvailable) {
+        const result = await openPdfExternallyAsync(fileUri);
+        if (!result.opened && result.reason === "no_app") {
+          showError("Cihazda PDF açabilecek bir uygulama bulunamadı.");
+        }
+      }
       showSuccess("PDF oluşturuldu");
     } catch (error) {
       showError(error instanceof Error ? error.message : "PDF oluşturulamadı");
@@ -612,6 +620,7 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     selectedCustomer?.name,
     showError,
     showSuccess,
+    inAppPdfPreviewAvailable,
   ]);
 
   const handleSharePdf = useCallback(async () => {
@@ -633,6 +642,21 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
       });
     } catch (error) {
       showError(error instanceof Error ? error.message : "PDF paylaşılamadı");
+    }
+  }, [pdfFileUri, showError]);
+
+  const handleOpenPdf = useCallback(async () => {
+    if (pdfFileUri == null) {
+      return;
+    }
+
+    const result = await openPdfExternallyAsync(pdfFileUri);
+    if (!result.opened) {
+      showError(
+        result.reason === "no_app"
+          ? "Cihazda PDF açabilecek bir uygulama bulunamadı."
+          : "PDF açılamadı."
+      );
     }
   }, [pdfFileUri, showError]);
 
@@ -830,7 +854,22 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
                 <Text style={styles.reportSecondaryButtonText}>Paylaş</Text>
               </TouchableOpacity>
 
-              {pdfFileUri ? (
+              {!inAppPdfPreviewAvailable && (
+                <TouchableOpacity
+                  style={[
+                    styles.reportSecondaryButton,
+                    { backgroundColor: pdfFileUri ? "#60A5FA" : mutedColor, opacity: pdfFileUri ? 1 : 0.6 },
+                  ]}
+                  onPress={() => {
+                    void handleOpenPdf();
+                  }}
+                  disabled={!pdfFileUri}
+                >
+                  <Text style={styles.reportSecondaryButtonText}>PDF Aç</Text>
+                </TouchableOpacity>
+              )}
+
+              {pdfFileUri && inAppPdfPreviewAvailable ? (
                 <View style={[styles.previewSection, { borderColor, backgroundColor: inputBg }]}>
                   <Text style={[styles.previewTitle, { color: textColor }]}>PDF Önizleme</Text>
                   <View style={[styles.pdfViewerWrapper, { height: pdfViewerHeight }]}>
@@ -842,6 +881,13 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
                       nestedScrollEnabled
                     />
                   </View>
+                </View>
+              ) : pdfFileUri ? (
+                <View style={[styles.previewSection, { borderColor, backgroundColor: inputBg }]}>
+                  <Text style={[styles.previewTitle, { color: textColor }]}>PDF Önizleme</Text>
+                  <Text style={{ color: mutedColor, fontSize: 14, lineHeight: 20 }}>
+                    Android APK içinde yerel PDF önizleme yerine dosya, cihazdaki PDF uygulamasında açılır. Açılmazsa Paylaş ile dış uygulamaya gönderebilirsiniz.
+                  </Text>
                 </View>
               ) : null}
             </View>

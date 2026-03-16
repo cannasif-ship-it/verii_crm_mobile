@@ -11,7 +11,11 @@
     "saveError": "Failed to save PDF.",
     "shareTitle": "Share Report",
     "share": "Share",
+    "openPdf": "Open PDF",
     "preview": "PDF Preview",
+    "androidPreviewFallback": "In Android APK builds, local PDF preview may be limited. You can open the PDF in a device PDF app or share it.",
+    "viewerNotAvailable": "No app is available on this device to open PDFs.",
+    "openError": "Failed to open the PDF.",
     "shareNotAvailable": "Sharing is not available on this device.",
     "noTemplates": "No report templates found for this document."
   },

@@ -18,6 +18,7 @@ import { useToastStore } from "../../../store/toast";
 import { useReportTemplateList, useGenerateReportPdf } from "../hooks";
 import { PickerModal } from "./PickerModal";
 import type { DocumentRuleTypeValue } from "../types";
+import { canPreviewPdfInApp, openPdfExternallyAsync } from "../../../lib/pdf";
 
 function arrayBufferToBase64(ab: ArrayBuffer): string {
   return Buffer.from(new Uint8Array(ab)).toString("base64");
@@ -48,6 +49,7 @@ export function ReportTab({
   const [selectedTemplateId, setSelectedTemplateId] = useState<number | string | undefined>(undefined);
   const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
   const [pdfFileUri, setPdfFileUri] = useState<string | null>(null);
+  const inAppPdfPreviewAvailable = useMemo(() => canPreviewPdfInApp(), []);
 
   const defaultTemplate = useMemo(() => {
     const builtInDefault = builtInTemplates.find((tpl) => tpl.isDefault === true);
@@ -80,6 +82,13 @@ export function ReportTab({
         .generate()
         .then((fileUri) => {
           setPdfFileUri(fileUri);
+          if (!inAppPdfPreviewAvailable) {
+            void openPdfExternallyAsync(fileUri).then((result) => {
+              if (!result.opened && result.reason === "no_app") {
+                showToast("error", t("report.viewerNotAvailable"));
+              }
+            });
+          }
           showToast("success", t("report.generated"));
         })
         .catch((err) => {
@@ -107,6 +116,13 @@ export function ReportTab({
             });
             const displayUri = fileUri.startsWith("file://") ? fileUri : `file://${fileUri}`;
             setPdfFileUri(displayUri);
+            if (!inAppPdfPreviewAvailable) {
+              void openPdfExternallyAsync(displayUri).then((result) => {
+                if (!result.opened && result.reason === "no_app") {
+                  showToast("error", t("report.viewerNotAvailable"));
+                }
+              });
+            }
             showToast("success", t("report.generated"));
           } catch (err) {
             const message = err instanceof Error ? err.message : t("report.saveError");
@@ -120,7 +136,15 @@ export function ReportTab({
         },
       }
     );
-  }, [selectedTemplateId, entityId, ruleType, generatePdf, showToast, t, builtInTemplates]);
+  }, [selectedTemplateId, entityId, ruleType, generatePdf, showToast, t, builtInTemplates, inAppPdfPreviewAvailable]);
+
+  const handleOpenPdf = useCallback(async () => {
+    if (pdfFileUri == null) return;
+    const result = await openPdfExternallyAsync(pdfFileUri);
+    if (!result.opened) {
+      showToast("error", t(result.reason === "no_app" ? "report.viewerNotAvailable" : "report.openError"));
+    }
+  }, [pdfFileUri, showToast, t]);
 
   const handleSharePdf = useCallback(async () => {
     if (pdfFileUri == null) return;
@@ -233,8 +257,20 @@ export function ReportTab({
         >
           <Text style={styles.shareBtnText}>{t("report.share")}</Text>
         </TouchableOpacity>
+        {!inAppPdfPreviewAvailable && (
+          <TouchableOpacity
+            style={[
+              styles.shareBtn,
+              { backgroundColor: pdfFileUri != null ? colors.accent : colors.textMuted },
+            ]}
+            onPress={handleOpenPdf}
+            disabled={pdfFileUri == null}
+          >
+            <Text style={styles.shareBtnText}>{t("report.openPdf")}</Text>
+          </TouchableOpacity>
+        )}
       </View>
-      {pdfFileUri != null && (
+      {pdfFileUri != null && inAppPdfPreviewAvailable && (
         <View style={[styles.previewSection, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t("report.preview")}
@@ -248,6 +284,16 @@ export function ReportTab({
               nestedScrollEnabled
             />
           </View>
+        </View>
+      )}
+      {pdfFileUri != null && !inAppPdfPreviewAvailable && (
+        <View style={[styles.previewSection, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t("report.preview")}
+          </Text>
+          <Text style={[styles.androidPdfInfo, { color: colors.textMuted }]}>
+            {t("report.androidPreviewFallback")}
+          </Text>
         </View>
       )}
       <PickerModal
@@ -298,6 +344,7 @@ const styles = StyleSheet.create({
   },
   shareBtnText: { color: "#FFF", fontSize: 16, fontWeight: "600" },
   previewSection: { padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 16 },
+  androidPdfInfo: { fontSize: 14, lineHeight: 20 },
   pdfViewerWrapper: { borderRadius: 8, overflow: "hidden" },
   pdfWebView: { flex: 1, backgroundColor: "transparent" },
 });

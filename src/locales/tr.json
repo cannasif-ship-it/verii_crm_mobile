@@ -11,7 +11,11 @@
     "saveError": "PDF kaydedilemedi.",
     "shareTitle": "Raporu Paylaş",
     "share": "Paylaş",
+    "openPdf": "PDF Aç",
     "preview": "PDF Önizleme",
+    "androidPreviewFallback": "Android APK sürümünde yerel PDF önizleme sınırlı olabilir. PDF'yi cihazınızdaki PDF uygulamasında açabilir veya paylaşabilirsiniz.",
+    "viewerNotAvailable": "Cihazda PDF açabilecek bir uygulama bulunamadı.",
+    "openError": "PDF açılamadı.",
     "shareNotAvailable": "Paylaşım bu cihazda kullanılamıyor.",
     "noTemplates": "Bu belge için rapor şablonu bulunamadı."
   },

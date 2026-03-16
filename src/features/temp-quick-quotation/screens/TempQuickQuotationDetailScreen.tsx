@@ -4,6 +4,7 @@ import {
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  ScrollView,
   useWindowDimensions,
   ScrollView,
 } from "react-native";
@@ -31,6 +32,7 @@ import { useToast } from "../../../hooks/useToast";
 import { tempQuickQuotationRepository } from "../repositories/tempQuotattion.repository";
 import { createBuiltInTempQuickQuotationReportPdf } from "../utils/createBuiltInTempQuickQuotationReportPdf";
 import type { QuotationLineFormState } from "../../quotation/types";
+import { canPreviewPdfInApp, openPdfExternallyAsync } from "../../../lib/pdf";
 
 function formatDate(value?: string | null): string {
   if (!value) return "-";
@@ -137,8 +139,8 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
 
   const [pdfFileUri, setPdfFileUri] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-
-  const pdfViewerHeight = useMemo(() => Math.max(360, windowHeight * 0.5), [windowHeight]);
+  const inAppPdfPreviewAvailable = useMemo(() => canPreviewPdfInApp(), []);
+  const pdfViewerHeight = useMemo(() => Math.max(420, windowHeight * 0.55), [windowHeight]);
 
   const detailQuery = useQuery({
     queryKey: ["temp-quick-quotation", "detail", quickQuotationId],
@@ -209,13 +211,19 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
       });
 
       setPdfFileUri(fileUri);
+      if (!inAppPdfPreviewAvailable) {
+        const result = await openPdfExternallyAsync(fileUri);
+        if (!result.opened && result.reason === "no_app") {
+          showError("Cihazda PDF açabilecek bir uygulama bulunamadı.");
+        }
+      }
       showSuccess("PDF oluşturuldu");
     } catch (error) {
       showError(error instanceof Error ? error.message : "PDF oluşturulamadı");
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [detail, mappedLines, showError, showSuccess]);
+  }, [detail, mappedLines, showError, showSuccess, inAppPdfPreviewAvailable]);
 
   const handleSharePdf = useCallback(async () => {
     if (!pdfFileUri) return;
@@ -237,6 +245,18 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
       });
     } catch (error) {
       showError(error instanceof Error ? error.message : "PDF paylaşılamadı");
+    }
+  }, [pdfFileUri, showError]);
+
+  const handleOpenPdf = useCallback(async () => {
+    if (!pdfFileUri) return;
+    const result = await openPdfExternallyAsync(pdfFileUri);
+    if (!result.opened) {
+      showError(
+        result.reason === "no_app"
+          ? "Cihazda PDF açabilecek bir uygulama bulunamadı."
+          : "PDF açılamadı."
+      );
     }
   }, [pdfFileUri, showError]);
 
@@ -718,9 +738,9 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
                     >
                       {rate.currency}
                     </Text>
-                    <Text style={[styles.exchangeSub, { color: colors.muted }]}>
+                      <Text style={[styles.exchangeSub, { color: colors.muted }]}>
                       Kur değeri
-                    </Text>
+                      </Text>
                   </View>
                 </View>
 
