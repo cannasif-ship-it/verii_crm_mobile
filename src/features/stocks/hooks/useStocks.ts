@@ -7,6 +7,7 @@ interface UseStocksParams {
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   pageSize?: number;
+  filterLogic?: "and" | "or";
 }
 
 // Hook artık hem parametreleri hem de arama metnini alıyor
@@ -15,22 +16,23 @@ export function useStocks(params: UseStocksParams = {}, searchQuery?: string) {
     filters = [], 
     sortBy = "stockName", 
     sortDirection = "asc", 
-    pageSize = 20 
+    pageSize = 20,
+    filterLogic: requestedFilterLogic,
   } = params;
 
   // Generic Tip Tanımlaması: <BackenddenDönenVeriTipi, HataTipi>
   return useInfiniteQuery<PagedResponse<StockGetDto>, Error>({
     
     // Arama metni değiştiğinde liste sıfırlansın diye queryKey'e ekledik
-    queryKey: ["stock", "list", { filters, sortBy, sortDirection, pageSize, searchQuery }],
+    queryKey: ["stock", "list", { filters, sortBy, sortDirection, pageSize, searchQuery, requestedFilterLogic }],
     
     queryFn: ({ pageParam = 1 }) => {
       // Filtre dizisini kopyalıyoruz (State mutation olmasın diye)
       const activeFilters: PagedFilter[] = [...filters];
-      let filterLogic: "and" | "or" | undefined;
+      let filterLogic: "and" | "or" | undefined = requestedFilterLogic;
 
       if (searchQuery && searchQuery.trim().length >= 2) {
-        const query = searchQuery.trim();
+        const queryTokens = searchQuery.trim().split(/\s+/).filter(Boolean);
         const searchableColumns = [
           "StockName",
           "ErpStockCode",
@@ -50,10 +52,12 @@ export function useStocks(params: UseStocksParams = {}, searchQuery?: string) {
         ];
 
         searchableColumns.forEach((column) => {
-          activeFilters.push({
-            column,
-            operator: "contains",
-            value: query,
+          queryTokens.forEach((token) => {
+            activeFilters.push({
+              column,
+              operator: "contains",
+              value: token,
+            });
           });
         });
         filterLogic = "or";
