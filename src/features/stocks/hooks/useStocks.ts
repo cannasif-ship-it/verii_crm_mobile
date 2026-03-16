@@ -12,19 +12,27 @@ interface UseStocksParams {
 
 // Hook artık hem parametreleri hem de arama metnini alıyor
 export function useStocks(params: UseStocksParams = {}, searchQuery?: string) {
-  const { 
-    filters = [], 
-    sortBy = "stockName", 
-    sortDirection = "asc", 
+  const {
+    filters = [],
+    sortBy = "stockName",
+    sortDirection = "asc",
     pageSize = 20,
     filterLogic: requestedFilterLogic = "or",
   } = params;
 
-  // Generic Tip Tanımlaması: <BackenddenDönenVeriTipi, HataTipi>
+  const filtersKey = JSON.stringify(filters);
+
   return useInfiniteQuery<PagedResponse<StockGetDto>, Error>({
-    
-    // Arama metni değiştiğinde liste sıfırlansın diye queryKey'e ekledik
-    queryKey: ["stock", "list", { filters, sortBy, sortDirection, pageSize, searchQuery, requestedFilterLogic }],
+    queryKey: [
+      "stock",
+      "list",
+      sortBy,
+      sortDirection,
+      pageSize,
+      searchQuery ?? "",
+      requestedFilterLogic,
+      filtersKey,
+    ],
     
     queryFn: ({ pageParam = 1 }) => {
       // Filtre dizisini kopyalıyoruz (State mutation olmasın diye)
