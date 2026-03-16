@@ -764,7 +764,7 @@ function ProductPickerInner(
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks(
     { filters: apiFilters, filterLogic: advancedFilterLogic },
-    hasAdvancedFilters ? undefined : normalizedQuery
+    hasAdvancedFilters ? undefined : searchText
   );
 
   const stocks = useMemo(() => {
