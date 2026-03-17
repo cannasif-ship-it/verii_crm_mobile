@@ -32,7 +32,6 @@ import {
   useStockRelations,
   useStockRelationsAsRelated,
 } from "../../stocks/hooks";
-import { buildAdvancedStockFilters } from "../../stocks/utils/buildAdvancedStockFilters";
 import type { StockGetDto, StockRelationDto } from "../../stocks/types";
 
 export interface ProductPickerRef {
@@ -680,65 +679,65 @@ function ProductPickerInner(
 
   const normalizedQuery = useMemo(() => normalizeSearchText(searchText), [searchText]);
 
-  const { filters: apiFilters, filterLogic: advancedFilterLogic } = useMemo(() => {
-    const entries: Array<{ column: string; operator: string; value: string }> = [];
+  const apiFilters = useMemo(() => {
+    const filters: Array<{ column: string; operator: string; value: string }> = [];
 
     if (appliedIdFilter.trim()) {
-      entries.push({ column: "Id", operator: "eq", value: appliedIdFilter.trim() });
+      filters.push({ column: "Id", operator: "eq", value: appliedIdFilter.trim() });
     }
     if (appliedCodeFilter.trim()) {
-      entries.push({ column: "ErpStockCode", operator: "contains", value: appliedCodeFilter.trim() });
+      filters.push({ column: "ErpStockCode", operator: "contains", value: appliedCodeFilter.trim() });
     }
     if (appliedNameFilter.trim()) {
-      entries.push({ column: "StockName", operator: "contains", value: appliedNameFilter.trim() });
+      filters.push({ column: "StockName", operator: "contains", value: appliedNameFilter.trim() });
     }
     if (appliedGroupCodeFilter.trim()) {
-      entries.push({ column: "GrupKodu", operator: "contains", value: appliedGroupCodeFilter.trim() });
+      filters.push({ column: "GrupKodu", operator: "contains", value: appliedGroupCodeFilter.trim() });
     }
     if (appliedGroupNameFilter.trim()) {
-      entries.push({ column: "GrupAdi", operator: "contains", value: appliedGroupNameFilter.trim() });
+      filters.push({ column: "GrupAdi", operator: "contains", value: appliedGroupNameFilter.trim() });
     }
     if (appliedCode1Filter.trim()) {
-      entries.push({ column: "Kod1", operator: "contains", value: appliedCode1Filter.trim() });
+      filters.push({ column: "Kod1", operator: "contains", value: appliedCode1Filter.trim() });
     }
     if (appliedCode1NameFilter.trim()) {
-      entries.push({ column: "Kod1Adi", operator: "contains", value: appliedCode1NameFilter.trim() });
+      filters.push({ column: "Kod1Adi", operator: "contains", value: appliedCode1NameFilter.trim() });
     }
     if (appliedCode2Filter.trim()) {
-      entries.push({ column: "Kod2", operator: "contains", value: appliedCode2Filter.trim() });
+      filters.push({ column: "Kod2", operator: "contains", value: appliedCode2Filter.trim() });
     }
     if (appliedCode2NameFilter.trim()) {
-      entries.push({ column: "Kod2Adi", operator: "contains", value: appliedCode2NameFilter.trim() });
+      filters.push({ column: "Kod2Adi", operator: "contains", value: appliedCode2NameFilter.trim() });
     }
     if (appliedCode3Filter.trim()) {
-      entries.push({ column: "Kod3", operator: "contains", value: appliedCode3Filter.trim() });
+      filters.push({ column: "Kod3", operator: "contains", value: appliedCode3Filter.trim() });
     }
     if (appliedCode3NameFilter.trim()) {
-      entries.push({ column: "Kod3Adi", operator: "contains", value: appliedCode3NameFilter.trim() });
+      filters.push({ column: "Kod3Adi", operator: "contains", value: appliedCode3NameFilter.trim() });
     }
     if (appliedCode4Filter.trim()) {
-      entries.push({ column: "Kod4", operator: "contains", value: appliedCode4Filter.trim() });
+      filters.push({ column: "Kod4", operator: "contains", value: appliedCode4Filter.trim() });
     }
     if (appliedCode4NameFilter.trim()) {
-      entries.push({ column: "Kod4Adi", operator: "contains", value: appliedCode4NameFilter.trim() });
+      filters.push({ column: "Kod4Adi", operator: "contains", value: appliedCode4NameFilter.trim() });
     }
     if (appliedCode5Filter.trim()) {
-      entries.push({ column: "Kod5", operator: "contains", value: appliedCode5Filter.trim() });
+      filters.push({ column: "Kod5", operator: "contains", value: appliedCode5Filter.trim() });
     }
     if (appliedCode5NameFilter.trim()) {
-      entries.push({ column: "Kod5Adi", operator: "contains", value: appliedCode5NameFilter.trim() });
+      filters.push({ column: "Kod5Adi", operator: "contains", value: appliedCode5NameFilter.trim() });
     }
     if (appliedManufacturerCodeFilter.trim()) {
-      entries.push({ column: "UreticiKodu", operator: "contains", value: appliedManufacturerCodeFilter.trim() });
+      filters.push({ column: "UreticiKodu", operator: "contains", value: appliedManufacturerCodeFilter.trim() });
     }
     if (appliedUnitFilter.trim()) {
-      entries.push({ column: "unit", operator: "contains", value: appliedUnitFilter.trim() });
+      filters.push({ column: "unit", operator: "contains", value: appliedUnitFilter.trim() });
     }
     if (appliedBranchCodeFilter.trim()) {
-      entries.push({ column: "BranchCode", operator: "eq", value: appliedBranchCodeFilter.trim() });
+      filters.push({ column: "BranchCode", operator: "eq", value: appliedBranchCodeFilter.trim() });
     }
 
-    return buildAdvancedStockFilters(entries);
+    return filters;
   }, [
     appliedBranchCodeFilter,
     appliedCode1Filter,
@@ -763,7 +762,7 @@ function ProductPickerInner(
   const hasAdvancedFilters = apiFilters.length > 0;
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks(
-    { filters: apiFilters, filterLogic: advancedFilterLogic },
+    { filters: apiFilters },
     hasAdvancedFilters ? undefined : normalizedQuery
   );
 
