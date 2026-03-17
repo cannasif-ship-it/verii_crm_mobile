@@ -34,9 +34,14 @@ interface QuotationLineFormProps {
   onClose: () => void;
   onSave: (line: QuotationLineFormState) => void;
   onAddWithRelatedStocks?: (stock: StockGetDto, relatedStockIds: number[]) => void;
-  onRequestRelatedStocksSelection?: (stock: StockGetDto & { parentRelations: StockRelationDto[] }) => void;
+  onRequestRelatedStocksSelection?: (
+    stock: StockGetDto & { parentRelations: StockRelationDto[] }
+  ) => void;
   onCancelRelatedSelection?: () => void;
-  onApplyRelatedSelection?: (stock: StockGetDto & { parentRelations: StockRelationDto[] }, selectedIds: number[]) => void;
+  onApplyRelatedSelection?: (
+    stock: StockGetDto & { parentRelations: StockRelationDto[] },
+    selectedIds: number[]
+  ) => void;
   pendingRelatedStock?: (StockGetDto & { parentRelations: StockRelationDto[] }) | null;
   disableRelatedStocks?: boolean;
   currency: string;
@@ -44,6 +49,58 @@ interface QuotationLineFormProps {
   pricingRules?: PricingRuleLineGetDto[];
   userDiscountLimits?: UserDiscountLimitDto[];
   exchangeRates?: Array<{ dovizTipi: number; kurDegeri: number }>;
+}
+
+function normalizeCurrencyCode(value?: string | null): string {
+  const normalized = String(value ?? "").trim().toUpperCase();
+
+  if (normalized === "TL" || normalized === "TRY") return "TRY";
+  return normalized;
+}
+
+function resolveCurrencyRate(
+  currencyCode: string,
+  currencyOptions?: Array<{ code: string; dovizTipi: number; dovizIsmi: string }>,
+  exchangeRates?: Array<{ dovizTipi: number; kurDegeri: number }>
+): number | null {
+  const normalizedCode = normalizeCurrencyCode(currencyCode);
+
+  if (!normalizedCode) return null;
+  if (normalizedCode === "TRY") return 1;
+
+  const option = currencyOptions?.find(
+    (c) => normalizeCurrencyCode(c.code) === normalizedCode
+  );
+
+  if (!option) return null;
+
+  const rate = exchangeRates?.find((r) => r.dovizTipi === option.dovizTipi)?.kurDegeri;
+
+  return rate && rate > 0 ? rate : null;
+}
+
+function convertPriceBetweenCurrencies(
+  amount: number,
+  sourceCurrency: string,
+  targetCurrency: string,
+  currencyOptions?: Array<{ code: string; dovizTipi: number; dovizIsmi: string }>,
+  exchangeRates?: Array<{ dovizTipi: number; kurDegeri: number }>
+): number {
+  const safeAmount = Number(amount) || 0;
+  const source = normalizeCurrencyCode(sourceCurrency || "TRY");
+  const target = normalizeCurrencyCode(targetCurrency || "TRY");
+
+  if (safeAmount <= 0) return 0;
+  if (source === target) return safeAmount;
+
+  const sourceRate = resolveCurrencyRate(source, currencyOptions, exchangeRates);
+  const targetRate = resolveCurrencyRate(target, currencyOptions, exchangeRates);
+
+  if (sourceRate == null || targetRate == null || targetRate <= 0) {
+    return safeAmount;
+  }
+
+  return (safeAmount * sourceRate) / targetRate;
 }
 
 export function QuotationLineForm({
@@ -69,13 +126,18 @@ export function QuotationLineForm({
 
   const isDark = themeMode === "dark";
   const mainBg = isDark ? "#161224" : "#FFFFFF";
-  const inputBg = isDark ? "rgba(255,255,255,0.03)" : "rgba(255,255,255,0.6)";
-  const cardBg = isDark ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.85)";
-  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)";
+  const inputBg = isDark ? "rgba(255,255,255,0.03)" : "#FFFFFF";
+  const cardBg = isDark ? "rgba(255,255,255,0.02)" : "rgba(255,255,255,0.92)";
+  const borderColor = isDark ? "rgba(255,255,255,0.08)" : "rgba(15,23,42,0.08)";
+  const softPinkBorder = isDark ? "rgba(236,72,153,0.26)" : "rgba(219,39,119,0.18)";
+  const softPinkBg = isDark ? "rgba(236,72,153,0.06)" : "rgba(219,39,119,0.04)";
   const textColor = isDark ? "#F8FAFC" : "#1E293B";
   const mutedColor = isDark ? "#94A3B8" : "#64748B";
   const brandColor = isDark ? "#EC4899" : "#DB2777";
+  const brandSoft = isDark ? "rgba(236,72,153,0.12)" : "rgba(219,39,119,0.08)";
   const warningColor = "#F59E0B";
+
+  const normalizedCurrency = useMemo(() => normalizeCurrencyCode(currency), [currency]);
 
   const [selectedStock, setSelectedStock] = useState<StockGetDto | undefined>();
   const [quantity, setQuantity] = useState<string>("1");
@@ -97,6 +159,7 @@ export function QuotationLineForm({
   const productPickerRef = useRef<ProductPickerRef>(null);
 
   const { data: projects = [] } = useErpProjects();
+  const { data: stockData } = useStock(selectedStock?.id);
 
   const currentLine: QuotationLineFormState = useMemo(() => {
     const qty = parseDecimalInput(quantity);
@@ -132,13 +195,17 @@ export function QuotationLineForm({
       isEditing: false,
       approvalStatus,
       relatedStockId: line?.relatedStockId ?? selectedStock?.id ?? null,
-      relatedProductKey: line?.relatedProductKey ?? (selectedStock ? `main-${selectedStock.id}` : undefined),
+      relatedProductKey:
+        line?.relatedProductKey ?? (selectedStock ? `main-${selectedStock.id}` : undefined),
       isMainRelatedProduct: line?.isMainRelatedProduct ?? true,
     };
 
     return calculateLineTotals(baseLine);
   }, [
     line?.id,
+    line?.relatedStockId,
+    line?.relatedProductKey,
+    line?.isMainRelatedProduct,
     selectedStock,
     quantity,
     unitPrice,
@@ -154,38 +221,10 @@ export function QuotationLineForm({
     approvalStatus,
   ]);
 
-  useEffect(() => {
-    if (line && visible) {
-      setQuantity(sanitizeDecimalInput(String(line.quantity)));
-      setUnitPrice(sanitizeDecimalInput(String(line.unitPrice)));
-      setDiscountRate1(sanitizeDecimalInput(String(line.discountRate1)));
-      setDiscountRate2(sanitizeDecimalInput(String(line.discountRate2)));
-      setDiscountRate3(sanitizeDecimalInput(String(line.discountRate3)));
-      setVatRate(sanitizeDecimalInput(String(line.vatRate)));
-      setDescription(line.description || "");
-      setDescription1(line.description1 || "");
-      setDescription2(line.description2 || "");
-      setDescription3(line.description3 || "");
-      setErpProjectCode(line.erpProjectCode ?? null);
-      setApprovalStatus(line.approvalStatus || 0);
-      setRelatedLinesDisplay(line.relatedLines ?? []);
-      if (line.productCode || line.productName) {
-        setSelectedStock({
-          id: line.productId ?? 0,
-          erpStockCode: line.productCode || "",
-          stockName: line.productName || "",
-          branchCode: 0,
-          grupKodu: line.groupCode ?? undefined,
-        } as StockGetDto);
-      }
-    } else if (!visible) {
-      resetForm();
-    }
-  }, [line, visible]);
-
   const displayedRelatedLines = useMemo((): QuotationLineFormState[] => {
     if (relatedLinesDisplay.length === 0) return [];
     const mainQty = parseDecimalInput(quantity);
+
     return relatedLinesDisplay.map((rel) =>
       calculateLineTotals({
         ...rel,
@@ -219,23 +258,58 @@ export function QuotationLineForm({
     setRelatedLinesDisplay([]);
   }, []);
 
-  const { data: stockData } = useStock(selectedStock?.id);
+  useEffect(() => {
+    if (line && visible) {
+      setQuantity(sanitizeDecimalInput(String(line.quantity)));
+      setUnitPrice(sanitizeDecimalInput(String(line.unitPrice)));
+      setDiscountRate1(sanitizeDecimalInput(String(line.discountRate1)));
+      setDiscountRate2(sanitizeDecimalInput(String(line.discountRate2)));
+      setDiscountRate3(sanitizeDecimalInput(String(line.discountRate3)));
+      setVatRate(sanitizeDecimalInput(String(line.vatRate)));
+      setDescription(line.description || "");
+      setDescription1(line.description1 || "");
+      setDescription2(line.description2 || "");
+      setDescription3(line.description3 || "");
+      setErpProjectCode(line.erpProjectCode ?? null);
+      setApprovalStatus(line.approvalStatus || 0);
+      setRelatedLinesDisplay(line.relatedLines ?? []);
+
+      if (line.productCode || line.productName) {
+        setSelectedStock({
+          id: line.productId ?? 0,
+          erpStockCode: line.productCode || "",
+          stockName: line.productName || "",
+          branchCode: 0,
+          grupKodu: line.groupCode ?? undefined,
+        } as StockGetDto);
+      }
+    } else if (!visible) {
+      resetForm();
+    }
+  }, [line, visible, resetForm]);
 
   const handleStockSelect = useCallback(
     async (stock: StockGetDto | undefined): Promise<boolean> => {
       let stockToUse: StockGetDto | undefined = stock;
+
       if (stock && (onAddWithRelatedStocks || onRequestRelatedStocksSelection)) {
         try {
           const fullStock = await stockApi.getById(stock.id);
           let relations = fullStock.parentRelations ?? [];
+
           if (relations.length === 0 && !disableRelatedStocks) {
-            const relationsRes = await stockApi.getRelations(stock.id, { pageNumber: 1, pageSize: 100 });
+            const relationsRes = await stockApi.getRelations(stock.id, {
+              pageNumber: 1,
+              pageSize: 100,
+            });
             relations = relationsRes?.items ?? [];
           }
+
           if (relations.length > 0 && !disableRelatedStocks && onRequestRelatedStocksSelection) {
             onRequestRelatedStocksSelection({ ...fullStock, parentRelations: relations });
             return false;
           }
+
           setSelectedStock(fullStock);
           stockToUse = fullStock;
         } catch {
@@ -253,6 +327,7 @@ export function QuotationLineForm({
       }
 
       setIsLoadingPrice(true);
+
       try {
         const priceData = await quotationApi.getPriceOfProduct([
           {
@@ -263,34 +338,29 @@ export function QuotationLineForm({
 
         if (priceData && priceData.length > 0) {
           const price = priceData[0];
-          let finalPrice = price.listPrice;
 
-          if (price.currency !== currency && exchangeRates && currencyOptions) {
-            const priceCurrency = currencyOptions.find((c) => c.code === price.currency);
-            const targetCurrency = currencyOptions.find((c) => c.code === currency);
+          const sourceCurrency = normalizeCurrencyCode(price.currency || "TRY");
+          const targetCurrency = normalizedCurrency || "TRY";
 
-            if (priceCurrency && targetCurrency && exchangeRates) {
-              const priceRate = exchangeRates.find(
-                (r) => r.dovizTipi === priceCurrency.dovizTipi
-              )?.kurDegeri;
-              const targetRate = exchangeRates.find(
-                (r) => r.dovizTipi === targetCurrency.dovizTipi
-              )?.kurDegeri;
+          const finalPrice = convertPriceBetweenCurrencies(
+            Number(price.listPrice) || 0,
+            sourceCurrency,
+            targetCurrency,
+            currencyOptions,
+            exchangeRates
+          );
 
-              if (priceRate && targetRate && priceRate > 0 && targetRate > 0) {
-                finalPrice = (price.listPrice * priceRate) / targetRate;
-              }
-            }
-          }
+          setUnitPrice(sanitizeDecimalInput(String(finalPrice)));
 
-          setUnitPrice(String(finalPrice));
-
-          if (price.discount1 !== null && price.discount1 !== undefined)
+          if (price.discount1 !== null && price.discount1 !== undefined) {
             setDiscountRate1(String(price.discount1));
-          if (price.discount2 !== null && price.discount2 !== undefined)
+          }
+          if (price.discount2 !== null && price.discount2 !== undefined) {
             setDiscountRate2(String(price.discount2));
-          if (price.discount3 !== null && price.discount3 !== undefined)
+          }
+          if (price.discount3 !== null && price.discount3 !== undefined) {
             setDiscountRate3(String(price.discount3));
+          }
         }
 
         if (pricingRules && stockToUse.erpStockCode) {
@@ -303,9 +373,21 @@ export function QuotationLineForm({
           );
 
           if (matchingRule) {
-            if (matchingRule.fixedUnitPrice !== null && matchingRule.fixedUnitPrice !== undefined) {
-              setUnitPrice(String(matchingRule.fixedUnitPrice));
+            if (
+              matchingRule.fixedUnitPrice !== null &&
+              matchingRule.fixedUnitPrice !== undefined
+            ) {
+              const convertedRulePrice = convertPriceBetweenCurrencies(
+                Number(matchingRule.fixedUnitPrice) || 0,
+                "TRY",
+                normalizedCurrency || "TRY",
+                currencyOptions,
+                exchangeRates
+              );
+
+              setUnitPrice(sanitizeDecimalInput(String(convertedRulePrice)));
             }
+
             setDiscountRate1(String(matchingRule.discountRate1));
             setDiscountRate2(String(matchingRule.discountRate2));
             setDiscountRate3(String(matchingRule.discountRate3));
@@ -316,9 +398,19 @@ export function QuotationLineForm({
       } finally {
         setIsLoadingPrice(false);
       }
+
       return true;
     },
-    [currency, exchangeRates, currencyOptions, pricingRules, quantity, disableRelatedStocks, onAddWithRelatedStocks, onRequestRelatedStocksSelection]
+    [
+      normalizedCurrency,
+      exchangeRates,
+      currencyOptions,
+      pricingRules,
+      quantity,
+      disableRelatedStocks,
+      onAddWithRelatedStocks,
+      onRequestRelatedStocksSelection,
+    ]
   );
 
   useEffect(() => {
@@ -333,27 +425,42 @@ export function QuotationLineForm({
 
       if (matchingRule) {
         if (matchingRule.fixedUnitPrice !== null && matchingRule.fixedUnitPrice !== undefined) {
-          setUnitPrice(String(matchingRule.fixedUnitPrice));
+          const convertedRulePrice = convertPriceBetweenCurrencies(
+            Number(matchingRule.fixedUnitPrice) || 0,
+            "TRY",
+            normalizedCurrency || "TRY",
+            currencyOptions,
+            exchangeRates
+          );
+
+          setUnitPrice(sanitizeDecimalInput(String(convertedRulePrice)));
         }
+
         setDiscountRate1(String(matchingRule.discountRate1));
         setDiscountRate2(String(matchingRule.discountRate2));
         setDiscountRate3(String(matchingRule.discountRate3));
       }
     }
-  }, [selectedStock, pricingRules, quantity]);
+  }, [
+    selectedStock,
+    pricingRules,
+    quantity,
+    normalizedCurrency,
+    currencyOptions,
+    exchangeRates,
+  ]);
 
   useEffect(() => {
     if (stockData && stockData.parentRelations && stockData.parentRelations.length > 0) {
       const relatedStocksInfo = stockData.parentRelations
         .map((r) => `${r.relatedStockName || r.relatedStockCode} (${r.quantity})`)
         .join(", ");
+
       if (relatedStocksInfo && !description.includes("İlgili Stoklar")) {
-        setDescription(
-          (prev) => (prev ? `${prev}\n` : "") + `İlgili Stoklar: ${relatedStocksInfo}`
-        );
+        setDescription((prev) => (prev ? `${prev}\n` : "") + `İlgili Stoklar: ${relatedStocksInfo}`);
       }
     }
-  }, [stockData]);
+  }, [stockData, description]);
 
   useEffect(() => {
     if (selectedStock && userDiscountLimits && selectedStock.grupKodu) {
@@ -379,7 +486,9 @@ export function QuotationLineForm({
         if (exceedsLimit1 || exceedsLimit2 || exceedsLimit3) {
           setApprovalStatus(1);
           setApprovalMessage(
-            `İndirim limiti aşıldı. Maksimum: %${matchingLimit.maxDiscount1} / %${matchingLimit.maxDiscount2 || "-"} / %${matchingLimit.maxDiscount3 || "-"}`
+            `İndirim limiti aşıldı. Maksimum: %${matchingLimit.maxDiscount1} / %${
+              matchingLimit.maxDiscount2 || "-"
+            } / %${matchingLimit.maxDiscount3 || "-"}`
           );
         } else {
           setApprovalStatus(0);
@@ -409,12 +518,15 @@ export function QuotationLineForm({
     return Math.max(0, Math.min(100, Number.isNaN(value) ? 0 : value));
   }, []);
 
-  const normalizeDiscountOnBlur = useCallback((value: string): string => {
-    const trimmed = value.trim();
-    if (trimmed === "" || trimmed === ".") return "0";
-    const num = parseDecimalInput(trimmed);
-    return String(clampDiscount(Number.isNaN(num) ? 0 : num));
-  }, [clampDiscount]);
+  const normalizeDiscountOnBlur = useCallback(
+    (value: string): string => {
+      const trimmed = value.trim();
+      if (trimmed === "" || trimmed === ".") return "0";
+      const num = parseDecimalInput(trimmed);
+      return String(clampDiscount(Number.isNaN(num) ? 0 : num));
+    },
+    [clampDiscount]
+  );
 
   const handleDiscount1Change = useCallback(
     (text: string) => {
@@ -423,12 +535,17 @@ export function QuotationLineForm({
         setDiscountRate1(sanitized);
         return;
       }
+
       const num = parseDecimalInput(sanitized);
-      if (!Number.isNaN(num)) setDiscountRate1(sanitizeDecimalInput(String(clampDiscount(num))));
-      else setDiscountRate1(sanitized);
+      if (!Number.isNaN(num)) {
+        setDiscountRate1(sanitizeDecimalInput(String(clampDiscount(num))));
+      } else {
+        setDiscountRate1(sanitized);
+      }
     },
     [clampDiscount]
   );
+
   const handleDiscount2Change = useCallback(
     (text: string) => {
       const sanitized = sanitizeDecimalInput(text);
@@ -436,12 +553,17 @@ export function QuotationLineForm({
         setDiscountRate2(sanitized);
         return;
       }
+
       const num = parseDecimalInput(sanitized);
-      if (!Number.isNaN(num)) setDiscountRate2(sanitizeDecimalInput(String(clampDiscount(num))));
-      else setDiscountRate2(sanitized);
+      if (!Number.isNaN(num)) {
+        setDiscountRate2(sanitizeDecimalInput(String(clampDiscount(num))));
+      } else {
+        setDiscountRate2(sanitized);
+      }
     },
     [clampDiscount]
   );
+
   const handleDiscount3Change = useCallback(
     (text: string) => {
       const sanitized = sanitizeDecimalInput(text);
@@ -449,357 +571,483 @@ export function QuotationLineForm({
         setDiscountRate3(sanitized);
         return;
       }
+
       const num = parseDecimalInput(sanitized);
-      if (!Number.isNaN(num)) setDiscountRate3(sanitizeDecimalInput(String(clampDiscount(num))));
-      else setDiscountRate3(sanitized);
+      if (!Number.isNaN(num)) {
+        setDiscountRate3(sanitizeDecimalInput(String(clampDiscount(num))));
+      } else {
+        setDiscountRate3(sanitized);
+      }
     },
     [clampDiscount]
   );
 
   return (
     <>
-    <Modal
-      visible={visible}
-      transparent
-      animationType="slide"
-      onRequestClose={handleCancel}
-    >
-      <View style={styles.modalOverlay}>
-        <TouchableOpacity style={styles.modalBackdrop} onPress={handleCancel} />
-        <View
-          style={[
-            styles.modalContent,
-            { backgroundColor: mainBg, paddingBottom: insets.bottom + 16 },
-          ]}
-        >
-          <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
-            <View style={[styles.handle, { backgroundColor: borderColor }]} />
-            <Text style={[styles.modalTitle, { color: textColor }]}>
-              {line ? "Satır Düzenle" : "Yeni Satır"}
-            </Text>
-            <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
-              <Text style={[styles.closeButtonText, { color: textColor }]}>✕</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.contentWrapper}>
-          <FlatListScrollView
-            style={styles.scrollContent}
-            contentContainerStyle={styles.scrollContentContainer}
-            showsVerticalScrollIndicator={false}
+      <Modal visible={visible} transparent animationType="slide" onRequestClose={handleCancel}>
+        <View style={styles.modalOverlay}>
+          <TouchableOpacity style={styles.modalBackdrop} onPress={handleCancel} />
+          <View
+            style={[
+              styles.modalContent,
+              { backgroundColor: mainBg, paddingBottom: insets.bottom + 14 },
+            ]}
           >
-            <ProductPicker
-              ref={productPickerRef}
-              value={selectedStock?.erpStockCode}
-              productName={selectedStock?.stockName}
-              onChange={handleStockSelect}
-              label="Ürün"
-              required
-              parentVisible={visible}
-              relatedStocksSelection={
-                pendingRelatedStock && onCancelRelatedSelection && onApplyRelatedSelection
-                  ? {
-                      stock: pendingRelatedStock,
-                      onCancel: onCancelRelatedSelection,
-                      onApply: (selectedIds) => {
-                        onApplyRelatedSelection(pendingRelatedStock, selectedIds);
-                        productPickerRef.current?.close();
-                      },
-                    }
-                  : undefined
-              }
-            />
-
-            {isLoadingPrice && (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="small" color={brandColor} />
-                <Text style={[styles.loadingText, { color: mutedColor }]}>
-                  Fiyat bilgisi yükleniyor...
-                </Text>
-              </View>
-            )}
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>
-                Miktar <Text style={{ color: "#ef4444" }}>*</Text>
+            <View style={[styles.modalHeader, { borderBottomColor: borderColor }]}>
+              <View style={[styles.handle, { backgroundColor: borderColor }]} />
+              <Text style={[styles.modalTitle, { color: textColor }]}>
+                {line ? "Satır Düzenle" : "Yeni Satır"}
               </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={quantity}
-                onChangeText={(text) => setQuantity(sanitizeDecimalInput(text))}
-                placeholder="Miktar"
-                placeholderTextColor={mutedColor}
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>
-                Birim Fiyat <Text style={{ color: "#ef4444" }}>*</Text>
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={unitPrice}
-                onChangeText={(text) => setUnitPrice(sanitizeDecimalInput(text))}
-                placeholder="Birim fiyat"
-                placeholderTextColor={mutedColor}
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>İndirim 1 (%) (0-100)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={discountRate1}
-                onChangeText={handleDiscount1Change}
-                onBlur={() => setDiscountRate1(normalizeDiscountOnBlur(discountRate1))}
-                placeholder="0"
-                placeholderTextColor={mutedColor}
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>İndirim 2 (%) (0-100)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={discountRate2}
-                onChangeText={handleDiscount2Change}
-                onBlur={() => setDiscountRate2(normalizeDiscountOnBlur(discountRate2))}
-                placeholder="0"
-                placeholderTextColor={mutedColor}
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>İndirim 3 (%) (0-100)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={discountRate3}
-                onChangeText={handleDiscount3Change}
-                onBlur={() => setDiscountRate3(normalizeDiscountOnBlur(discountRate3))}
-                placeholder="0"
-                placeholderTextColor={mutedColor}
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>KDV Oranı (%)</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={vatRate}
-                onChangeText={(text) => setVatRate(sanitizeDecimalInput(text))}
-                placeholder="18"
-                placeholderTextColor={mutedColor}
-                keyboardType="decimal-pad"
-              />
-            </View>
-
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>
-                {t("quotation.projectCode")}
-              </Text>
-              <TouchableOpacity
-                style={[
-                  styles.pickerButton,
-                  { backgroundColor: inputBg, borderColor: borderColor },
-                ]}
-                onPress={() => setProjectCodeModalVisible(true)}
-              >
-                <Text
-                  style={[styles.pickerText, { color: erpProjectCode ? textColor : mutedColor }]}
-                  numberOfLines={1}
-                >
-                  {erpProjectCode
-                    ? (() => {
-                        const p = projects.find((pr) => pr.projeKod === erpProjectCode);
-                        return p
-                          ? p.projeAciklama
-                            ? `${p.projeKod} - ${p.projeAciklama}`
-                            : p.projeKod
-                          : erpProjectCode;
-                      })()
-                    : t("common.select")}
-                </Text>
+              <TouchableOpacity onPress={handleCancel} style={styles.closeButton}>
+                <Text style={[styles.closeButtonText, { color: textColor }]}>✕</Text>
               </TouchableOpacity>
             </View>
 
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>Açıklama</Text>
-              <TextInput
-                style={[
-                  styles.textArea,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={description}
-                onChangeText={setDescription}
-                placeholder="Satır açıklaması"
-                placeholderTextColor={mutedColor}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
+            <View style={styles.contentWrapper}>
+              <FlatListScrollView
+                style={styles.scrollContent}
+                contentContainerStyle={styles.scrollContentContainer}
+                showsVerticalScrollIndicator={false}
+              >
+                <ProductPicker
+                  ref={productPickerRef}
+                  value={selectedStock?.erpStockCode}
+                  productName={selectedStock?.stockName}
+                  onChange={handleStockSelect}
+                  label="Ürün"
+                  required
+                  parentVisible={visible}
+                  relatedStocksSelection={
+                    pendingRelatedStock &&
+                    onCancelRelatedSelection &&
+                    onApplyRelatedSelection
+                      ? {
+                          stock: pendingRelatedStock,
+                          onCancel: onCancelRelatedSelection,
+                          onApply: (selectedIds) => {
+                            onApplyRelatedSelection(pendingRelatedStock, selectedIds);
+                            productPickerRef.current?.close();
+                          },
+                        }
+                      : undefined
+                  }
+                />
 
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>Profile</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={description1}
-                onChangeText={setDescription1}
-                placeholder="Profile bilgisi"
-                placeholderTextColor={mutedColor}
-              />
-            </View>
+                {isLoadingPrice && (
+                  <View style={styles.loadingContainer}>
+                    <ActivityIndicator size="small" color={brandColor} />
+                    <Text style={[styles.loadingText, { color: mutedColor }]}>
+                      Fiyat bilgisi yükleniyor...
+                    </Text>
+                  </View>
+                )}
 
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>Demir</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={description2}
-                onChangeText={setDescription2}
-                placeholder="Demir bilgisi"
-                placeholderTextColor={mutedColor}
-              />
-            </View>
+                <View style={[styles.formCard, { borderColor, backgroundColor: cardBg }]}>
+                  <View style={styles.rowTwo}>
+                    <View style={styles.fieldHalf}>
+                      <Text style={[styles.label, { color: mutedColor }]}>
+                        Miktar <Text style={{ color: "#ef4444" }}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                        ]}
+                        value={quantity}
+                        onChangeText={(text) => setQuantity(sanitizeDecimalInput(text))}
+                        placeholder="Miktar"
+                        placeholderTextColor={mutedColor}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
 
-            <View style={styles.fieldContainer}>
-              <Text style={[styles.label, { color: mutedColor }]}>Vida</Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  { backgroundColor: inputBg, borderColor: borderColor, color: textColor },
-                ]}
-                value={description3}
-                onChangeText={setDescription3}
-                placeholder="Vida bilgisi"
-                placeholderTextColor={mutedColor}
-              />
-            </View>
-
-            {approvalStatus === 1 && approvalMessage && (
-              <View style={[styles.approvalWarning, { backgroundColor: warningColor + "15", borderColor: warningColor + "30" }]}>
-                <Text style={[styles.approvalWarningText, { color: warningColor }]}>
-                  ⚠️ {approvalMessage}
-                </Text>
-              </View>
-            )}
-
-            <View style={[styles.summaryCard, { backgroundColor: cardBg, borderColor: borderColor }]}>
-              <Text style={[styles.summaryTitle, { color: textColor }]}>{t("quotation.calculationSummary")}</Text>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: mutedColor }]}>Ara Toplam:</Text>
-                <Text style={[styles.summaryValue, { color: textColor }]}>
-                  {currentLine.lineTotal.toFixed(2)}
-                </Text>
-              </View>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: mutedColor }]}>KDV:</Text>
-                <Text style={[styles.summaryValue, { color: textColor }]}>
-                  {currentLine.vatAmount.toFixed(2)}
-                </Text>
-              </View>
-              <View style={[styles.summaryRow, styles.summaryRowTotal, { borderTopColor: borderColor }]}>
-                <Text style={[styles.summaryLabel, { color: textColor, fontWeight: "600" }]}>Genel Toplam:</Text>
-                <Text style={[styles.summaryValue, { color: brandColor, fontWeight: "700" }]}>
-                  {currentLine.lineGrandTotal.toFixed(2)}
-                </Text>
-              </View>
-            </View>
-
-            {displayedRelatedLines.length > 0 && (
-              <View style={[styles.relatedSummaryCard, { backgroundColor: cardBg, borderColor: borderColor }]}>
-                <Text style={[styles.relatedSummaryTitle, { color: textColor }]}>{t("quotation.relatedStocksSummary")}</Text>
-                {displayedRelatedLines.map((rel) => (
-                  <View key={rel.id} style={[styles.relatedSummaryRow, { borderBottomColor: borderColor }]}>
-                    <Text style={[styles.relatedSummaryCode, { color: textColor }]} numberOfLines={1}>{rel.productCode}</Text>
-                    <View style={styles.relatedSummaryGrid}>
-                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discount1")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>% {rel.discountRate1.toFixed(1)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discountAmount1")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>{rel.discountAmount1.toFixed(2)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discount2")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>% {rel.discountRate2.toFixed(1)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discountAmount2")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>{rel.discountAmount2.toFixed(2)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discount3")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>% {rel.discountRate3.toFixed(1)}</Text>
-                      <Text style={[styles.relatedSummaryLabel, { color: mutedColor }]}>{t("quotation.discountAmount3")}:</Text>
-                      <Text style={[styles.relatedSummaryValue, { color: textColor }]}>{rel.discountAmount3.toFixed(2)}</Text>
+                    <View style={styles.fieldHalf}>
+                      <Text style={[styles.label, { color: mutedColor }]}>
+                        Birim Fiyat <Text style={{ color: "#ef4444" }}>*</Text>
+                      </Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                        ]}
+                        value={unitPrice}
+                        onChangeText={(text) => setUnitPrice(sanitizeDecimalInput(text))}
+                        placeholder="Birim fiyat"
+                        placeholderTextColor={mutedColor}
+                        keyboardType="decimal-pad"
+                      />
                     </View>
                   </View>
-                ))}
-              </View>
-            )}
-          </FlatListScrollView>
-          </View>
 
-          <View style={[styles.modalFooter, { borderTopColor: borderColor, backgroundColor: mainBg }]}>
-            <TouchableOpacity
-              style={[styles.cancelButton, { borderColor: borderColor, backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "transparent" }]}
-              onPress={handleCancel}
-            >
-              <Text style={[styles.cancelButtonText, { color: textColor }]}>İptal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
+                  <View style={styles.rowThree}>
+                    <View style={styles.fieldThird}>
+                      <Text style={[styles.label, { color: mutedColor }]}>İnd. 1 (%)</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          styles.compactInput,
+                          { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                        ]}
+                        value={discountRate1}
+                        onChangeText={handleDiscount1Change}
+                        onBlur={() => setDiscountRate1(normalizeDiscountOnBlur(discountRate1))}
+                        placeholder="0"
+                        placeholderTextColor={mutedColor}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+
+                    <View style={styles.fieldThird}>
+                      <Text style={[styles.label, { color: mutedColor }]}>İnd. 2 (%)</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          styles.compactInput,
+                          { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                        ]}
+                        value={discountRate2}
+                        onChangeText={handleDiscount2Change}
+                        onBlur={() => setDiscountRate2(normalizeDiscountOnBlur(discountRate2))}
+                        placeholder="0"
+                        placeholderTextColor={mutedColor}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+
+                    <View style={styles.fieldThird}>
+                      <Text style={[styles.label, { color: mutedColor }]}>İnd. 3 (%)</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          styles.compactInput,
+                          { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                        ]}
+                        value={discountRate3}
+                        onChangeText={handleDiscount3Change}
+                        onBlur={() => setDiscountRate3(normalizeDiscountOnBlur(discountRate3))}
+                        placeholder="0"
+                        placeholderTextColor={mutedColor}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+                  </View>
+
+                  <View style={styles.rowTwo}>
+                    <View style={styles.fieldHalf}>
+                      <Text style={[styles.label, { color: mutedColor }]}>KDV Oranı (%)</Text>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                        ]}
+                        value={vatRate}
+                        onChangeText={(text) => setVatRate(sanitizeDecimalInput(text))}
+                        placeholder="18"
+                        placeholderTextColor={mutedColor}
+                        keyboardType="decimal-pad"
+                      />
+                    </View>
+
+                    <View style={styles.fieldHalf}>
+                      <Text style={[styles.label, { color: mutedColor }]}>
+                        {t("quotation.projectCode")}
+                      </Text>
+                      <TouchableOpacity
+                        activeOpacity={0.82}
+                        style={[
+                          styles.pickerButton,
+                          {
+                            backgroundColor: softPinkBg,
+                            borderColor: softPinkBorder,
+                          },
+                        ]}
+                        onPress={() => setProjectCodeModalVisible(true)}
+                      >
+                        <Text
+                          style={[styles.pickerText, { color: erpProjectCode ? textColor : mutedColor }]}
+                          numberOfLines={1}
+                        >
+                          {erpProjectCode
+                            ? (() => {
+                                const p = projects.find((pr) => pr.projeKod === erpProjectCode);
+                                return p
+                                  ? p.projeAciklama
+                                    ? `${p.projeKod} - ${p.projeAciklama}`
+                                    : p.projeKod
+                                  : erpProjectCode;
+                              })()
+                            : t("common.select")}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
+                  <View style={styles.fieldContainer}>
+                    <Text style={[styles.label, { color: mutedColor }]}>Açıklama</Text>
+                    <TextInput
+                      style={[
+                        styles.textArea,
+                        { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                      ]}
+                      value={description}
+                      onChangeText={setDescription}
+                      placeholder="Satır açıklaması"
+                      placeholderTextColor={mutedColor}
+                      multiline
+                      numberOfLines={3}
+                    />
+                  </View>
+
+                  <View style={[styles.detailCard, { borderColor: softPinkBorder, backgroundColor: softPinkBg }]}>
+                    <Text style={[styles.sectionMiniTitle, { color: textColor }]}>
+                      Ek Detaylar
+                    </Text>
+
+                    <View style={styles.rowThree}>
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Profile</Text>
+                        <TextInput
+                          style={[
+                            styles.input,
+                            styles.compactInput,
+                            { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                          ]}
+                          value={description1}
+                          onChangeText={setDescription1}
+                          placeholder="Profile"
+                          placeholderTextColor={mutedColor}
+                        />
+                      </View>
+
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Demir</Text>
+                        <TextInput
+                          style={[
+                            styles.input,
+                            styles.compactInput,
+                            { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                          ]}
+                          value={description2}
+                          onChangeText={setDescription2}
+                          placeholder="Demir"
+                          placeholderTextColor={mutedColor}
+                        />
+                      </View>
+
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Vida</Text>
+                        <TextInput
+                          style={[
+                            styles.input,
+                            styles.compactInput,
+                            { backgroundColor: inputBg, borderColor: softPinkBorder, color: textColor },
+                          ]}
+                          value={description3}
+                          onChangeText={setDescription3}
+                          placeholder="Vida"
+                          placeholderTextColor={mutedColor}
+                        />
+                      </View>
+                    </View>
+                  </View>
+                </View>
+
+                {approvalStatus === 1 && approvalMessage && (
+                  <View
+                    style={[
+                      styles.approvalWarning,
+                      {
+                        backgroundColor: warningColor + "12",
+                        borderColor: warningColor + "26",
+                      },
+                    ]}
+                  >
+                    <Text style={[styles.approvalWarningText, { color: warningColor }]}>
+                      ⚠️ {approvalMessage}
+                    </Text>
+                  </View>
+                )}
+
+                <View
+                  style={[
+                    styles.summaryCard,
+                    { backgroundColor: cardBg, borderColor: borderColor },
+                  ]}
+                >
+                  <Text style={[styles.summaryTitle, { color: textColor }]}>
+                    {t("quotation.calculationSummary")}
+                  </Text>
+
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: mutedColor }]}>Ara Toplam:</Text>
+                    <Text style={[styles.summaryValue, { color: textColor }]}>
+                      {currentLine.lineTotal.toFixed(2)}
+                    </Text>
+                  </View>
+
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: mutedColor }]}>KDV:</Text>
+                    <Text style={[styles.summaryValue, { color: textColor }]}>
+                      {currentLine.vatAmount.toFixed(2)}
+                    </Text>
+                  </View>
+
+                  <View
+                    style={[
+                      styles.summaryRow,
+                      styles.summaryRowTotal,
+                      { borderTopColor: borderColor },
+                    ]}
+                  >
+                    <Text style={[styles.summaryLabel, { color: textColor, fontWeight: "700" }]}>
+                      Genel Toplam:
+                    </Text>
+                    <Text style={[styles.summaryValue, { color: brandColor, fontWeight: "800" }]}>
+                      {currentLine.lineGrandTotal.toFixed(2)}
+                    </Text>
+                  </View>
+                </View>
+
+                {displayedRelatedLines.length > 0 && (
+                  <View
+                    style={[
+                      styles.relatedSummaryCard,
+                      { backgroundColor: cardBg, borderColor: borderColor },
+                    ]}
+                  >
+                    <Text style={[styles.relatedSummaryTitle, { color: textColor }]}>
+                      {t("quotation.relatedStocksSummary")}
+                    </Text>
+
+                    {displayedRelatedLines.map((rel) => (
+                      <View
+                        key={rel.id}
+                        style={[styles.relatedSummaryRow, { borderBottomColor: borderColor }]}
+                      >
+                        <Text
+                          style={[styles.relatedSummaryCode, { color: textColor }]}
+                          numberOfLines={1}
+                        >
+                          {rel.productCode}
+                        </Text>
+
+                        <View style={styles.relatedSummaryGrid}>
+                          <View style={styles.relatedSummaryItem}>
+                            <Text style={[styles.relatedSummaryItemLabel, { color: mutedColor }]}>
+                              {t("quotation.discount1")}
+                            </Text>
+                            <Text style={[styles.relatedSummaryItemValue, { color: textColor }]}>
+                              % {rel.discountRate1.toFixed(1)}
+                            </Text>
+                          </View>
+
+                          <View style={styles.relatedSummaryItem}>
+                            <Text style={[styles.relatedSummaryItemLabel, { color: mutedColor }]}>
+                              {t("quotation.discountAmount1")}
+                            </Text>
+                            <Text style={[styles.relatedSummaryItemValue, { color: textColor }]}>
+                              {rel.discountAmount1.toFixed(2)}
+                            </Text>
+                          </View>
+
+                          <View style={styles.relatedSummaryItem}>
+                            <Text style={[styles.relatedSummaryItemLabel, { color: mutedColor }]}>
+                              {t("quotation.discount2")}
+                            </Text>
+                            <Text style={[styles.relatedSummaryItemValue, { color: textColor }]}>
+                              % {rel.discountRate2.toFixed(1)}
+                            </Text>
+                          </View>
+
+                          <View style={styles.relatedSummaryItem}>
+                            <Text style={[styles.relatedSummaryItemLabel, { color: mutedColor }]}>
+                              {t("quotation.discountAmount2")}
+                            </Text>
+                            <Text style={[styles.relatedSummaryItemValue, { color: textColor }]}>
+                              {rel.discountAmount2.toFixed(2)}
+                            </Text>
+                          </View>
+
+                          <View style={styles.relatedSummaryItem}>
+                            <Text style={[styles.relatedSummaryItemLabel, { color: mutedColor }]}>
+                              {t("quotation.discount3")}
+                            </Text>
+                            <Text style={[styles.relatedSummaryItemValue, { color: textColor }]}>
+                              % {rel.discountRate3.toFixed(1)}
+                            </Text>
+                          </View>
+
+                          <View style={styles.relatedSummaryItem}>
+                            <Text style={[styles.relatedSummaryItemLabel, { color: mutedColor }]}>
+                              {t("quotation.discountAmount3")}
+                            </Text>
+                            <Text style={[styles.relatedSummaryItemValue, { color: textColor }]}>
+                              {rel.discountAmount3.toFixed(2)}
+                            </Text>
+                          </View>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </FlatListScrollView>
+            </View>
+
+            <View
               style={[
-                styles.saveButton,
-                { backgroundColor: brandColor },
-                !(selectedStock || (line?.productCode && lineToSave.productCode)) && styles.saveButtonDisabled,
+                styles.modalFooter,
+                { borderTopColor: borderColor, backgroundColor: mainBg },
               ]}
-              onPress={handleSave}
-              disabled={!(selectedStock || (line?.productCode && lineToSave.productCode))}
             >
-              <Text style={styles.saveButtonText}>Kaydet</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                activeOpacity={0.82}
+                style={[
+                  styles.cancelButton,
+                  {
+                    borderColor: softPinkBorder,
+                    backgroundColor: softPinkBg,
+                  },
+                ]}
+                onPress={handleCancel}
+              >
+                <Text style={[styles.cancelButtonText, { color: textColor }]}>İptal</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                activeOpacity={0.86}
+                style={[
+                  styles.saveButton,
+                  { backgroundColor: brandColor },
+                  !(selectedStock || (line?.productCode && lineToSave.productCode)) &&
+                    styles.saveButtonDisabled,
+                ]}
+                onPress={handleSave}
+                disabled={!(selectedStock || (line?.productCode && lineToSave.productCode))}
+              >
+                <Text style={styles.saveButtonText}>Kaydet</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
 
-    <PickerModal
-      visible={projectCodeModalVisible}
-      options={projects.map((p) => ({
-        id: p.projeKod,
-        name: p.projeAciklama ? `${p.projeKod} - ${p.projeAciklama}` : p.projeKod,
-        code: p.projeKod,
-      }))}
-      selectedValue={erpProjectCode ?? undefined}
-      onSelect={(option) => {
-        setErpProjectCode((option.code ?? option.id) as string ?? null);
-        setProjectCodeModalVisible(false);
-      }}
-      onClose={() => setProjectCodeModalVisible(false)}
-      title={t("quotation.projectCode")}
-      searchPlaceholder={t("quotation.projectCodeSearch")}
-    />
-  </>
+      <PickerModal
+        visible={projectCodeModalVisible}
+        options={projects.map((p) => ({
+          id: p.projeKod,
+          name: p.projeAciklama ? `${p.projeKod} - ${p.projeAciklama}` : p.projeKod,
+          code: p.projeKod,
+        }))}
+        selectedValue={erpProjectCode ?? undefined}
+        onSelect={(option) => {
+          setErpProjectCode(((option.code ?? option.id) as string) ?? null);
+          setProjectCodeModalVisible(false);
+        }}
+        onClose={() => setProjectCodeModalVisible(false)}
+        title={t("quotation.projectCode")}
+        searchPlaceholder={t("quotation.projectCodeSearch")}
+      />
+    </>
   );
 }
 
@@ -810,7 +1058,7 @@ const styles = StyleSheet.create({
   },
   modalBackdrop: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.6)", 
+    backgroundColor: "rgba(0, 0, 0, 0.58)",
   },
   modalContent: {
     height: "92%",
@@ -828,72 +1076,99 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     paddingHorizontal: 20,
     paddingTop: 14,
-    paddingBottom: 16,
+    paddingBottom: 14,
     borderBottomWidth: 1,
   },
- handle: {
+  handle: {
     position: "absolute",
     top: 10,
     left: "50%",
-    transform: [{ translateX: -10 }], // Ekranın tam ortasına çiviler (genişliğin yarısı kadar geri çeker)
+    transform: [{ translateX: -22 }],
     width: 44,
     height: 5,
     borderRadius: 3,
     opacity: 0.5,
   },
   modalTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 17,
+    fontWeight: "800",
     flex: 1,
     textAlign: "center",
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   closeButton: {
     padding: 6,
   },
   closeButtonText: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "300",
-    opacity: 0.7,
+    opacity: 0.75,
   },
   scrollContent: {
     flex: 1,
   },
   scrollContentContainer: {
     flexGrow: 1,
-    padding: 20,
-    paddingBottom: 24,
+    padding: 18,
+    paddingBottom: 22,
+    gap: 14,
+  },
+  formCard: {
+    gap: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderRadius: 18,
   },
   loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    paddingVertical: 12,
-    marginBottom: 16,
+    paddingVertical: 10,
+    marginBottom: 2,
   },
   loadingText: {
     marginLeft: 8,
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
   },
   fieldContainer: {
-    marginBottom: 16,
+    marginBottom: 2,
+  },
+  rowTwo: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  rowThree: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  fieldHalf: {
+    flex: 1,
+  },
+  fieldThird: {
+    flex: 1,
   },
   label: {
-    fontSize: 13,
-    fontWeight: "600",
-    marginBottom: 8,
+    fontSize: 11,
+    fontWeight: "700",
+    marginBottom: 7,
     textTransform: "uppercase",
-    letterSpacing: 0.5,
-    marginLeft: 4,
+    letterSpacing: 0.45,
+    marginLeft: 3,
   },
   input: {
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
     fontWeight: "500",
+    minHeight: 46,
+  },
+  compactInput: {
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+    minHeight: 44,
   },
   inputReadOnly: {
     opacity: 0.6,
@@ -901,130 +1176,153 @@ const styles = StyleSheet.create({
   pickerButton: {
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    minHeight: 52,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    minHeight: 46,
     justifyContent: "center",
   },
   pickerText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "500",
   },
   textArea: {
     borderWidth: 1,
     borderRadius: 14,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 15,
-    minHeight: 100,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    minHeight: 88,
     textAlignVertical: "top",
   },
-  approvalWarning: {
-    padding: 14,
-    borderRadius: 12,
-    borderWidth: 1,
-    marginBottom: 20,
-  },
-  approvalWarningText: {
-    fontSize: 13,
-    lineHeight: 20,
-    fontWeight: "600",
-  },
-  summaryCard: {
-    padding: 20,
+  detailCard: {
+    marginTop: 2,
+    padding: 12,
     borderRadius: 16,
     borderWidth: 1,
-    marginTop: 8,
+    gap: 10,
+  },
+  sectionMiniTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  approvalWarning: {
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  approvalWarningText: {
+    fontSize: 12,
+    lineHeight: 18,
+    fontWeight: "700",
+  },
+  summaryCard: {
+    padding: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    marginTop: 2,
   },
   summaryTitle: {
-    fontSize: 16,
-    fontWeight: "700",
-    marginBottom: 16,
-    letterSpacing: 0.5,
+    fontSize: 15,
+    fontWeight: "800",
+    marginBottom: 14,
+    letterSpacing: 0.25,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 10,
+    marginBottom: 9,
   },
   summaryRowTotal: {
-    marginTop: 12,
-    paddingTop: 12,
+    marginTop: 10,
+    paddingTop: 10,
     borderTopWidth: 1,
   },
   summaryLabel: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "500",
   },
   summaryValue: {
-    fontSize: 15,
-    fontWeight: "600",
+    fontSize: 14,
+    fontWeight: "700",
   },
   relatedSummaryCard: {
-    padding: 20,
+    padding: 16,
     borderRadius: 16,
     borderWidth: 1,
-    marginTop: 16,
+    marginTop: 2,
   },
   relatedSummaryTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    marginBottom: 14,
+    fontSize: 14,
+    fontWeight: "800",
+    marginBottom: 12,
   },
   relatedSummaryRow: {
-    paddingVertical: 14,
+    paddingVertical: 12,
     borderBottomWidth: 1,
   },
   relatedSummaryCode: {
-    fontSize: 14,
-    fontWeight: "700",
+    fontSize: 13,
+    fontWeight: "800",
     marginBottom: 10,
   },
   relatedSummaryGrid: {
     flexDirection: "row",
     flexWrap: "wrap",
-    gap: 10,
+    gap: 8,
+    justifyContent: "space-between",
   },
-  relatedSummaryLabel: {
-    fontSize: 13,
-    width: "35%",
+  relatedSummaryItem: {
+    width: "48%",
+    padding: 9,
+    borderRadius: 10,
+    backgroundColor: "rgba(148,163,184,0.05)",
   },
-  relatedSummaryValue: {
-    fontSize: 13,
-    fontWeight: "600",
-    width: "60%",
+  relatedSummaryItemLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  relatedSummaryItemValue: {
+    fontSize: 12,
+    fontWeight: "700",
   },
   modalFooter: {
     flexDirection: "row",
-    paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 24, 
+    paddingHorizontal: 18,
+    paddingTop: 14,
+    paddingBottom: 20,
     borderTopWidth: 1,
-    gap: 12,
+    gap: 10,
   },
   cancelButton: {
     flex: 1,
     borderWidth: 1,
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: "center",
   },
   cancelButtonText: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
   saveButton: {
     flex: 1,
     borderRadius: 14,
-    paddingVertical: 16,
+    paddingVertical: 14,
     alignItems: "center",
+    shadowColor: "#db2777",
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 2,
   },
   saveButtonDisabled: {
     opacity: 0.5,
   },
   saveButtonText: {
     color: "#FFFFFF",
-    fontSize: 15,
-    fontWeight: "700",
+    fontSize: 14,
+    fontWeight: "800",
   },
 });
