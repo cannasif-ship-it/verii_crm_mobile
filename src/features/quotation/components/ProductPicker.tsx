@@ -3,7 +3,6 @@ import React, {
   useState,
   useMemo,
   useEffect,
-  useRef,
   memo,
   useImperativeHandle,
   forwardRef,
@@ -31,6 +30,7 @@ import { PickerModal } from "./PickerModal";
 import {
   useStocks,
 } from "../../stocks/hooks";
+import { buildAdvancedStockFilters } from "../../stocks/utils/buildAdvancedStockFilters";
 import type { StockGetDto, StockRelationDto } from "../../stocks/types";
 
 const STOCK_FILTER_COLUMNS = [
@@ -90,96 +90,6 @@ function createFilterRow(column: StockFilterColumnValue = "StockName"): Advanced
     operator: getDefaultOperatorForColumn(column),
     value: "",
   };
-}
-
-function getStockColumnValue(stock: StockGetDto, column: StockFilterColumnValue): string {
-  switch (column) {
-    case "Id":
-      return String(stock.id ?? "");
-    case "ErpStockCode":
-      return stock.erpStockCode ?? "";
-    case "StockName":
-      return stock.stockName ?? "";
-    case "GrupKodu":
-      return stock.grupKodu ?? "";
-    case "GrupAdi":
-      return stock.grupAdi ?? "";
-    case "Kod1":
-      return stock.kod1 ?? "";
-    case "Kod1Adi":
-      return stock.kod1Adi ?? "";
-    case "Kod2":
-      return stock.kod2 ?? "";
-    case "Kod2Adi":
-      return stock.kod2Adi ?? "";
-    case "Kod3":
-      return stock.kod3 ?? "";
-    case "Kod3Adi":
-      return stock.kod3Adi ?? "";
-    case "Kod4":
-      return stock.kod4 ?? "";
-    case "Kod4Adi":
-      return stock.kod4Adi ?? "";
-    case "Kod5":
-      return stock.kod5 ?? "";
-    case "Kod5Adi":
-      return stock.kod5Adi ?? "";
-    case "UreticiKodu":
-      return stock.ureticiKodu ?? "";
-    case "unit":
-      return stock.unit ?? "";
-    case "BranchCode":
-      return String(stock.branchCode ?? "");
-    default:
-      return "";
-  }
-}
-
-function applyAdvancedFilterRowsLocally(stocks: StockGetDto[], rows: AdvancedFilterRow[]): StockGetDto[] {
-  const validRows = rows.filter((row) => row.value.trim().length > 0);
-  if (validRows.length === 0) return stocks;
-
-  return stocks.filter((stock) =>
-    validRows.every((row) => {
-      const columnValue = normalizeSearchText(getStockColumnValue(stock, row.column));
-      const filterValue = normalizeSearchText(row.value);
-
-      if (!columnValue || !filterValue) return false;
-
-      if (getColumnConfig(row.column).type === "number") {
-        const stockNumber = Number(columnValue);
-        const filterNumber = Number(filterValue);
-        if (!Number.isFinite(stockNumber) || !Number.isFinite(filterNumber)) return false;
-
-        switch (row.operator) {
-          case "gt":
-            return stockNumber > filterNumber;
-          case "gte":
-            return stockNumber >= filterNumber;
-          case "lt":
-            return stockNumber < filterNumber;
-          case "lte":
-            return stockNumber <= filterNumber;
-          default:
-            return stockNumber === filterNumber;
-        }
-      }
-
-      switch (row.operator) {
-        case "startsWith":
-          return columnValue.startsWith(filterValue);
-        case "endsWith":
-          return columnValue.endsWith(filterValue);
-        case "eq":
-          return columnValue === filterValue;
-        case "contains":
-        default: {
-          const tokens = filterValue.split(/\s+/).filter(Boolean);
-          return tokens.some((token) => columnValue.includes(token));
-        }
-      }
-    })
-  );
 }
 
 export interface ProductPickerRef {
@@ -783,7 +693,6 @@ function ProductPickerInner(
   const [appliedFilterRows, setAppliedFilterRows] = useState<AdvancedFilterRow[]>([]);
   const [columnPickerRowId, setColumnPickerRowId] = useState<string | null>(null);
   const [operatorPickerRowId, setOperatorPickerRowId] = useState<string | null>(null);
-  const endReachedLockRef = useRef(false);
 
   const relatedMandatory = useMemo(
     () => (relatedStocksSelection?.stock.parentRelations ?? []).filter((r) => r.isMandatory),
@@ -830,10 +739,7 @@ function ProductPickerInner(
       }))
       .filter((row) => row.value.length > 0);
 
-    return {
-      filters: entries,
-      filterLogic: entries.length > 0 ? "and" : undefined,
-    } as const;
+    return buildAdvancedStockFilters(entries);
   }, [appliedFilterRows]);
 
   const hasAdvancedFilters = apiFilters.length > 0;
@@ -857,18 +763,12 @@ function ProductPickerInner(
     }
 
     const rawStocks = data?.pages.flatMap((page) => page.items) || [];
-    const advancedFilteredStocks = hasAdvancedFilters
-      ? applyAdvancedFilterRowsLocally(rawStocks, appliedFilterRows)
-      : rawStocks;
-
     if (debouncedSearchText.trim().length >= 2) {
-      return filterAndRankStocksLocal(advancedFilteredStocks, debouncedSearchText);
+      return filterAndRankStocksLocal(rawStocks, debouncedSearchText);
     }
 
-    return hasAdvancedFilters
-      ? filterAndRankStocksLocal(advancedFilteredStocks, debouncedSearchText)
-      : advancedFilteredStocks;
-  }, [appliedFilterRows, data, debouncedSearchText, hasAdvancedFilters, shouldHideStaleResults]);
+    return hasAdvancedFilters ? filterAndRankStocksLocal(rawStocks, debouncedSearchText) : rawStocks;
+  }, [data, debouncedSearchText, hasAdvancedFilters, shouldHideStaleResults]);
 
   const handleOpen = useCallback(() => {
     if (!disabled) {
@@ -900,16 +800,10 @@ function ProductPickerInner(
   }, [onChange]);
 
   const handleEndReached = useCallback(() => {
-    if (endReachedLockRef.current) return;
     if (hasNextPage && !isFetchingNextPage) {
-      endReachedLockRef.current = true;
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
-
-  useEffect(() => {
-    endReachedLockRef.current = false;
-  }, [data?.pages.length, searchText, debouncedSearchText, hasAdvancedFilters]);
 
   const handleShowRelationDetail = useCallback((stock: StockGetDto, relations: StockRelationDto[]) => {
     setRelationDetailStock(stock);
