@@ -81,6 +81,9 @@
     "voiceSearchSupportInfo": "Sprachsuche: Funktioniert, wenn der Webbrowser dies unterstützt. Für Mobilgeräte: npx expo install expo-speech-recognition",
     "all": "Alle",  
     "filter": "Filtern",
+    "logic": "Filterlogik",
+    "and": "UND",
+    "or": "ODER",
     "newest": "Neueste",
     "oldest": "Älteste"
   },

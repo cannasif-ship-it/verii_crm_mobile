@@ -86,6 +86,9 @@
     "voiceSearchSupportInfo": "Sesli arama: Web'de tarayıcı destekliyorsa çalışır. Mobil için: npx expo install expo-speech-recognition",
     "all": "Tümü",
     "filter": "Filtrele",
+    "logic": "Filtre Mantığı",
+    "and": "VE",
+    "or": "VEYA",
     "newest": "En Yeniler", 
     "oldest": "En Eskiler"
   },

@@ -85,6 +85,9 @@
     "voiceSearchSupportInfo": "Voice search: Works if the web browser supports it. For mobile: npx expo install expo-speech-recognition",
     "all": "All",
     "filter": "Filter",
+    "logic": "Filter Logic",
+    "and": "AND",
+    "or": "OR",
     "newest": "Newest",
     "oldest": "Oldest"
   },
