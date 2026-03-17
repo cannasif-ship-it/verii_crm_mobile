@@ -252,6 +252,7 @@ function ProductPickerInner(
     filters: apiFilters,
     filterLogic: appliedFilterLogic,
     search: debouncedSearchText || undefined,
+    enabled: isOpen && parentVisible,
   });
 
   const stocks = useMemo(() => {
