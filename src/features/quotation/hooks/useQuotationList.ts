@@ -6,23 +6,34 @@ const DEFAULT_PAGE_SIZE = 20;
 
 interface UseQuotationListParams {
   filters?: PagedFilter[];
+  search?: string;
+  filterLogic?: "and" | "or";
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   pageSize?: number;
 }
 
 export function useQuotationList(params: UseQuotationListParams = {}) {
-  const { filters, sortBy = "Id", sortDirection = "desc", pageSize = DEFAULT_PAGE_SIZE } = params;
+  const {
+    filters,
+    search,
+    filterLogic,
+    sortBy = "Id",
+    sortDirection = "desc",
+    pageSize = DEFAULT_PAGE_SIZE,
+  } = params;
 
   return useInfiniteQuery<PagedResponse<QuotationGetDto>, Error>({
-    queryKey: ["quotation", "quotations", { filters, sortBy, sortDirection }],
+    queryKey: ["quotation", "quotations", { filters, search, filterLogic, sortBy, sortDirection }],
     queryFn: ({ pageParam }) =>
       quotationApi.getList({
         pageNumber: pageParam as number,
         pageSize,
+        search,
         sortBy,
         sortDirection,
         filters,
+        filterLogic,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.pageNumber + 1 : undefined),

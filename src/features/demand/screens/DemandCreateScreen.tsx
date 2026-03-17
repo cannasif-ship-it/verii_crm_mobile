@@ -286,12 +286,12 @@ export function DemandCreateScreen(): React.ReactElement {
         return;
       }
       Alert.alert(
-        "Kur Değişikliği",
-        "Para birimi değişikliği tüm satırları etkileyecektir. Devam etmek istiyor musunuz?",
+        t("demand.currencyChangeTitle"),
+        t("demand.currencyChangeMessage"),
         [
-          { text: "Vazgeç", style: "cancel", onPress: () => setCurrencyModalVisible(false) },
+          { text: t("common.cancel"), style: "cancel", onPress: () => setCurrencyModalVisible(false) },
           {
-            text: "Onayla",
+            text: t("common.confirm"),
             onPress: () => {
               applyCurrencyChange(newCurrency);
               setCurrencyModalVisible(false);
@@ -300,7 +300,7 @@ export function DemandCreateScreen(): React.ReactElement {
         ]
       );
     },
-    [lines.length, setValue, applyCurrencyChange]
+    [lines.length, setValue, applyCurrencyChange, t]
   );
 
   const handleAddLine = useCallback(() => {

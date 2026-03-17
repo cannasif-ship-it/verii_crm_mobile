@@ -28,9 +28,6 @@ import { useUIStore } from "../../../store/ui";
 import { VoiceSearchButton } from "./VoiceSearchButton";
 import {
   useStocks,
-  useStock,
-  useStockRelations,
-  useStockRelationsAsRelated,
 } from "../../stocks/hooks";
 import type { StockGetDto, StockRelationDto } from "../../stocks/types";
 
@@ -54,6 +51,8 @@ interface ProductPickerProps {
   parentVisible?: boolean;
   relatedStocksSelection?: RelatedStocksSelectionProps | null;
 }
+
+const SEARCH_DEBOUNCE_MS = 700;
 
 function normalizeSearchText(value: string): string {
   return (value || "")
@@ -459,13 +458,11 @@ function StockListItem({
   isSelected,
   onSelect,
   onShowRelationDetail,
-  modalOpen,
 }: {
   item: StockGetDto;
   isSelected: boolean;
   onSelect: () => void;
   onShowRelationDetail: (stock: StockGetDto, relations: StockRelationDto[]) => void;
-  modalOpen: boolean;
 }): React.ReactElement {
   const { t } = useTranslation();
   const { themeMode } = useUIStore();
@@ -477,23 +474,7 @@ function StockListItem({
   const metaRows = useMemo(() => getStockMetaRows(item, t), [item, t]);
   const balance = formatStockBalance(item);
 
-  const { data: stockDetail } = useStock(modalOpen ? item.id : undefined);
-  const { data: relationsData } = useStockRelations({
-    stockId: modalOpen ? item.id : undefined,
-  });
-  const { data: relationsAsRelatedData } = useStockRelationsAsRelated(modalOpen ? item.id : undefined);
-
-  const relationsList = useMemo((): StockRelationDto[] => {
-    if (stockDetail?.parentRelations && stockDetail.parentRelations.length > 0) {
-      return stockDetail.parentRelations;
-    }
-
-    const asParent = relationsData?.pages?.[0]?.items;
-    if (Array.isArray(asParent) && asParent.length > 0) return asParent;
-
-    const asRelated = relationsAsRelatedData?.items;
-    return Array.isArray(asRelated) ? asRelated : [];
-  }, [stockDetail?.parentRelations, relationsData?.pages, relationsAsRelatedData?.items]);
+  const relationsList = item.parentRelations ?? [];
 
   const relationCount = relationsList.length;
   const showBadge = relationCount > 0;
@@ -606,6 +587,7 @@ function ProductPickerInner(
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearchText, setDebouncedSearchText] = useState("");
   const [relationDetailStock, setRelationDetailStock] = useState<StockGetDto | null>(null);
   const [relationDetailVisible, setRelationDetailVisible] = useState(false);
   const [relationDetailData, setRelationDetailData] = useState<StockRelationDto[]>([]);
@@ -651,6 +633,8 @@ function ProductPickerInner(
   const [appliedCode5NameFilter, setAppliedCode5NameFilter] = useState("");
   const [appliedManufacturerCodeFilter, setAppliedManufacturerCodeFilter] = useState("");
   const [appliedBranchCodeFilter, setAppliedBranchCodeFilter] = useState("");
+  const [tempFilterLogic, setTempFilterLogic] = useState<"and" | "or">("and");
+  const [appliedFilterLogic, setAppliedFilterLogic] = useState<"and" | "or">("and");
 
   const relatedMandatory = useMemo(
     () => (relatedStocksSelection?.stock.parentRelations ?? []).filter((r) => r.isMandatory),
@@ -668,16 +652,25 @@ function ProductPickerInner(
   }, [relatedStocksSelection?.stock?.id, relatedMandatory]);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchText(searchText.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timeout);
+  }, [searchText]);
+
+  useEffect(() => {
     if (!parentVisible) {
       setIsOpen(false);
       setSearchText("");
+      setDebouncedSearchText("");
       setRelationDetailVisible(false);
       setRelationDetailStock(null);
       setRelationDetailData([]);
+      setTempFilterLogic("and");
+      setAppliedFilterLogic("and");
     }
   }, [parentVisible]);
-
-  const normalizedQuery = useMemo(() => normalizeSearchText(searchText), [searchText]);
 
   const apiFilters = useMemo(() => {
     const filters: Array<{ column: string; operator: string; value: string }> = [];
@@ -762,14 +755,16 @@ function ProductPickerInner(
   const hasAdvancedFilters = apiFilters.length > 0;
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks(
-    { filters: apiFilters },
-    hasAdvancedFilters ? undefined : normalizedQuery
+    {
+      filters: apiFilters,
+      filterLogic: appliedFilterLogic,
+      search: debouncedSearchText || undefined,
+    }
   );
 
   const stocks = useMemo(() => {
-    const rawStocks = data?.pages.flatMap((page) => page.items) || [];
-    return hasAdvancedFilters ? filterAndRankStocksLocal(rawStocks, searchText) : rawStocks;
-  }, [data, hasAdvancedFilters, searchText]);
+    return data?.pages.flatMap((page) => page.items) || [];
+  }, [data]);
 
   const handleOpen = useCallback(() => {
     if (!disabled) {
@@ -917,6 +912,7 @@ function ProductPickerInner(
     setAppliedManufacturerCodeFilter(tempManufacturerCodeFilter);
     setAppliedBranchCodeFilter(tempBranchCodeFilter);
     setAppliedUnitFilter(tempUnitFilter);
+    setAppliedFilterLogic(tempFilterLogic);
     setIsFilterModalVisible(false);
   }, [
     tempBranchCodeFilter,
@@ -936,6 +932,7 @@ function ProductPickerInner(
     tempIdFilter,
     tempManufacturerCodeFilter,
     tempNameFilter,
+    tempFilterLogic,
     tempUnitFilter,
   ]);
 
@@ -977,6 +974,8 @@ function ProductPickerInner(
     setAppliedManufacturerCodeFilter("");
     setAppliedBranchCodeFilter("");
     setAppliedUnitFilter("");
+    setTempFilterLogic("and");
+    setAppliedFilterLogic("and");
     setIsFilterModalVisible(false);
   }, []);
 
@@ -996,10 +995,9 @@ function ProductPickerInner(
         isSelected={value === item.erpStockCode}
         onSelect={() => handleSelect(item)}
         onShowRelationDetail={handleShowRelationDetail}
-        modalOpen={isOpen}
       />
     ),
-    [value, handleSelect, handleShowRelationDetail, isOpen]
+    [value, handleSelect, handleShowRelationDetail]
   );
 
   return (
@@ -1436,6 +1434,40 @@ function ProductPickerInner(
                 showsVerticalScrollIndicator={false}
               >
                 <View style={styles.filterFields}>
+                  <View style={styles.logicRow}>
+                    <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>
+                      {t("common.logic")}
+                    </Text>
+                    <View style={styles.logicButtons}>
+                      <TouchableOpacity
+                        style={[
+                          styles.logicButton,
+                          { borderColor },
+                          tempFilterLogic === "and" && { backgroundColor: brandColor, borderColor: brandColor },
+                        ]}
+                        onPress={() => setTempFilterLogic("and")}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={[styles.logicButtonText, { color: tempFilterLogic === "and" ? "#fff" : textColor }]}>
+                          {t("common.and")}
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.logicButton,
+                          { borderColor },
+                          tempFilterLogic === "or" && { backgroundColor: brandColor, borderColor: brandColor },
+                        ]}
+                        onPress={() => setTempFilterLogic("or")}
+                        activeOpacity={0.85}
+                      >
+                        <Text style={[styles.logicButtonText, { color: tempFilterLogic === "or" ? "#fff" : textColor }]}>
+                          {t("common.or")}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+
                   <View style={styles.filterFieldRow}>
                     <View style={styles.filterField}>
                       <Text style={[styles.filterFieldLabel, { color: mutedColor }]}>
@@ -1896,6 +1928,23 @@ const styles = StyleSheet.create({
   filterFields: {
     padding: 18,
     gap: 14,
+  },
+  logicRow: {
+    gap: 8,
+  },
+  logicButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  logicButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  logicButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
   },
   filterFieldRow: {
     flexDirection: "row",

@@ -78,11 +78,17 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
   if (params.pageSize) {
     queryParams.pageSize = params.pageSize;
   }
+  if (params.search) {
+    queryParams.search = params.search;
+  }
   if (params.sortBy) {
     queryParams.sortBy = params.sortBy;
   }
   if (params.sortDirection) {
     queryParams.sortDirection = params.sortDirection;
+  }
+  if (params.filterLogic) {
+    queryParams.filterLogic = params.filterLogic;
   }
   if (params.filters && params.filters.length > 0) {
     queryParams.filters = JSON.stringify(params.filters);
@@ -639,4 +645,3 @@ export const quotationApi = {
     return response.data;
   },
 };
-

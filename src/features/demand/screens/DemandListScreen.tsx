@@ -14,11 +14,11 @@ import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ScreenHeader } from "../../../components/navigation";
+import { PagedFlatList } from "../../../components/paged";
 import { useUIStore } from "../../../store/ui";
 import { useDemandList, useCreateRevisionOfDemand } from "../hooks";
 import { DemandRow } from "../components/DemandRow";
-import { SearchInput } from "../../customer/components";
-import type { DemandGetDto, PagedFilter } from "../types";
+import type { DemandGetDto } from "../types";
 import { CustomerMailComposerModal } from "../../integration";
 // Tasarım bütünlüğü için ikon
 import { Add01Icon } from "hugeicons-react-native";
@@ -62,20 +62,6 @@ export function DemandListScreen(): React.ReactElement {
     return () => clearTimeout(handler);
   }, [searchTerm]);
 
-  const filters: PagedFilter[] | undefined = useMemo(() => {
-    if (debouncedQuery.trim().length >= 2) {
-      return [
-        { column: "OfferNo", operator: "contains", value: debouncedQuery.trim() },
-        {
-          column: "PotentialCustomerName",
-          operator: "contains",
-          value: debouncedQuery.trim(),
-        },
-      ];
-    }
-    return undefined;
-  }, [debouncedQuery]);
-
   const {
     data,
     isLoading,
@@ -87,16 +73,12 @@ export function DemandListScreen(): React.ReactElement {
     hasNextPage,
     isFetchingNextPage,
   } = useDemandList({
-    filters,
+    search: debouncedQuery.trim().length >= 2 ? debouncedQuery.trim() : undefined,
     sortBy,
     sortDirection,
   });
 
   const createRevisionMutation = useCreateRevisionOfDemand();
-
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
 
   const handleRowClick = useCallback(
     (id: number) => {
@@ -224,59 +206,37 @@ export function DemandListScreen(): React.ReactElement {
       <ScreenHeader title={t("demand.list")} showBackButton />
 
       <View style={styles.listContainer}>
-        
-        {/* CONTROLS AREA (Header Altı) */}
-        <View style={[styles.controlsArea, { backgroundColor: theme.headerBg }]}>
-             {/* Arama Inputu */}
-             <View style={{ flex: 1, marginRight: 10 }}>
-                <SearchInput
-                    value={searchTerm}
-                    onSearch={setSearchTerm}
-                    placeholder={t("demand.searchPlaceholder")}
-                />
-             </View>
-
-             {/* Yeni Ekle Butonu */}
-             <View style={[styles.actionBtnContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : '#F1F5F9' }]}>
-                <TouchableWithoutFeedback onPress={handleCreatePress}>
-                    <View style={[styles.iconBtn, { backgroundColor: theme.activeSwitch }]}>
-                         <Add01Icon size={20} color="#FFF" variant="stroke" />
-                    </View>
-                </TouchableWithoutFeedback>
-             </View>
-        </View>
-
-        {/* LOADING & LIST */}
-        {isLoading && !data ? (
-           <View style={styles.center}>
-             <ActivityIndicator size="large" color={theme.primary} />
-           </View>
-        ) : (
-          <FlatList
-            data={demands}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={{
-                paddingHorizontal: PADDING,
-                paddingTop: 12,
-                paddingBottom: insets.bottom + 20,
-                gap: GAP, 
-            }}
-            showsVerticalScrollIndicator={false}
-            refreshControl={
-              <View> 
-                 {/* CustomRefreshControl logic'i buraya entegre edilebilir veya standart kullanılabilir */}
-                 {/* Basitlik için standart RefreshControl behavior'u üst komponentten geliyor gibi davranıyoruz */}
-              </View>
-            }
-            refreshing={isRefetching}
-            onRefresh={handleRefresh}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            ListEmptyComponent={renderEmpty}
-            ListFooterComponent={renderFooter}
-          />
-        )}
+        <PagedFlatList
+          data={demands}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          searchValue={searchTerm}
+          onSearchChange={setSearchTerm}
+          searchPlaceholder={t("demand.searchPlaceholder")}
+          toolbarActions={
+            <View style={[styles.actionBtnContainer, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9" }]}>
+              <TouchableWithoutFeedback onPress={handleCreatePress}>
+                <View style={[styles.iconBtn, { backgroundColor: theme.activeSwitch }]}>
+                  <Add01Icon size={20} color="#FFF" variant="stroke" />
+                </View>
+              </TouchableWithoutFeedback>
+            </View>
+          }
+          isLoading={Boolean(isLoading && !data)}
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          isFetchingNextPage={isFetchingNextPage}
+          contentContainerStyle={{
+            paddingHorizontal: PADDING,
+            paddingTop: 12,
+            paddingBottom: insets.bottom + 20,
+            gap: GAP,
+          }}
+          emptyComponent={renderEmpty()}
+        />
       </View>
 
       <CustomerMailComposerModal

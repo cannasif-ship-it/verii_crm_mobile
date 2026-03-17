@@ -379,6 +379,78 @@ const gradientColors = isDark
     if (notesData) setNotes(notesFromDto(notesData as Record<string, string | null | undefined>));
   }, [notesData]);
 
+  const applyCurrencyChange = useCallback(
+    (newCurrency: string) => {
+      const oldCurrency = watchedCurrency || "";
+      if (!oldCurrency || oldCurrency === newCurrency) {
+        setValue("quotation.currency", newCurrency);
+        return;
+      }
+
+      const oldRate = findExchangeRateByCurrency(
+        oldCurrency,
+        exchangeRates,
+        erpRatesForQuotation,
+        currencyOptions
+      );
+      const newRate = findExchangeRateByCurrency(
+        newCurrency,
+        exchangeRates,
+        erpRatesForQuotation,
+        currencyOptions
+      );
+
+      if (oldRate == null || newRate == null || newRate <= 0) {
+        setValue("quotation.currency", newCurrency);
+        setLines((prev) => prev);
+        return;
+      }
+
+      const conversionRatio = oldRate / newRate;
+      setLines((prev) =>
+        prev.map((line) => {
+          const updated = {
+            ...line,
+            unitPrice: line.unitPrice * conversionRatio,
+          };
+          return calculateLineTotals(updated);
+        })
+      );
+      setValue("quotation.currency", newCurrency);
+    },
+    [watchedCurrency, exchangeRates, erpRatesForQuotation, currencyOptions, setValue]
+  );
+
+  const handleCurrencySelect = useCallback(
+    (newCurrency: string) => {
+      if (lines.length === 0) {
+        setValue("quotation.currency", newCurrency);
+        setCurrencyModalVisible(false);
+        return;
+      }
+
+      Alert.alert(
+        t("quotation.currencyChangeTitle"),
+        t("quotation.currencyChangeMessage"),
+        [
+          {
+            text: t("common.cancel"),
+            style: "cancel",
+            onPress: () => setCurrencyModalVisible(false),
+          },
+          {
+            text: t("common.confirm"),
+            onPress: () => {
+              applyCurrencyChange(newCurrency);
+              setCurrencyModalVisible(false);
+            },
+          },
+        ]
+      );
+    },
+    [applyCurrencyChange, lines.length, setValue, t]
+  );
+
   const handleSaveNotes = useCallback(
     (savedNotes: string[]) => {
       if (!quotationId) return;
@@ -1642,10 +1714,7 @@ const gradientColors = isDark
           visible={currencyModalVisible}
           options={currencyOptions?.map((c) => ({ id: c.code, name: c.dovizIsmi ?? c.code, code: c.code })) ?? []}
           selectedValue={watch("quotation.currency")}
-          onSelect={(o) => {
-            setValue("quotation.currency", o.id as string);
-            setCurrencyModalVisible(false);
-          }}
+          onSelect={(o) => handleCurrencySelect(o.id as string)}
           onClose={() => setCurrencyModalVisible(false)}
           title={t("quotation.selectCurrency")}
           searchPlaceholder={t("quotation.searchCurrency")}

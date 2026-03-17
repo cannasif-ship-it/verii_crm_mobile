@@ -318,6 +318,78 @@ export function DemandDetailScreen(): React.ReactElement {
     [setValue]
   );
 
+  const applyCurrencyChange = useCallback(
+    (newCurrency: string) => {
+      const oldCurrency = watchedCurrency || "";
+      if (!oldCurrency || oldCurrency === newCurrency) {
+        setValue("demand.currency", newCurrency);
+        return;
+      }
+
+      const oldRate = findExchangeRateByCurrency(
+        oldCurrency,
+        exchangeRates,
+        erpRatesForDemand,
+        currencyOptions
+      );
+      const newRate = findExchangeRateByCurrency(
+        newCurrency,
+        exchangeRates,
+        erpRatesForDemand,
+        currencyOptions
+      );
+
+      if (oldRate == null || newRate == null || newRate <= 0) {
+        setValue("demand.currency", newCurrency);
+        setLines((prev) => prev);
+        return;
+      }
+
+      const conversionRatio = oldRate / newRate;
+      setLines((prev) =>
+        prev.map((line) => {
+          const updated = {
+            ...line,
+            unitPrice: line.unitPrice * conversionRatio,
+          };
+          return calculateLineTotals(updated);
+        })
+      );
+      setValue("demand.currency", newCurrency);
+    },
+    [watchedCurrency, exchangeRates, erpRatesForDemand, currencyOptions, setValue]
+  );
+
+  const handleCurrencySelect = useCallback(
+    (newCurrency: string) => {
+      if (lines.length === 0) {
+        setValue("demand.currency", newCurrency);
+        setCurrencyModalVisible(false);
+        return;
+      }
+
+      Alert.alert(
+        t("demand.currencyChangeTitle"),
+        t("demand.currencyChangeMessage"),
+        [
+          {
+            text: t("common.cancel"),
+            style: "cancel",
+            onPress: () => setCurrencyModalVisible(false),
+          },
+          {
+            text: t("common.confirm"),
+            onPress: () => {
+              applyCurrencyChange(newCurrency);
+              setCurrencyModalVisible(false);
+            },
+          },
+        ]
+      );
+    },
+    [applyCurrencyChange, lines.length, setValue, t]
+  );
+
   const handleAddLine = useCallback(() => {
     if ((!watchedCustomerId && !watchedErpCustomerCode) || !watchedRepresentativeId || !watchedCurrency) {
       showToast("error", t("common.selectCustomerRepresentativeCurrency"));
@@ -1410,10 +1482,7 @@ export function DemandDetailScreen(): React.ReactElement {
           visible={currencyModalVisible}
           options={currencyOptions?.map((c) => ({ id: c.code, name: c.dovizIsmi ?? c.code, code: c.code })) ?? []}
           selectedValue={watch("demand.currency")}
-          onSelect={(o) => {
-            setValue("demand.currency", o.id as string);
-            setCurrencyModalVisible(false);
-          }}
+          onSelect={(o) => handleCurrencySelect(o.id as string)}
           onClose={() => setCurrencyModalVisible(false)}
           title={t("demand.selectCurrency")}
           searchPlaceholder={t("demand.searchCurrency")}

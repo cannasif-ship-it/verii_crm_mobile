@@ -15,9 +15,8 @@ import { Text } from "../../../components/ui/text";
 import type { ThemeColors } from "../../../constants/theme";
 import { useUIStore } from "../../../store/ui";
 import { VoiceSearchButton } from "./VoiceSearchButton";
-import { useStocks, useStock, useStockRelations, useStockRelationsAsRelated } from "../../stocks/hooks";
+import { useStocks } from "../../stocks/hooks";
 import type { StockGetDto, StockRelationDto } from "../../stocks/types";
-import { filterAndRankStocks } from "../../stocks/utils/advancedSearch";
 
 export interface ProductPickerRef {
   close: () => void;
@@ -39,6 +38,8 @@ interface ProductPickerProps {
   parentVisible?: boolean;
   relatedStocksSelection?: RelatedStocksSelectionProps | null;
 }
+
+const SEARCH_DEBOUNCE_MS = 700;
 
 function formatStockBalance(item: StockGetDto): string | null {
   if (item.balanceText?.trim()) return item.balanceText.trim();
@@ -68,32 +69,17 @@ function StockListItem({
   colors,
   onSelect,
   onShowRelationDetail,
-  modalOpen,
 }: {
   item: StockGetDto;
   isSelected: boolean;
   colors: ThemeColors;
   onSelect: () => void;
   onShowRelationDetail: (stock: StockGetDto, relations: StockRelationDto[]) => void;
-  modalOpen: boolean;
 }): React.ReactElement {
   const { t } = useTranslation();
   const metaRows = useMemo(() => getStockMetaRows(item, t), [item, t]);
   const balance = formatStockBalance(item);
-  const { data: stockDetail } = useStock(modalOpen ? item.id : undefined);
-  const { data: relationsData } = useStockRelations({
-    stockId: modalOpen ? item.id : undefined,
-  });
-  const { data: relationsAsRelatedData } = useStockRelationsAsRelated(modalOpen ? item.id : undefined);
-  const relationsList = useMemo((): StockRelationDto[] => {
-    if (stockDetail?.parentRelations && stockDetail.parentRelations.length > 0) {
-      return stockDetail.parentRelations;
-    }
-    const asParent = relationsData?.pages?.[0]?.items;
-    if (Array.isArray(asParent) && asParent.length > 0) return asParent;
-    const asRelated = relationsAsRelatedData?.items;
-    return Array.isArray(asRelated) ? asRelated : [];
-  }, [stockDetail?.parentRelations, relationsData?.pages, relationsAsRelatedData?.items]);
+  const relationsList = item.parentRelations ?? [];
 
   const relationCount = relationsList.length;
   const showBadge = relationCount > 0;
@@ -171,10 +157,22 @@ function ProductPickerInner(
 
   const [isOpen, setIsOpen] = useState(false);
   const [searchText, setSearchText] = useState("");
+  const [debouncedSearchText, setDebouncedSearchText] = useState("");
+  const [isFilterModalVisible, setIsFilterModalVisible] = useState(false);
   const [relationDetailStock, setRelationDetailStock] = useState<StockGetDto | null>(null);
   const [relationDetailVisible, setRelationDetailVisible] = useState(false);
   const [relationDetailData, setRelationDetailData] = useState<StockRelationDto[]>([]);
   const [relatedSelectedIds, setRelatedSelectedIds] = useState<Set<number>>(new Set());
+  const [tempCodeFilter, setTempCodeFilter] = useState("");
+  const [tempNameFilter, setTempNameFilter] = useState("");
+  const [tempGroupCodeFilter, setTempGroupCodeFilter] = useState("");
+  const [tempGroupNameFilter, setTempGroupNameFilter] = useState("");
+  const [appliedCodeFilter, setAppliedCodeFilter] = useState("");
+  const [appliedNameFilter, setAppliedNameFilter] = useState("");
+  const [appliedGroupCodeFilter, setAppliedGroupCodeFilter] = useState("");
+  const [appliedGroupNameFilter, setAppliedGroupNameFilter] = useState("");
+  const [tempFilterLogic, setTempFilterLogic] = useState<"and" | "or">("and");
+  const [appliedFilterLogic, setAppliedFilterLogic] = useState<"and" | "or">("and");
 
   const relatedMandatory = useMemo(
     () => (relatedStocksSelection?.stock.parentRelations ?? []).filter((r) => r.isMandatory),
@@ -215,18 +213,50 @@ function ProductPickerInner(
   }, [relatedStocksSelection]);
 
   useEffect(() => {
+    const timeout = setTimeout(() => {
+      setDebouncedSearchText(searchText.trim());
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(timeout);
+  }, [searchText]);
+
+  useEffect(() => {
     if (!parentVisible) {
       setIsOpen(false);
       setSearchText("");
+      setDebouncedSearchText("");
+      setIsFilterModalVisible(false);
+      setTempFilterLogic("and");
+      setAppliedFilterLogic("and");
     }
   }, [parentVisible]);
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks({}, searchText);
+  const apiFilters = useMemo(() => {
+    const filters: Array<{ column: string; operator: string; value: string }> = [];
+    if (appliedCodeFilter.trim()) {
+      filters.push({ column: "ErpStockCode", operator: "contains", value: appliedCodeFilter.trim() });
+    }
+    if (appliedNameFilter.trim()) {
+      filters.push({ column: "StockName", operator: "contains", value: appliedNameFilter.trim() });
+    }
+    if (appliedGroupCodeFilter.trim()) {
+      filters.push({ column: "GrupKodu", operator: "contains", value: appliedGroupCodeFilter.trim() });
+    }
+    if (appliedGroupNameFilter.trim()) {
+      filters.push({ column: "GrupAdi", operator: "contains", value: appliedGroupNameFilter.trim() });
+    }
+    return filters;
+  }, [appliedCodeFilter, appliedNameFilter, appliedGroupCodeFilter, appliedGroupNameFilter]);
+
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks({
+    filters: apiFilters,
+    filterLogic: appliedFilterLogic,
+    search: debouncedSearchText || undefined,
+  });
 
   const stocks = useMemo(() => {
-    const rawStocks = data?.pages.flatMap((page) => page.items) || [];
-    return filterAndRankStocks(rawStocks, searchText);
-  }, [data, searchText]);
+    return data?.pages.flatMap((page) => page.items) || [];
+  }, [data]);
 
   const handleOpen = useCallback(() => {
     if (!disabled) {
@@ -238,6 +268,30 @@ function ProductPickerInner(
   const handleClose = useCallback(() => {
     setIsOpen(false);
     setSearchText("");
+    setDebouncedSearchText("");
+    setIsFilterModalVisible(false);
+  }, []);
+
+  const handleApplyFilters = useCallback(() => {
+    setAppliedCodeFilter(tempCodeFilter);
+    setAppliedNameFilter(tempNameFilter);
+    setAppliedGroupCodeFilter(tempGroupCodeFilter);
+    setAppliedGroupNameFilter(tempGroupNameFilter);
+    setAppliedFilterLogic(tempFilterLogic);
+    setIsFilterModalVisible(false);
+  }, [tempCodeFilter, tempNameFilter, tempGroupCodeFilter, tempGroupNameFilter, tempFilterLogic]);
+
+  const handleClearFilters = useCallback(() => {
+    setTempCodeFilter("");
+    setTempNameFilter("");
+    setTempGroupCodeFilter("");
+    setTempGroupNameFilter("");
+    setAppliedCodeFilter("");
+    setAppliedNameFilter("");
+    setAppliedGroupCodeFilter("");
+    setAppliedGroupNameFilter("");
+    setTempFilterLogic("and");
+    setAppliedFilterLogic("and");
   }, []);
 
   useImperativeHandle(ref, () => ({ close: handleClose }), [handleClose]);
@@ -282,10 +336,9 @@ function ProductPickerInner(
         colors={colors}
         onSelect={() => handleSelect(item)}
         onShowRelationDetail={handleShowRelationDetail}
-        modalOpen={isOpen}
       />
     ),
-    [value, colors, handleSelect, handleShowRelationDetail, isOpen]
+    [value, colors, handleSelect, handleShowRelationDetail]
   );
 
   return (
@@ -531,6 +584,14 @@ function ProductPickerInner(
                     onChangeText={setSearchText}
                     autoFocus
                   />
+                  <TouchableOpacity
+                    style={[styles.filterButton, { borderColor: colors.border }]}
+                    onPress={() => setIsFilterModalVisible(true)}
+                  >
+                    <Text style={[styles.filterButtonText, { color: colors.text }]}>
+                      {t("common.filter")}
+                    </Text>
+                  </TouchableOpacity>
                   <VoiceSearchButton onResult={setSearchText} />
                 </View>
 
@@ -566,6 +627,84 @@ function ProductPickerInner(
                 )}
               </>
             )}
+          </View>
+        </View>
+      </Modal>
+      <Modal visible={isFilterModalVisible} transparent animationType="fade" onRequestClose={() => setIsFilterModalVisible(false)}>
+        <View style={styles.filterModalOverlay}>
+          <TouchableOpacity style={styles.modalBackdrop} onPress={() => setIsFilterModalVisible(false)} />
+          <View style={[styles.filterModalContent, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.filterModalTitle, { color: colors.text }]}>
+              {t("stockPicker.advancedFilterTitle")}
+            </Text>
+            <TextInput
+              style={[styles.filterInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder={t("stockPicker.filterCode")}
+              placeholderTextColor={colors.textMuted}
+              value={tempCodeFilter}
+              onChangeText={setTempCodeFilter}
+            />
+            <TextInput
+              style={[styles.filterInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder={t("stockPicker.filterName")}
+              placeholderTextColor={colors.textMuted}
+              value={tempNameFilter}
+              onChangeText={setTempNameFilter}
+            />
+            <TextInput
+              style={[styles.filterInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder={t("stockPicker.filterGroupCode")}
+              placeholderTextColor={colors.textMuted}
+              value={tempGroupCodeFilter}
+              onChangeText={setTempGroupCodeFilter}
+            />
+            <TextInput
+              style={[styles.filterInput, { color: colors.text, borderColor: colors.border }]}
+              placeholder={t("stockPicker.filterGroupName")}
+              placeholderTextColor={colors.textMuted}
+              value={tempGroupNameFilter}
+              onChangeText={setTempGroupNameFilter}
+            />
+            <View style={styles.logicRow}>
+              <Text style={[styles.logicLabel, { color: colors.textMuted }]}>{t("common.logic")}</Text>
+              <View style={styles.logicButtons}>
+                <TouchableOpacity
+                  style={[
+                    styles.logicButton,
+                    { borderColor: colors.border },
+                    tempFilterLogic === "and" && { backgroundColor: colors.accent, borderColor: colors.accent },
+                  ]}
+                  onPress={() => setTempFilterLogic("and")}
+                >
+                  <Text style={[styles.logicButtonText, { color: tempFilterLogic === "and" ? "#fff" : colors.text }]}>
+                    {t("common.and")}
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.logicButton,
+                    { borderColor: colors.border },
+                    tempFilterLogic === "or" && { backgroundColor: colors.accent, borderColor: colors.accent },
+                  ]}
+                  onPress={() => setTempFilterLogic("or")}
+                >
+                  <Text style={[styles.logicButtonText, { color: tempFilterLogic === "or" ? "#fff" : colors.text }]}>
+                    {t("common.or")}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+            <View style={styles.filterActions}>
+              <TouchableOpacity style={[styles.filterSecondaryButton, { borderColor: colors.border }]} onPress={handleClearFilters}>
+                <Text style={[styles.filterSecondaryText, { color: colors.textMuted }]}>{t("common.clear")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.filterSecondaryButton, { borderColor: colors.border }]} onPress={() => setIsFilterModalVisible(false)}>
+                <Text style={[styles.filterSecondaryText, { color: colors.textMuted }]}>{t("common.cancel")}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.filterPrimaryButton, { backgroundColor: colors.accent }]} onPress={handleApplyFilters}>
+                <Text style={styles.filterPrimaryText}>{t("common.apply")}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       </Modal>
@@ -720,6 +859,16 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontSize: 15,
   },
+  filterButton: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  filterButtonText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
   loadingContainer: {
     paddingVertical: 40,
     alignItems: "center",
@@ -791,6 +940,76 @@ const styles = StyleSheet.create({
   footerLoading: {
     paddingVertical: 16,
     alignItems: "center",
+  },
+  filterModalOverlay: {
+    flex: 1,
+    justifyContent: "center",
+    paddingHorizontal: 20,
+  },
+  filterModalContent: {
+    borderWidth: 1,
+    borderRadius: 16,
+    padding: 16,
+    gap: 10,
+  },
+  filterModalTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+    marginBottom: 4,
+  },
+  filterInput: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+  },
+  filterActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 10,
+    marginTop: 6,
+  },
+  logicRow: {
+    gap: 8,
+  },
+  logicLabel: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  logicButtons: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  logicButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  logicButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  filterSecondaryButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  filterSecondaryText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  filterPrimaryButton: {
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  filterPrimaryText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
   },
   relationDetailWrapper: {
     flex: 1,

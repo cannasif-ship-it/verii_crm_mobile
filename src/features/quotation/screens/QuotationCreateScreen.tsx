@@ -390,16 +390,16 @@ export function QuotationCreateScreen(): React.ReactElement {
         return;
       }
       Alert.alert(
-        "Kur Değişikliği",
-        "Para birimi değişikliği tüm satırları etkileyecektir. Devam etmek istiyor musunuz?",
+        t("quotation.currencyChangeTitle"),
+        t("quotation.currencyChangeMessage"),
         [
           {
-            text: "Vazgeç",
+            text: t("common.cancel"),
             style: "cancel",
             onPress: () => setCurrencyModalVisible(false),
           },
           {
-            text: "Onayla",
+            text: t("common.confirm"),
             onPress: () => {
               applyCurrencyChange(newCurrency);
               setCurrencyModalVisible(false);
@@ -408,7 +408,7 @@ export function QuotationCreateScreen(): React.ReactElement {
         ]
       );
     },
-    [lines.length, setValue, applyCurrencyChange]
+    [lines.length, setValue, applyCurrencyChange, t]
   );
 
   const handleAddLine = useCallback(() => {

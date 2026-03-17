@@ -16,12 +16,12 @@ import { LinearGradient } from "expo-linear-gradient"; // Arka plan efekti için
 import { Add01Icon } from "hugeicons-react-native";
 
 import { ScreenHeader } from "../../../components/navigation";
+import { PagedFlatList } from "../../../components/paged";
 import { useUIStore } from "../../../store/ui";
 import { useQuotationList, useCreateRevisionOfQuotation } from "../hooks";
 import { QuotationRow } from "../components/QuotationRow";
-import { SearchInput } from "../../customer/components";
 import { CustomerMailComposerModal } from "../../integration";
-import type { QuotationGetDto, PagedFilter } from "../types";
+import type { QuotationGetDto } from "../types";
 
 const { width } = Dimensions.get("window");
 const GAP = 16;
@@ -66,24 +66,6 @@ export function QuotationListScreen(): React.ReactElement {
     return () => clearTimeout(handler);
   }, [searchText]);
 
-  const filters: PagedFilter[] | undefined = useMemo(() => {
-    if (debouncedQuery.trim().length >= 2) {
-      return [
-        {
-          column: "OfferNo",
-          operator: "contains",
-          value: debouncedQuery.trim(),
-        },
-        {
-          column: "PotentialCustomerName",
-          operator: "contains",
-          value: debouncedQuery.trim(),
-        },
-      ];
-    }
-    return undefined;
-  }, [debouncedQuery]);
-
   const {
     data,
     isLoading,
@@ -95,16 +77,12 @@ export function QuotationListScreen(): React.ReactElement {
     hasNextPage,
     isFetchingNextPage,
   } = useQuotationList({
-    filters,
+    search: debouncedQuery.trim().length >= 2 ? debouncedQuery.trim() : undefined,
     sortBy,
     sortDirection,
   });
 
   const createRevisionMutation = useCreateRevisionOfQuotation();
-
-  const handleRefresh = useCallback(() => {
-    refetch();
-  }, [refetch]);
 
   const handleRowClick = useCallback(
     (id: number) => {
@@ -252,97 +230,84 @@ export function QuotationListScreen(): React.ReactElement {
       <ScreenHeader title={t("quotation.list")} showBackButton />
 
       <View style={styles.listContainer}>
-        {/* Arama ve Ekleme Alanı */}
-        <View style={styles.controlsArea}>
-          <View style={styles.searchContainer}>
-            <SearchInput
-              value={searchText}
-              onSearch={setSearchText}
-              placeholder={t("quotation.searchPlaceholder")}
-            />
-          </View>
+        <PagedFlatList
+          data={quotations}
+          renderItem={renderItem}
+          keyExtractor={(item) => item.id.toString()}
+          searchValue={searchText}
+          onSearchChange={setSearchText}
+          searchPlaceholder={t("quotation.searchPlaceholder")}
+          toolbarActions={
+            <TouchableOpacity
+              style={[
+                styles.createButton,
+                isDark ? styles.createButtonDark : styles.createButtonLight,
+                {
+                  backgroundColor: isDark ? "rgba(236, 72, 153, 0.15)" : brandColor,
+                },
+              ]}
+              onPress={handleCreatePress}
+              activeOpacity={0.8}
+            >
+              <Add01Icon
+                size={22}
+                color={isDark ? brandColor : "#FFFFFF"}
+                variant="stroke"
+              />
+            </TouchableOpacity>
+          }
+          afterToolbarContent={
+            <View style={styles.quickActionsRow}>
+              <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(124, 58, 237, 0.1)"
+                      : "rgba(124, 58, 237, 0.08)",
+                    borderColor: "rgba(124, 58, 237, 0.2)",
+                  },
+                ]}
+                onPress={handleQuickListPress}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.actionBtnText, { color: "#8b5cf6" }]}>
+                  Hızlı Teklifler
+                </Text>
+              </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[
-              styles.createButton,
-              isDark ? styles.createButtonDark : styles.createButtonLight,
-              {
-                backgroundColor: isDark ? "rgba(236, 72, 153, 0.15)" : brandColor,
-              },
-            ]}
-            onPress={handleCreatePress}
-            activeOpacity={0.8}
-          >
-            <Add01Icon
-              size={22}
-              color={isDark ? brandColor : "#FFFFFF"}
-              variant="stroke"
-            />
-          </TouchableOpacity>
-        </View>
-
-        {/* Hızlı İşlem Butonları (Modernize Edildi) */}
-        <View style={styles.quickActionsRow}>
-          <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              {
-                backgroundColor: isDark
-                  ? "rgba(124, 58, 237, 0.1)"
-                  : "rgba(124, 58, 237, 0.08)",
-                borderColor: "rgba(124, 58, 237, 0.2)",
-              },
-            ]}
-            onPress={handleQuickListPress}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.actionBtnText, { color: "#8b5cf6" }]}>
-              Hızlı Teklifler
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.actionBtn,
-              {
-                backgroundColor: isDark
-                  ? "rgba(14, 165, 233, 0.1)"
-                  : "rgba(14, 165, 233, 0.08)",
-                borderColor: "rgba(14, 165, 233, 0.2)",
-              },
-            ]}
-            onPress={handleQuickCreatePress}
-            activeOpacity={0.7}
-          >
-            <Text style={[styles.actionBtnText, { color: "#0ea5e9" }]}>
-              Hızlı Oluştur
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        {/* LİSTE */}
-        {isLoading && !data ? (
-          <View style={styles.center}>
-            <ActivityIndicator size="large" color={brandColor} />
-          </View>
-        ) : (
-          <FlatList
-            data={quotations}
-            renderItem={renderItem}
-            keyExtractor={(item) => item.id.toString()}
-            contentContainerStyle={[
-              styles.flatListContent,
-              { paddingBottom: Math.max(insets.bottom, 24) + 80 },
-            ]}
-            refreshing={isRefetching}
-            onRefresh={handleRefresh}
-            ListEmptyComponent={renderEmpty}
-            ListFooterComponent={renderFooter}
-            onEndReached={handleEndReached}
-            onEndReachedThreshold={0.5}
-            showsVerticalScrollIndicator={false}
-          />
-        )}
+              <TouchableOpacity
+                style={[
+                  styles.actionBtn,
+                  {
+                    backgroundColor: isDark
+                      ? "rgba(14, 165, 233, 0.1)"
+                      : "rgba(14, 165, 233, 0.08)",
+                    borderColor: "rgba(14, 165, 233, 0.2)",
+                  },
+                ]}
+                onPress={handleQuickCreatePress}
+                activeOpacity={0.7}
+              >
+                <Text style={[styles.actionBtnText, { color: "#0ea5e9" }]}>
+                  Hızlı Oluştur
+                </Text>
+              </TouchableOpacity>
+            </View>
+          }
+          isLoading={Boolean(isLoading && !data)}
+          refreshing={isRefetching}
+          onRefresh={refetch}
+          isFetchingNextPage={isFetchingNextPage}
+          onEndReached={handleEndReached}
+          onEndReachedThreshold={0.5}
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.flatListContent,
+            { paddingBottom: Math.max(insets.bottom, 24) + 80 },
+          ]}
+          emptyComponent={renderEmpty()}
+        />
       </View>
 
       <CustomerMailComposerModal

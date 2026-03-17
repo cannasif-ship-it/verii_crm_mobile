@@ -6,23 +6,34 @@ const DEFAULT_PAGE_SIZE = 20;
 
 interface UseOrderListParams {
   filters?: PagedFilter[];
+  search?: string;
+  filterLogic?: "and" | "or";
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   pageSize?: number;
 }
 
 export function useOrderList(params: UseOrderListParams = {}) {
-  const { filters, sortBy = "Id", sortDirection = "desc", pageSize = DEFAULT_PAGE_SIZE } = params;
+  const {
+    filters,
+    search,
+    filterLogic,
+    sortBy = "Id",
+    sortDirection = "desc",
+    pageSize = DEFAULT_PAGE_SIZE,
+  } = params;
 
   return useInfiniteQuery<PagedResponse<OrderGetDto>, Error>({
-    queryKey: ["order", "orders", { filters, sortBy, sortDirection }],
+    queryKey: ["order", "orders", { filters, search, filterLogic, sortBy, sortDirection }],
     queryFn: ({ pageParam }) =>
       orderApi.getList({
         pageNumber: pageParam as number,
         pageSize,
+        search,
         sortBy,
         sortDirection,
         filters,
+        filterLogic,
       }),
     initialPageParam: 1,
     getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.pageNumber + 1 : undefined),
