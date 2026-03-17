@@ -17,7 +17,7 @@ export function useStocks(params: UseStocksParams = {}, searchQuery?: string) {
     sortBy = "stockName", 
     sortDirection = "asc", 
     pageSize = 20,
-    filterLogic: requestedFilterLogic = "or",
+    filterLogic: requestedFilterLogic,
   } = params;
 
   // Generic Tip Tanımlaması: <BackenddenDönenVeriTipi, HataTipi>

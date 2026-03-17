@@ -31,26 +31,17 @@ export function buildAdvancedStockFilters(entries: AdvancedFilterInput[]): Advan
     .filter((entry) => entry.value.length > 0);
 
   if (activeEntries.length !== 1) {
-    return {
-      filters: activeEntries,
-      filterLogic: activeEntries.length > 0 ? "or" : undefined,
-    };
+    return { filters: activeEntries };
   }
 
   const [singleEntry] = activeEntries;
   if (singleEntry.operator !== "contains") {
-    return {
-      filters: activeEntries,
-      filterLogic: "or",
-    };
+    return { filters: activeEntries };
   }
 
   const tokens = splitTokens(singleEntry.value);
   if (tokens.length <= 1) {
-    return {
-      filters: activeEntries,
-      filterLogic: "or",
-    };
+    return { filters: activeEntries };
   }
 
   return {
