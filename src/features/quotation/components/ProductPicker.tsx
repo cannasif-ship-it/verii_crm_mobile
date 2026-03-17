@@ -766,25 +766,15 @@ function ProductPickerInner(
 
   const hasAdvancedFilters = apiFilters.length > 0;
 
-  const { data, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks(
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks(
     { filters: apiFilters, filterLogic: advancedFilterLogic },
     hasAdvancedFilters ? undefined : searchText
   );
 
-  const shouldHideStaleResults = useMemo(() => {
-    const trimmedSearch = searchText.trim();
-    if (trimmedSearch.length < 2) return false;
-    return isFetching && !isFetchingNextPage;
-  }, [isFetching, isFetchingNextPage, searchText]);
-
   const stocks = useMemo(() => {
-    if (shouldHideStaleResults) {
-      return [];
-    }
-
     const rawStocks = data?.pages.flatMap((page) => page.items) || [];
     return hasAdvancedFilters ? filterAndRankStocksLocal(rawStocks, searchText) : rawStocks;
-  }, [data, hasAdvancedFilters, searchText, shouldHideStaleResults]);
+  }, [data, hasAdvancedFilters, searchText]);
 
   const handleOpen = useCallback(() => {
     if (!disabled) {

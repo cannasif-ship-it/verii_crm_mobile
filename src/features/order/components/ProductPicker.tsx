@@ -221,22 +221,12 @@ function ProductPickerInner(
     }
   }, [parentVisible]);
 
-  const { data, isLoading, isFetching, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks({}, searchText);
-
-  const shouldHideStaleResults = useMemo(() => {
-    const trimmedSearch = searchText.trim();
-    if (trimmedSearch.length < 2) return false;
-    return isFetching && !isFetchingNextPage;
-  }, [isFetching, isFetchingNextPage, searchText]);
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useStocks({}, searchText);
 
   const stocks = useMemo(() => {
-    if (shouldHideStaleResults) {
-      return [];
-    }
-
     const rawStocks = data?.pages.flatMap((page) => page.items) || [];
     return filterAndRankStocks(rawStocks, searchText);
-  }, [data, searchText, shouldHideStaleResults]);
+  }, [data, searchText]);
 
   const handleOpen = useCallback(() => {
     if (!disabled) {
