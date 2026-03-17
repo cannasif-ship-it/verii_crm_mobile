@@ -28,7 +28,9 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { VoiceSearchButton } from "./VoiceSearchButton";
 import { PickerModal } from "./PickerModal";
-import { useStocks } from "../../stocks/hooks";
+import {
+  useStocks,
+} from "../../stocks/hooks";
 import { buildAdvancedStockFilters } from "../../stocks/utils/buildAdvancedStockFilters";
 import type { StockGetDto, StockRelationDto, PagedFilter } from "../../stocks/types";
 
@@ -57,9 +59,7 @@ const STRING_OPERATORS = ["contains", "startsWith", "endsWith", "eq"] as const;
 const NUMBER_OPERATORS = ["eq", "gt", "gte", "lt", "lte"] as const;
 
 type StockFilterColumnValue = (typeof STOCK_FILTER_COLUMNS)[number]["value"];
-type AdvancedFilterOperator =
-  | (typeof STRING_OPERATORS)[number]
-  | (typeof NUMBER_OPERATORS)[number];
+type AdvancedFilterOperator = (typeof STRING_OPERATORS)[number] | (typeof NUMBER_OPERATORS)[number];
 
 type AdvancedFilterRow = {
   id: string;
@@ -76,9 +76,7 @@ function getColumnConfig(column: StockFilterColumnValue) {
   return STOCK_FILTER_COLUMNS.find((item) => item.value === column) ?? STOCK_FILTER_COLUMNS[0];
 }
 
-function getOperatorsForColumn(
-  column: StockFilterColumnValue
-): readonly AdvancedFilterOperator[] {
+function getOperatorsForColumn(column: StockFilterColumnValue): readonly AdvancedFilterOperator[] {
   return getColumnConfig(column).type === "number" ? NUMBER_OPERATORS : STRING_OPERATORS;
 }
 
@@ -632,22 +630,13 @@ function getStockMetaRows(
 ): Array<{ label: string; value: string }> {
   return [
     item.grupKodu || item.grupAdi
-      ? {
-          label: t("stockPicker.group"),
-          value: [item.grupKodu, item.grupAdi].filter(Boolean).join(" · "),
-        }
+      ? { label: t("stockPicker.group"), value: [item.grupKodu, item.grupAdi].filter(Boolean).join(" · ") }
       : null,
     item.kod1 || item.kod1Adi
-      ? {
-          label: t("stockPicker.code1"),
-          value: [item.kod1, item.kod1Adi].filter(Boolean).join(" · "),
-        }
+      ? { label: t("stockPicker.code1"), value: [item.kod1, item.kod1Adi].filter(Boolean).join(" · ") }
       : null,
     item.kod2 || item.kod2Adi
-      ? {
-          label: t("stockPicker.code2"),
-          value: [item.kod2, item.kod2Adi].filter(Boolean).join(" · "),
-        }
+      ? { label: t("stockPicker.code2"), value: [item.kod2, item.kod2Adi].filter(Boolean).join(" · ") }
       : null,
   ].filter((row): row is { label: string; value: string } => Boolean(row));
 }
@@ -707,7 +696,7 @@ function StockListItem({
           </View>
 
           <View style={styles.stockInfo}>
-            <Text style={[styles.stockName, { color: textColor }]} numberOfLines={2}>
+            <Text style={[styles.stockName, { color: textColor }]} numberOfLines={1}>
               {item.stockName}
             </Text>
             <Text style={[styles.stockCode, { color: mutedColor }]} numberOfLines={1}>
@@ -1111,10 +1100,7 @@ function ProductPickerInner(
 
             {productName ? (
               <TouchableOpacity
-                style={[
-                  styles.clearButton,
-                  { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9" },
-                ]}
+                style={[styles.clearButton, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F1F5F9" }]}
                 onPress={(e) => {
                   e.stopPropagation();
                   handleClear();
@@ -1124,12 +1110,7 @@ function ProductPickerInner(
                 <Ionicons name="close" size={16} color={mutedColor} />
               </TouchableOpacity>
             ) : (
-              <View
-                style={[
-                  styles.chevronWrap,
-                  { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F8FAFC" },
-                ]}
-              >
+              <View style={[styles.chevronWrap, { backgroundColor: isDark ? "rgba(255,255,255,0.05)" : "#F8FAFC" }]}>
                 <Ionicons name="chevron-down" size={16} color={brandColor} />
               </View>
             )}
@@ -1474,7 +1455,7 @@ function ProductPickerInner(
         >
           <KeyboardAvoidingView
             behavior={Platform.OS === "ios" ? "padding" : "height"}
-            keyboardVerticalOffset={Platform.OS === "ios" ? 20 : 10}
+            keyboardVerticalOffset={Platform.OS === "ios" ? 24 : 20}
             style={styles.filterKeyboardAvoid}
           >
             <Pressable
@@ -1488,11 +1469,7 @@ function ProductPickerInner(
                 <Text style={[styles.filterModalTitle, { color: textColor }]}>
                   {t("stockPicker.advancedFilterTitle")}
                 </Text>
-                <TouchableOpacity
-                  onPress={() => setIsFilterModalVisible(false)}
-                  style={styles.closeButton}
-                  activeOpacity={0.8}
-                >
+                <TouchableOpacity onPress={() => setIsFilterModalVisible(false)} style={styles.closeButton} activeOpacity={0.8}>
                   <Ionicons name="close" size={20} color={textColor} />
                 </TouchableOpacity>
               </View>
@@ -1517,16 +1494,13 @@ function ProductPickerInner(
                 <View style={styles.filterFields}>
                   {draftFilterRows.map((row) => {
                     const columnConfig = getColumnConfig(row.column);
+                    const operatorOptions = getOperatorsForColumn(row.column);
                     const isNumeric = columnConfig.type === "number";
-
                     return (
                       <View
                         style={[
                           styles.advancedFilterRowCard,
-                          {
-                            borderColor,
-                            backgroundColor: isDark ? "rgba(255,255,255,0.02)" : "#FFFFFF",
-                          },
+                          { borderColor, backgroundColor: isDark ? "rgba(255,255,255,0.02)" : "#FFFFFF" },
                         ]}
                         key={row.id}
                       >
@@ -1541,11 +1515,7 @@ function ProductPickerInner(
 
                         <View style={styles.filterFieldRow}>
                           <TouchableOpacity
-                            style={[
-                              styles.filterField,
-                              styles.filterSelectField,
-                              { borderColor, backgroundColor: inputBg },
-                            ]}
+                            style={[styles.filterField, styles.filterSelectField, { borderColor, backgroundColor: inputBg }]}
                             onPress={() => setColumnPickerRowId(row.id)}
                             activeOpacity={0.8}
                           >
@@ -1558,11 +1528,7 @@ function ProductPickerInner(
                           </TouchableOpacity>
 
                           <TouchableOpacity
-                            style={[
-                              styles.filterField,
-                              styles.filterSelectField,
-                              { borderColor, backgroundColor: inputBg },
-                            ]}
+                            style={[styles.filterField, styles.filterSelectField, { borderColor, backgroundColor: inputBg }]}
                             onPress={() => setOperatorPickerRowId(row.id)}
                             activeOpacity={0.8}
                           >
@@ -1596,7 +1562,6 @@ function ProductPickerInner(
                       </View>
                     );
                   })}
-
                   {draftFilterRows.length === 0 ? (
                     <View style={styles.emptyContainer}>
                       <Text style={[styles.emptyText, { color: mutedColor }]}>
@@ -1873,68 +1838,62 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.48)",
     alignItems: "center",
     justifyContent: "center",
-    paddingHorizontal: 16,
-    paddingVertical: 20,
+    padding: 20,
   },
   filterKeyboardAvoid: {
     width: "100%",
     alignItems: "center",
     justifyContent: "center",
-    flex: 1,
   },
   filterModalCard: {
     width: "100%",
-    maxWidth: 430,
-    maxHeight: "82%",
+    maxWidth: 420,
     borderRadius: 22,
     borderWidth: 1,
     overflow: "hidden",
   },
   filterModalHeader: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 14,
     borderBottomWidth: StyleSheet.hairlineWidth,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
   },
   filterModalTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: "700",
   },
   filterFormScroll: {
-    flexGrow: 0,
-    maxHeight: 430,
+    maxHeight: 420,
   },
   filterFormScrollContent: {
-    paddingBottom: 10,
+    paddingBottom: 8,
   },
   addFilterRowButton: {
-    marginHorizontal: 16,
-    marginTop: 14,
+    marginHorizontal: 18,
+    marginTop: 18,
     borderWidth: 1,
-    borderRadius: 13,
-    minHeight: 42,
+    borderRadius: 14,
+    minHeight: 44,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
   },
   addFilterRowButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
   filterFields: {
-    paddingHorizontal: 16,
-    paddingTop: 14,
-    paddingBottom: 6,
-    gap: 12,
+    padding: 18,
+    gap: 14,
   },
   advancedFilterRowCard: {
     borderWidth: 1,
     borderRadius: 16,
-    padding: 12,
-    gap: 10,
+    padding: 14,
+    gap: 12,
   },
   advancedFilterRowHeader: {
     flexDirection: "row",
@@ -1942,72 +1901,70 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
   },
   advancedFilterRowTitle: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
   filterFieldRow: {
     flexDirection: "row",
-    gap: 10,
+    gap: 12,
   },
   filterField: {
-    gap: 5,
+    gap: 6,
     flex: 1,
   },
   filterSelectField: {
     borderWidth: 1,
-    borderRadius: 13,
-    minHeight: 44,
-    paddingHorizontal: 12,
-    paddingVertical: 9,
+    borderRadius: 14,
+    minHeight: 46,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     justifyContent: "center",
   },
   filterFieldLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "700",
     textTransform: "uppercase",
-    letterSpacing: 0.45,
+    letterSpacing: 0.5,
   },
   filterSelectValue: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "500",
   },
   filterFieldInput: {
     borderWidth: 1,
-    borderRadius: 13,
-    height: 44,
-    paddingHorizontal: 12,
-    fontSize: 13,
+    borderRadius: 14,
+    height: 46,
+    paddingHorizontal: 14,
+    fontSize: 14,
   },
   filterModalFooter: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    paddingBottom: 16,
+    padding: 18,
     flexDirection: "row",
-    gap: 8,
+    gap: 10,
   },
   filterSecondaryButton: {
     flex: 1,
-    height: 44,
-    borderRadius: 13,
+    height: 46,
+    borderRadius: 14,
     borderWidth: 1,
     alignItems: "center",
     justifyContent: "center",
   },
   filterSecondaryButtonText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "600",
   },
   filterPrimaryButton: {
     flex: 1,
-    height: 44,
-    borderRadius: 13,
+    height: 46,
+    borderRadius: 14,
     alignItems: "center",
     justifyContent: "center",
   },
   filterPrimaryButtonText: {
     color: "#FFFFFF",
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: "700",
   },
   searchInput: {
@@ -2061,7 +2018,6 @@ const styles = StyleSheet.create({
   },
   stockInfo: {
     flex: 1,
-    paddingRight: 4,
   },
   relatedStockBadge: {
     marginTop: 10,
@@ -2079,20 +2035,17 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   stockName: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: 15,
     fontWeight: "600",
-    marginBottom: 4,
-    paddingRight: 6,
+    marginBottom: 5,
   },
   stockCode: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "500",
   },
   stockMeta: {
-    fontSize: 11.5,
-    marginTop: 3,
-    lineHeight: 16,
+    fontSize: 12,
+    marginTop: 4,
   },
   checkmark: {
     width: 26,
@@ -2100,7 +2053,6 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
-    marginLeft: 8,
   },
   footerLoading: {
     paddingVertical: 16,
