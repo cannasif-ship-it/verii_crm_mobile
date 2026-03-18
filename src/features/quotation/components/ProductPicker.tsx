@@ -504,17 +504,24 @@ function StockListItem({
           </View>
 
           <View style={styles.stockInfo}>
-            <Text style={[styles.stockName, { color: textColor }]} numberOfLines={1}>
+            <Text
+              style={[styles.stockName, { color: textColor }]}
+              numberOfLines={2}
+              ellipsizeMode="tail"
+            >
               {item.stockName}
             </Text>
+
             <Text style={[styles.stockCode, { color: mutedColor }]} numberOfLines={1}>
               {item.erpStockCode}
             </Text>
+
             {metaRows.map((row) => (
               <Text key={row.label} style={[styles.stockMeta, { color: mutedColor }]} numberOfLines={1}>
                 {row.label}: {row.value}
               </Text>
             ))}
+
             {balance ? (
               <Text style={[styles.stockMeta, { color: brandColor }]} numberOfLines={1}>
                 {t("stockPicker.balance")}: {balance}
@@ -2024,31 +2031,33 @@ const styles = StyleSheet.create({
   },
   stockItem: {
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 10,
     borderBottomWidth: 1,
   },
   stockItemTouchable: {
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "space-between",
   },
   stockInfoRow: {
     flex: 1,
     flexDirection: "row",
-    alignItems: "center",
+    alignItems: "flex-start",
     marginRight: 12,
   },
   stockIconWrap: {
-    width: 38,
-    height: 38,
+    width: 36,
+    height: 36,
     borderRadius: 12,
     alignItems: "center",
     justifyContent: "center",
     marginRight: 12,
+    marginTop: 2,
     borderWidth: 1,
   },
   stockInfo: {
     flex: 1,
+    minWidth: 0,
   },
   relatedStockBadge: {
     marginTop: 10,
@@ -2066,17 +2075,21 @@ const styles = StyleSheet.create({
     fontWeight: "600",
   },
   stockName: {
-    fontSize: 15,
+    fontSize: 13,
+    lineHeight: 18,
     fontWeight: "600",
-    marginBottom: 5,
+    marginBottom: 4,
+    flexShrink: 1,
   },
   stockCode: {
-    fontSize: 13,
+    fontSize: 12,
+    lineHeight: 16,
     fontWeight: "500",
   },
   stockMeta: {
-    fontSize: 12,
-    marginTop: 4,
+    fontSize: 11,
+    lineHeight: 15,
+    marginTop: 3,
   },
   checkmark: {
     width: 26,
@@ -2084,6 +2097,7 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 2,
   },
   footerLoading: {
     paddingVertical: 16,
