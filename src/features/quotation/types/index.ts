@@ -254,6 +254,7 @@ export interface QuotationLineFormState {
   productId?: number | null;
   productCode: string;
   productName: string;
+  imagePath?: string | null;
   groupCode?: string | null;
   quantity: number;
   unitPrice: number;
@@ -394,6 +395,7 @@ export const DocumentRuleType = {
   Demand: 0,
   Quotation: 1,
   Order: 2,
+  FastQuotation: 3,
 } as const;
 
 export type DocumentRuleTypeValue = (typeof DocumentRuleType)[keyof typeof DocumentRuleType];

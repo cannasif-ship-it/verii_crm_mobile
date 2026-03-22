@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   ScrollView,
+  Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -27,9 +28,9 @@ import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useToast } from "../../../hooks/useToast";
 import { tempQuickQuotationRepository } from "../repositories/tempQuotattion.repository";
-import { createBuiltInTempQuickQuotationReportPdf } from "../utils/createBuiltInTempQuickQuotationReportPdf";
-import type { QuotationLineFormState } from "../../quotation/types";
+import { generateTempQuickQuotationReportPdf } from "../utils/generateTempQuickQuotationReportPdf";
 import { openPdfExternallyAsync } from "../../../lib/pdf";
+import { getApiBaseUrl } from "../../../constants/config";
 
 function formatDate(value?: string | null): string {
   if (!value) return "-";
@@ -70,51 +71,17 @@ function getCurrencyDisplayName(currency: string | number | null | undefined): s
   }
 }
 
-function mapTempLineToFormState(
-  id: number,
-  line: {
-    productCode: string;
-    productName: string;
-    quantity: number;
-    unitPrice: number;
-    discountRate1: number;
-    discountAmount1: number;
-    discountRate2: number;
-    discountAmount2: number;
-    discountRate3: number;
-    discountAmount3: number;
-    vatRate: number;
-    vatAmount: number;
-    lineTotal: number;
-    lineGrandTotal: number;
-    description: string;
+function resolveMobileImageUri(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("file://")) {
+    return path;
   }
-): QuotationLineFormState {
-  return {
-    id: `db-${id}`,
-    productId: null,
-    productCode: line.productCode,
-    productName: line.productName,
-    groupCode: null,
-    quantity: line.quantity,
-    unitPrice: line.unitPrice,
-    discountRate1: line.discountRate1,
-    discountAmount1: line.discountAmount1,
-    discountRate2: line.discountRate2,
-    discountAmount2: line.discountAmount2,
-    discountRate3: line.discountRate3,
-    discountAmount3: line.discountAmount3,
-    vatRate: line.vatRate,
-    vatAmount: line.vatAmount,
-    lineTotal: line.lineTotal,
-    lineGrandTotal: line.lineGrandTotal,
-    description: line.description,
-    isEditing: false,
-    relatedStockId: null,
-    relatedProductKey: undefined,
-    isMainRelatedProduct: true,
-    approvalStatus: 0,
-  };
+
+  if (path.startsWith("/")) {
+    return `${getApiBaseUrl()}${path}`;
+  }
+
+  return path;
 }
 
 export function TempQuickQuotationDetailScreen(): React.ReactElement {
@@ -197,11 +164,6 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
 
   const detail = detailQuery.data;
 
-  const mappedLines = useMemo(
-    () => (linesQuery.data ?? []).map((line) => mapTempLineToFormState(line.id, line)),
-    [linesQuery.data]
-  );
-
   const lineCount = linesQuery.data?.length ?? 0;
 
   const totalGrandAmount = useMemo(() => {
@@ -212,20 +174,15 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
   }, [linesQuery.data]);
 
   const handleGeneratePdf = useCallback(async () => {
-    if (!detail || mappedLines.length === 0) {
-      showError("PDF oluşturmak için hızlı teklif kalemleri bulunamadı");
+    if (!detail?.id) {
+      showError("PDF oluşturmak için hızlı teklif kaydı bulunamadı");
       return;
     }
 
     setIsGeneratingPdf(true);
     try {
-      const fileUri = await createBuiltInTempQuickQuotationReportPdf({
+      const fileUri = await generateTempQuickQuotationReportPdf({
         tempQuotationId: detail.id,
-        customerName: detail.customerName,
-        currencyCode: detail.currencyCode,
-        lines: mappedLines,
-        offerDate: detail.offerDate,
-        description: detail.description,
       });
 
       setPdfFileUri(fileUri);
@@ -235,7 +192,7 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [detail, mappedLines, showError, showSuccess]);
+  }, [detail?.id, showError, showSuccess]);
 
   const handleSharePdf = useCallback(async () => {
     if (!pdfFileUri) return;
@@ -567,6 +524,20 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
                 ]}
               >
                 <View style={styles.lineCardTop}>
+                  {line.imagePath ? (
+                    <Image
+                      source={{ uri: resolveMobileImageUri(line.imagePath) ?? line.imagePath }}
+                      style={[
+                        styles.lineImage,
+                        {
+                          borderColor: colors.border,
+                          backgroundColor: colors.softBg,
+                        },
+                      ]}
+                      resizeMode="cover"
+                    />
+                  ) : null}
+
                   <View style={{ flex: 1, paddingRight: 8 }}>
                     <Text
                       style={[styles.lineCode, { color: colors.brand }]}
@@ -1203,6 +1174,13 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-start",
     gap: 8,
+  },
+
+  lineImage: {
+    width: 54,
+    height: 54,
+    borderRadius: 12,
+    borderWidth: 1,
   },
 
   lineCode: {

@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  Image,
 } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
@@ -52,9 +53,10 @@ import {
   findCurrencyOptionByValue,
   resolveExchangeRateByCurrency,
 } from "../../../lib/resolve-exchange-rate";
+import { getApiBaseUrl } from "../../../constants/config";
 import { openPdfExternallyAsync } from "../../../lib/pdf";
 import { calculateLineTotals } from "../../quotation/utils";
-import { createBuiltInTempQuickQuotationReportPdf } from "../utils/createBuiltInTempQuickQuotationReportPdf";
+import { generateTempQuickQuotationReportPdf } from "../utils/generateTempQuickQuotationReportPdf";
 
 function numberValue(value: string): number {
   const parsed = Number(value.replace(",", "."));
@@ -73,6 +75,19 @@ function toDbExchangeId(mixedId: string): number | null {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
+function resolveMobileImageUri(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("file://")) {
+    return path;
+  }
+
+  if (path.startsWith("/")) {
+    return `${getApiBaseUrl()}${path}`;
+  }
+
+  return path;
+}
+
 function mapFormLineToCreateDto(
   line: QuotationLineFormState,
   headerId: number
@@ -81,6 +96,7 @@ function mapFormLineToCreateDto(
     tempQuotattionId: headerId,
     productCode: line.productCode || "",
     productName: line.productName || "",
+    imagePath: line.imagePath || "",
     quantity: line.quantity || 0,
     unitPrice: line.unitPrice || 0,
     discountRate1: line.discountRate1 || 0,
@@ -101,6 +117,7 @@ function mapFormLineToUpdateDto(line: QuotationLineFormState): TempQuotattionLin
   return {
     productCode: line.productCode || "",
     productName: line.productName || "",
+    imagePath: line.imagePath || "",
     quantity: line.quantity || 0,
     unitPrice: line.unitPrice || 0,
     discountRate1: line.discountRate1 || 0,
@@ -339,6 +356,7 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
       productId: null,
       productCode: line.productCode,
       productName: line.productName,
+      imagePath: line.imagePath || null,
       groupCode: null,
       quantity: line.quantity,
       unitPrice: line.unitPrice,
@@ -625,21 +643,15 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
   const loading = detailQuery.isLoading || linesQuery.isLoading || exchangeLinesQuery.isLoading;
 
   const handleGeneratePdf = useCallback(async () => {
-    if (lines.length === 0) {
-      showError("PDF oluşturmak için en az 1 stok satırı eklemelisin");
+    if (!editId) {
+      showError("Tasarım şablonundan PDF oluşturmak için önce hızlı teklifi kaydedin");
       return;
     }
 
     setIsGeneratingPdf(true);
     try {
-      const fileUri = await createBuiltInTempQuickQuotationReportPdf({
+      const fileUri = await generateTempQuickQuotationReportPdf({
         tempQuotationId: editId,
-        customerName: selectedCustomer?.name ?? detailQuery.data?.customerName ?? null,
-        customerCode: selectedCustomer?.customerCode ?? params.customerCode ?? null,
-        currencyCode,
-        lines,
-        offerDate,
-        description,
       });
 
       setPdfFileUri(fileUri);
@@ -650,15 +662,7 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
       setIsGeneratingPdf(false);
     }
   }, [
-    currencyCode,
-    description,
-    detailQuery.data?.customerName,
     editId,
-    lines,
-    offerDate,
-    params.customerCode,
-    selectedCustomer?.customerCode,
-    selectedCustomer?.name,
     showError,
     showSuccess,
   ]);
@@ -820,6 +824,13 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
                     <Text style={[styles.lineTitle, { color: textColor }]}>
                       {line.productCode} - {line.productName}
                     </Text>
+                    {line.imagePath ? (
+                      <Image
+                        source={{ uri: resolveMobileImageUri(line.imagePath) ?? line.imagePath }}
+                        style={styles.linePreviewImage}
+                        resizeMode="cover"
+                      />
+                    ) : null}
                     <View style={styles.lineDetailsGrid}>
                       <Text style={[styles.lineText, { color: mutedColor }]}>
                         Miktar: <Text style={{ color: textColor }}>{line.quantity}</Text>
@@ -1186,6 +1197,7 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
           }}
           onSave={handleSaveLine}
           currency={currencyCode}
+          allowImageUpload
           currencyOptions={(currencyOptions ?? []).map((x) => ({
             code: x.code,
             dovizTipi: x.dovizTipi,
@@ -1332,6 +1344,11 @@ const styles = StyleSheet.create({
   lineTitle: {
     fontSize: 15,
     fontWeight: "700",
+  },
+  linePreviewImage: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
   },
   lineDetailsGrid: {
     flexDirection: "row",

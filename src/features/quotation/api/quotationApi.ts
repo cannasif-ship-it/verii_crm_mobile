@@ -55,6 +55,14 @@ import type {
 } from "../types";
 
 export interface ReportTemplateListResponse extends ApiResponse<PagedResponse<ReportTemplateGetDto>> {}
+export interface PdfTemplateAssetDto {
+  id: number;
+  originalFileName: string;
+  storedFileName: string;
+  relativeUrl: string;
+  contentType: string;
+  sizeBytes: number;
+}
 
 export type ErpProjectCodesResponse = ApiResponse<ProjeDto[]>;
 export type SalesTypeListResponse = ApiResponse<PagedResponse<SalesTypeGetDto>>;
@@ -632,6 +640,42 @@ export const quotationApi = {
     }
     const paged = response.data.data;
     return (paged && "items" in paged ? paged.items : []) ?? [];
+  },
+
+  uploadReportAsset: async (fileUri: string): Promise<PdfTemplateAssetDto> => {
+    const cleanedUri = fileUri.split("?")[0]?.split("#")[0] ?? fileUri;
+    const rawTail = decodeURIComponent(cleanedUri).split("/").pop()?.trim() || `fast_quotation_${Date.now()}.jpg`;
+    const ext = rawTail.includes(".") ? rawTail.substring(rawTail.lastIndexOf(".") + 1).toLowerCase() : "jpg";
+    const mimeType =
+      ext === "png" ? "image/png" :
+      ext === "webp" ? "image/webp" :
+      ext === "gif" ? "image/gif" :
+      "image/jpeg";
+
+    const formData = new FormData();
+    formData.append("file", {
+      uri: fileUri,
+      name: rawTail,
+      type: mimeType,
+    } as any);
+
+    const response = await apiClient.post<ApiResponse<PdfTemplateAssetDto>>(
+      "/api/pdf-report-templates/assets/upload",
+      formData,
+      {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      }
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(
+        response.data.message || response.data.exceptionMessage || "Görsel yüklenemedi"
+      );
+    }
+
+    return response.data.data;
   },
 
   generateReportPdf: async (

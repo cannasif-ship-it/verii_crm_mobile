@@ -6,7 +6,10 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Image,
+  Alert,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -20,6 +23,7 @@ import { stockApi } from "../../stocks/api";
 import { useErpProjects } from "../hooks";
 import { useStock } from "../../stocks/hooks";
 import { parseDecimalInput, sanitizeDecimalInput } from "../../../lib/decimal-input";
+import { getApiBaseUrl } from "../../../constants/config";
 import type {
   QuotationLineFormState,
   PricingRuleLineGetDto,
@@ -49,6 +53,7 @@ interface QuotationLineFormProps {
   pricingRules?: PricingRuleLineGetDto[];
   userDiscountLimits?: UserDiscountLimitDto[];
   exchangeRates?: Array<{ dovizTipi: number; kurDegeri: number }>;
+  allowImageUpload?: boolean;
 }
 
 function normalizeCurrencyCode(value?: string | null): string {
@@ -77,6 +82,19 @@ function resolveCurrencyRate(
   const rate = exchangeRates?.find((r) => r.dovizTipi === option.dovizTipi)?.kurDegeri;
 
   return rate && rate > 0 ? rate : null;
+}
+
+function resolveMobileImageUri(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("file://")) {
+    return path;
+  }
+
+  if (path.startsWith("/")) {
+    return `${getApiBaseUrl()}${path}`;
+  }
+
+  return path;
 }
 
 function convertPriceBetweenCurrencies(
@@ -119,6 +137,7 @@ export function QuotationLineForm({
   pricingRules,
   userDiscountLimits,
   exchangeRates,
+  allowImageUpload = false,
 }: QuotationLineFormProps): React.ReactElement {
   const { t } = useTranslation();
   const { themeMode } = useUIStore();
@@ -155,6 +174,8 @@ export function QuotationLineForm({
   const [approvalMessage, setApprovalMessage] = useState<string>("");
   const [relatedLinesDisplay, setRelatedLinesDisplay] = useState<QuotationLineFormState[]>([]);
   const [erpProjectCode, setErpProjectCode] = useState<string | null>(null);
+  const [imagePath, setImagePath] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [projectCodeModalVisible, setProjectCodeModalVisible] = useState(false);
   const productPickerRef = useRef<ProductPickerRef>(null);
 
@@ -174,6 +195,7 @@ export function QuotationLineForm({
       productId: selectedStock?.id || null,
       productCode: selectedStock?.erpStockCode || "",
       productName: selectedStock?.stockName || "",
+      imagePath,
       groupCode: selectedStock?.grupKodu || null,
       quantity: qty,
       unitPrice: price,
@@ -217,6 +239,7 @@ export function QuotationLineForm({
     description1,
     description2,
     description3,
+    imagePath,
     erpProjectCode,
     approvalStatus,
   ]);
@@ -252,6 +275,7 @@ export function QuotationLineForm({
     setDescription1("");
     setDescription2("");
     setDescription3("");
+    setImagePath(null);
     setErpProjectCode(null);
     setApprovalStatus(0);
     setApprovalMessage("");
@@ -270,6 +294,7 @@ export function QuotationLineForm({
       setDescription1(line.description1 || "");
       setDescription2(line.description2 || "");
       setDescription3(line.description3 || "");
+      setImagePath(line.imagePath || null);
       setErpProjectCode(line.erpProjectCode ?? null);
       setApprovalStatus(line.approvalStatus || 0);
       setRelatedLinesDisplay(line.relatedLines ?? []);
@@ -287,6 +312,45 @@ export function QuotationLineForm({
       resetForm();
     }
   }, [line, visible, resetForm]);
+
+  const handlePickImage = useCallback(async (mode: "camera" | "gallery") => {
+    const permission =
+      mode === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result =
+      mode === "camera"
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.8,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.8,
+          });
+
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+
+    setIsUploadingImage(true);
+    try {
+      const uploaded = await quotationApi.uploadReportAsset(result.assets[0].uri);
+      setImagePath(uploaded.relativeUrl);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }, []);
+
+  const openImagePickerMenu = useCallback(() => {
+    Alert.alert("Kalem Görseli", "Görsel kaynağını seç", [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Kameradan Çek", onPress: () => void handlePickImage("camera") },
+      { text: "Galeriden Seç", onPress: () => void handlePickImage("gallery") },
+    ]);
+  }, [handlePickImage]);
 
   const handleStockSelect = useCallback(
     async (stock: StockGetDto | undefined): Promise<boolean> => {
@@ -630,8 +694,68 @@ export function QuotationLineForm({
                           },
                         }
                       : undefined
-                  }
+                    }
                 />
+
+                {allowImageUpload ? (
+                  <View style={[styles.formCard, { borderColor, backgroundColor: cardBg }]}>
+                    <Text style={[styles.sectionMiniTitle, { color: textColor }]}>
+                      Kalem Görseli
+                    </Text>
+
+                    {imagePath ? (
+                      <Image
+                        source={{ uri: resolveMobileImageUri(imagePath) ?? imagePath }}
+                        style={styles.imagePreview}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={[
+                          styles.imagePlaceholder,
+                          { borderColor: softPinkBorder, backgroundColor: softPinkBg },
+                        ]}
+                      >
+                        <Text style={[styles.imagePlaceholderText, { color: mutedColor }]}>
+                          Bu kalem için henüz görsel eklenmedi
+                        </Text>
+                      </View>
+                    )}
+
+                    <View style={styles.imageActionRow}>
+                      <TouchableOpacity
+                        style={[
+                          styles.imageActionButton,
+                          { borderColor: softPinkBorder, backgroundColor: inputBg },
+                        ]}
+                        onPress={openImagePickerMenu}
+                        disabled={isUploadingImage}
+                      >
+                        {isUploadingImage ? (
+                          <ActivityIndicator size="small" color={brandColor} />
+                        ) : (
+                          <Text style={[styles.imageActionButtonText, { color: textColor }]}>
+                            {imagePath ? "Görseli Değiştir" : "Görsel Ekle"}
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+
+                      {imagePath ? (
+                        <TouchableOpacity
+                          style={[
+                            styles.imageActionButton,
+                            { borderColor: softPinkBorder, backgroundColor: inputBg },
+                          ]}
+                          onPress={() => setImagePath(null)}
+                        >
+                          <Text style={[styles.imageActionButtonText, { color: warningColor }]}>
+                            Kaldır
+                          </Text>
+                        </TouchableOpacity>
+                      ) : null}
+                    </View>
+                  </View>
+                ) : null}
 
                 {isLoadingPrice && (
                   <View style={styles.loadingContainer}>
@@ -1193,6 +1317,42 @@ const styles = StyleSheet.create({
     fontSize: 14,
     minHeight: 88,
     textAlignVertical: "top",
+  },
+  imagePreview: {
+    width: "100%",
+    height: 148,
+    borderRadius: 14,
+  },
+  imagePlaceholder: {
+    width: "100%",
+    height: 110,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 16,
+  },
+  imagePlaceholderText: {
+    fontSize: 13,
+    fontWeight: "500",
+    textAlign: "center",
+  },
+  imageActionRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  imageActionButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  imageActionButtonText: {
+    fontSize: 13,
+    fontWeight: "700",
   },
   detailCard: {
     marginTop: 2,

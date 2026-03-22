@@ -42,6 +42,7 @@ export interface TempQuotattionLineGetDto extends TempQuickQuotationBaseDto {
   tempQuotattionId: number;
   productCode: string;
   productName: string;
+  imagePath: string;
   quantity: number;
   unitPrice: number;
   discountRate1: number;
@@ -61,6 +62,7 @@ export interface TempQuotattionLineCreateDto {
   tempQuotattionId: number;
   productCode: string;
   productName: string;
+  imagePath: string;
   quantity: number;
   unitPrice: number;
   discountRate1: number;
@@ -79,6 +81,7 @@ export interface TempQuotattionLineCreateDto {
 export interface TempQuotattionLineUpdateDto {
   productCode: string;
   productName: string;
+  imagePath: string;
   quantity: number;
   unitPrice: number;
   discountRate1: number;
