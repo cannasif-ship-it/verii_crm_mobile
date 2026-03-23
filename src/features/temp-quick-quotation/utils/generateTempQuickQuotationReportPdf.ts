@@ -5,6 +5,7 @@ import { DocumentRuleType } from "../../quotation/types";
 
 interface GenerateTempQuickQuotationReportPdfParams {
   tempQuotationId?: number;
+  templateId?: number;
 }
 
 function arrayBufferToBase64(ab: ArrayBuffer): string {
@@ -13,6 +14,7 @@ function arrayBufferToBase64(ab: ArrayBuffer): string {
 
 export async function generateTempQuickQuotationReportPdf({
   tempQuotationId,
+  templateId,
 }: GenerateTempQuickQuotationReportPdfParams): Promise<string> {
   if (tempQuotationId == null || tempQuotationId < 1) {
     throw new Error("Tasarım şablonundan PDF oluşturmak için önce hızlı teklifi kaydedin.");
@@ -28,7 +30,11 @@ export async function generateTempQuickQuotationReportPdf({
   }
 
   const selectedTemplate =
-    availableTemplates.find((template) => template.default === true) ?? availableTemplates[0];
+    (templateId != null
+      ? availableTemplates.find((template) => template.id === templateId)
+      : undefined) ??
+    availableTemplates.find((template) => template.default === true) ??
+    availableTemplates[0];
 
   const arrayBuffer = await quotationApi.generateReportPdf({
     templateId: selectedTemplate.id,

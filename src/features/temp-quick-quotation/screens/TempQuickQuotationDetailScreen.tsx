@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
@@ -29,6 +29,9 @@ import { useUIStore } from "../../../store/ui";
 import { useToast } from "../../../hooks/useToast";
 import { tempQuickQuotationRepository } from "../repositories/tempQuotattion.repository";
 import { generateTempQuickQuotationReportPdf } from "../utils/generateTempQuickQuotationReportPdf";
+import { useReportTemplateList } from "../../quotation/hooks/useReportTemplateList";
+import { DocumentRuleType } from "../../quotation/types";
+import { PickerModal } from "../../quotation/components";
 import { openPdfExternallyAsync } from "../../../lib/pdf";
 import { getApiBaseUrl } from "../../../constants/config";
 
@@ -126,6 +129,8 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
 
   const [pdfFileUri, setPdfFileUri] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | undefined>(undefined);
 
   const detailQuery = useQuery({
     queryKey: ["temp-quick-quotation", "detail", quickQuotationId],
@@ -163,6 +168,22 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
     detailQuery.isLoading || linesQuery.isLoading || exchangeLinesQuery.isLoading;
 
   const detail = detailQuery.data;
+  const { data: reportTemplates } = useReportTemplateList(DocumentRuleType.FastQuotation);
+  const selectedTemplate = useMemo(
+    () =>
+      reportTemplates.find((template) => template.id === selectedTemplateId) ??
+      reportTemplates.find((template) => template.default === true) ??
+      reportTemplates[0],
+    [reportTemplates, selectedTemplateId]
+  );
+  const selectedReportTemplateTitle =
+    selectedTemplate?.title?.trim() || "Hızlı teklif şablonu bulunamadı";
+
+  useEffect(() => {
+    if (selectedTemplateId == null && selectedTemplate?.id != null) {
+      setSelectedTemplateId(selectedTemplate.id);
+    }
+  }, [selectedTemplate, selectedTemplateId]);
 
   const lineCount = linesQuery.data?.length ?? 0;
 
@@ -183,6 +204,7 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
     try {
       const fileUri = await generateTempQuickQuotationReportPdf({
         tempQuotationId: detail.id,
+        templateId: selectedTemplate?.id,
       });
 
       setPdfFileUri(fileUri);
@@ -192,7 +214,7 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
     } finally {
       setIsGeneratingPdf(false);
     }
-  }, [detail?.id, showError, showSuccess]);
+  }, [detail?.id, selectedTemplate?.id, showError, showSuccess]);
 
   const handleSharePdf = useCallback(async () => {
     if (!pdfFileUri) return;
@@ -778,9 +800,11 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
               ]}
             >
               <Text style={[styles.label, { color: colors.muted }]}>Rapor Şablonu</Text>
-              <Text style={[styles.reportTemplateText, { color: colors.text }]} numberOfLines={1}>
-                Windo Teklif Yap
-              </Text>
+              <TouchableOpacity activeOpacity={0.8} onPress={() => setTemplatePickerVisible(true)}>
+                <Text style={[styles.reportTemplateText, { color: colors.text }]} numberOfLines={1}>
+                  {selectedReportTemplateTitle}
+                </Text>
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
@@ -931,6 +955,19 @@ export function TempQuickQuotationDetailScreen(): React.ReactElement {
           </View>
         </ScrollView>
       )}
+
+      <PickerModal
+        visible={templatePickerVisible}
+        options={reportTemplates.map((template) => ({
+          id: template.id,
+          name: template.title,
+        }))}
+        selectedValue={selectedTemplateId}
+        onSelect={(option) => setSelectedTemplateId(Number(option.id))}
+        onClose={() => setTemplatePickerVisible(false)}
+        title="Rapor Şablonu"
+        searchPlaceholder="Şablon ara..."
+      />
     </View>
   );
 }

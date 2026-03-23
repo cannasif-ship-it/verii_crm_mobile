@@ -57,6 +57,8 @@ import { getApiBaseUrl } from "../../../constants/config";
 import { openPdfExternallyAsync } from "../../../lib/pdf";
 import { calculateLineTotals } from "../../quotation/utils";
 import { generateTempQuickQuotationReportPdf } from "../utils/generateTempQuickQuotationReportPdf";
+import { useReportTemplateList } from "../../quotation/hooks/useReportTemplateList";
+import { DocumentRuleType } from "../../quotation/types";
 
 function numberValue(value: string): number {
   const parsed = Number(value.replace(",", "."));
@@ -234,6 +236,8 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
   const [customerSelectDialogOpen, setCustomerSelectDialogOpen] = useState(false);
   const [pdfFileUri, setPdfFileUri] = useState<string | null>(null);
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [templatePickerVisible, setTemplatePickerVisible] = useState(false);
+  const [selectedTemplateId, setSelectedTemplateId] = useState<number | undefined>(undefined);
 
   const [lines, setLines] = useState<QuotationLineFormState[]>([]);
   const [editingLine, setEditingLine] = useState<QuotationLineFormState | null>(null);
@@ -641,6 +645,22 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
 
   const pending = createMutation.isPending || updateMutation.isPending;
   const loading = detailQuery.isLoading || linesQuery.isLoading || exchangeLinesQuery.isLoading;
+  const { data: reportTemplates } = useReportTemplateList(DocumentRuleType.FastQuotation);
+  const selectedTemplate = useMemo(
+    () =>
+      reportTemplates.find((template) => template.id === selectedTemplateId) ??
+      reportTemplates.find((template) => template.default === true) ??
+      reportTemplates[0],
+    [reportTemplates, selectedTemplateId]
+  );
+  const selectedReportTemplateTitle =
+    selectedTemplate?.title?.trim() || "Hızlı teklif şablonu bulunamadı";
+
+  useEffect(() => {
+    if (selectedTemplateId == null && selectedTemplate?.id != null) {
+      setSelectedTemplateId(selectedTemplate.id);
+    }
+  }, [selectedTemplate, selectedTemplateId]);
 
   const handleGeneratePdf = useCallback(async () => {
     if (!editId) {
@@ -652,6 +672,7 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     try {
       const fileUri = await generateTempQuickQuotationReportPdf({
         tempQuotationId: editId,
+        templateId: selectedTemplate?.id,
       });
 
       setPdfFileUri(fileUri);
@@ -663,6 +684,7 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
     }
   }, [
     editId,
+    selectedTemplate?.id,
     showError,
     showSuccess,
   ]);
@@ -995,9 +1017,11 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
                   { borderColor, backgroundColor: inputBg },
                 ]}
               >
-                <Text style={[styles.reportTemplateText, { color: textColor }]}>
-                  Windo Teklif Yap
-                </Text>
+                <TouchableOpacity activeOpacity={0.8} onPress={() => setTemplatePickerVisible(true)}>
+                  <Text style={[styles.reportTemplateText, { color: textColor }]}>
+                    {selectedReportTemplateTitle}
+                  </Text>
+                </TouchableOpacity>
               </View>
 
               <TouchableOpacity
@@ -1221,6 +1245,22 @@ export function TempQuickQuotationCreateScreen(): React.ReactElement {
           onClose={() => setCurrencyModalVisible(false)}
           title="Para Birimi Seçiniz"
           searchPlaceholder="Para birimi ara..."
+        />
+
+        <PickerModal
+          visible={templatePickerVisible}
+          options={reportTemplates.map((template) => ({
+            id: template.id,
+            name: template.title,
+          }))}
+          selectedValue={selectedTemplateId}
+          onSelect={(option) => {
+            setSelectedTemplateId(Number(option.id));
+            setTemplatePickerVisible(false);
+          }}
+          onClose={() => setTemplatePickerVisible(false)}
+          title="Rapor Şablonu Seçiniz"
+          searchPlaceholder="Şablon ara..."
         />
 
         <CustomerSelectDialog
