@@ -1,7 +1,7 @@
 import "../lib/suppressConsoleErrors";
 import "react-native-gesture-handler";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { ActivityIndicator, AppState, LogBox, Modal, Pressable, StyleSheet, View } from "react-native";
+import { ActivityIndicator, AppState, InteractionManager, LogBox, Modal, Pressable, StyleSheet, View } from "react-native";
 import { Stack, router, usePathname } from "expo-router";
 import { I18nextProvider } from "react-i18next";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -27,6 +27,7 @@ import {
   fetchVersionCheck,
   type VersionCheckResult,
 } from "../lib/versionCheck";
+import { clearPerfMarks, perfMark, perfMeasure, perfMeasureOnNextPaint } from "../lib/perf-metrics";
 import "../../global.css";
 
 const VERSION_CHECK_INTERVAL_MS = 1000 * 60 * 30;
@@ -72,13 +73,60 @@ export default function RootLayout(): React.ReactElement {
   const lastVersionCheckAtRef = useRef<number>(0);
 
   useEffect(() => {
-    void hydrate();
-    void initLanguage();
-    void initializeApiClient().catch((error) => {
-      console.warn("API base URL initialize failed", error);
-    });
-    void cleanupCachedApkUpdates().catch(() => undefined);
+    perfMark("app:mount");
+
+    perfMark("app:auth_hydrate_start");
+    void hydrate()
+      .then(() => {
+        perfMark("app:auth_hydrate_end");
+        void perfMeasure("app:auth_hydrate", "app:auth_hydrate_start", "app:auth_hydrate_end");
+      })
+      .catch(() => undefined);
+
+    perfMark("app:language_init_start");
+    void initLanguage()
+      .then(() => {
+        perfMark("app:language_init_end");
+        void perfMeasure("app:language_init", "app:language_init_start", "app:language_init_end");
+      })
+      .catch(() => undefined);
+
+    perfMark("app:api_client_init_start");
+    void initializeApiClient()
+      .then(() => {
+        perfMark("app:api_client_init_end");
+        void perfMeasure("app:api_client_init", "app:api_client_init_start", "app:api_client_init_end");
+      })
+      .catch((error) => {
+        console.warn("API base URL initialize failed", error);
+      });
   }, [hydrate]);
+
+  useEffect(() => {
+    if (!isHydrated) {
+      return;
+    }
+
+    perfMeasureOnNextPaint("app:mount_to_hydrated_paint", "app:mount", "app:hydrated_paint");
+
+    return () => {
+      clearPerfMarks(
+        "app:mount",
+        "app:hydrated_paint",
+        "app:settings_ready",
+        "app:auth_hydrate_start",
+        "app:auth_hydrate_end",
+        "app:language_init_start",
+        "app:language_init_end",
+        "app:api_client_init_start",
+        "app:api_client_init_end",
+        "app:settings_fetch_start",
+        "app:settings_fetch_end",
+        "app:system_language_apply_start",
+        "app:system_language_apply_end",
+      );
+    };
+  }, [isHydrated]);
 
   const runVersionCheck = useCallback(
     async (force = false) => {
@@ -112,7 +160,14 @@ export default function RootLayout(): React.ReactElement {
       return;
     }
 
-    void runVersionCheck(true);
+    const interactionTask = InteractionManager.runAfterInteractions(() => {
+      void cleanupCachedApkUpdates().catch(() => undefined);
+      void runVersionCheck(true);
+    });
+
+    return () => {
+      interactionTask.cancel();
+    };
   }, [isHydrated, runVersionCheck]);
 
   useEffect(() => {
@@ -122,19 +177,39 @@ export default function RootLayout(): React.ReactElement {
       if (!isHydrated || !token) return;
 
       try {
+        perfMark("app:settings_fetch_start");
         const settings = await getSystemSettings();
+        perfMark("app:settings_fetch_end");
+        void perfMeasure("app:settings_fetch", "app:settings_fetch_start", "app:settings_fetch_end");
         if (cancelled) return;
         setSystemSettings(settings);
+
+        perfMark("app:system_language_apply_start");
         await applySystemLanguageIfNeeded();
+        perfMark("app:system_language_apply_end");
+        void perfMeasure(
+          "app:system_language_apply",
+          "app:system_language_apply_start",
+          "app:system_language_apply_end",
+        );
+        perfMark("app:settings_ready");
+        perfMeasureOnNextPaint(
+          "app:mount_to_settings_ready_paint",
+          "app:mount",
+          "app:settings_ready_paint",
+        );
       } catch {
         // System settings should not block the app.
       }
     }
 
-    void bootstrapSystemSettings();
+    const interactionTask = InteractionManager.runAfterInteractions(() => {
+      void bootstrapSystemSettings();
+    });
 
     return () => {
       cancelled = true;
+      interactionTask.cancel();
     };
   }, [isHydrated, setSystemSettings, token]);
 

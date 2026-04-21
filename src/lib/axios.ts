@@ -92,9 +92,14 @@ apiClient.interceptors.request.use(
       await authState.hydrate();
     }
 
-    const token = useAuthStore.getState().token;
-    const branch = useAuthStore.getState().branch as Branch | null;
+    const latestAuthState = useAuthStore.getState();
+    let branch = latestAuthState.branch as Branch | null;
+    const token = latestAuthState.token;
     const language = getCurrentLanguage();
+
+    if (token && !branch && !config.url?.includes("/api/auth/login")) {
+      branch = await useAuthStore.getState().hydrateBranch();
+    }
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;

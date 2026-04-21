@@ -11,6 +11,7 @@ interface UseActivitiesParams {
   sortBy?: string;
   sortDirection?: "asc" | "desc";
   pageSize?: number;
+  enabled?: boolean;
 }
 
 export function useActivities(params: UseActivitiesParams = {}) {
@@ -21,6 +22,7 @@ export function useActivities(params: UseActivitiesParams = {}) {
     sortBy = "Id",
     sortDirection = "desc",
     pageSize = DEFAULT_PAGE_SIZE,
+    enabled = true,
   } = params;
 
   return useInfiniteQuery<PagedResponse<ActivityDto>, Error>({
@@ -35,6 +37,7 @@ export function useActivities(params: UseActivitiesParams = {}) {
         filters,
         filterLogic,
       }),
+    enabled,
     initialPageParam: 1,
     getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.pageNumber + 1 : undefined),
     staleTime: 30 * 1000,

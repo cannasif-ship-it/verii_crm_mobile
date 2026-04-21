@@ -1,14 +1,14 @@
-import React, { useCallback, useMemo, useState } from "react";
-import { ActivityIndicator, FlatList, StyleSheet, View, TouchableOpacity } from "react-native";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { ActivityIndicator, FlatList, InteractionManager, StyleSheet, View } from "react-native";
 import { StatusBar } from "expo-status-bar";
 import { useRouter } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
 import { LinearGradient } from "expo-linear-gradient";
-import { RefreshIcon } from "hugeicons-react-native";
 
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { useAuthStore } from "../../../store/auth";
 import { CRM_MODULES } from "../constants/modules";
 import type { Module } from "../types";
 
@@ -21,30 +21,59 @@ import { useActivities } from "../../activity/hooks";
 import { useCustomers } from "../../customer/hooks";
 import { useDailyTasks } from "../../daily-tasks/hooks";
 import { countPendingTasksForToday, getTodayRange } from "../utils/homeStats";
+import { clearPerfMarks, perfMark, perfMeasureOnNextPaint } from "../../../lib/perf-metrics";
 
 export function HomeScreen(): React.ReactElement {
   const { t } = useTranslation();
   const router = useRouter();
   const { themeMode } = useUIStore();
+  const branch = useAuthStore((state) => state.branch);
   const insets = useSafeAreaInsets();
+  const [isSecondaryDataEnabled, setIsSecondaryDataEnabled] = useState(false);
+  const isBranchReady = Boolean(branch?.code);
+
+  useEffect(() => {
+    perfMark("home:mount");
+    perfMeasureOnNextPaint("home:mount_to_paint", "home:mount", "home:first_paint");
+
+    const interactionTask = InteractionManager.runAfterInteractions(() => {
+      setIsSecondaryDataEnabled(true);
+    });
+
+    return () => {
+      interactionTask.cancel();
+      clearPerfMarks("home:mount", "home:first_paint", "home:primary_data_ready");
+    };
+  }, []);
   
   const {
     data: activitiesData,
-    isLoading: isActivitiesLoading,
-    error: activitiesError,
     refetch: refetchActivities,
-  } = useActivities({ pageSize: 3, sortDirection: "desc" });
+  } = useActivities({ pageSize: 3, sortDirection: "desc", enabled: isBranchReady });
 
   const {
     data: customersData,
     refetch: refetchCustomers,
-  } = useCustomers({ pageSize: 1 });
+  } = useCustomers({ pageSize: 1, enabled: isSecondaryDataEnabled && isBranchReady });
 
   const todayRange = useMemo(() => getTodayRange(), []);
   const {
     data: todayTasks,
     refetch: refetchDailyTasks,
-  } = useDailyTasks(todayRange);
+  } = useDailyTasks(todayRange, { enabled: isSecondaryDataEnabled && isBranchReady });
+
+  useEffect(() => {
+    if (!activitiesData) {
+      return;
+    }
+
+    perfMark("home:primary_data_ready");
+    perfMeasureOnNextPaint(
+      "home:mount_to_primary_data_ready_paint",
+      "home:mount",
+      "home:primary_data_ready_paint",
+    );
+  }, [activitiesData]);
 
   const totalCustomers = customersData?.pages?.[0]?.totalCount ?? 0;
   const totalActivities = activitiesData?.pages?.[0]?.totalCount ?? 0;
@@ -81,31 +110,6 @@ export function HomeScreen(): React.ReactElement {
     ({ item }: { item: Module }) => <ModuleCard item={item} onPress={onOpenModule} />,
     [onOpenModule]
   );
-
-  if (activitiesError && !activitiesData) {
-    return (
-      <View style={[styles.center, { backgroundColor: mainBg }]}>
-        <Text style={{ color: textColor, marginBottom: 12, fontSize: 15 }}>
-          {t("home.error")}
-        </Text>
-        <TouchableOpacity 
-          onPress={() => void onRefresh()}
-          style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: isDark ? '#1E293B' : '#F1F5F9', padding: 10, borderRadius: 12 }}
-        >
-          <RefreshIcon size={18} color={textColor} />
-          <Text style={{ color: textColor, marginLeft: 8, fontWeight: '600' }}>{t("common.retry")}</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
-  if (isActivitiesLoading && !activitiesData) {
-    return (
-      <View style={[styles.center, { backgroundColor: mainBg }]}>
-        <ActivityIndicator size="large" color="#db2777" />
-      </View>
-    );
-  }
 
   const recentActivitiesList = activitiesData?.pages?.[0]?.items?.filter(item => item != null) || [];
 
@@ -144,6 +148,15 @@ export function HomeScreen(): React.ReactElement {
             <Text style={[styles.sectionTitle, { color: textColor, marginTop: 12 }]}>
               {t("home.overview")}
             </Text>
+
+            {!isBranchReady && (
+              <View style={[styles.inlineInfoBox, { backgroundColor: isDark ? "#1E293B" : "#F8FAFC", borderColor: isDark ? "#334155" : "#E2E8F0" }]}>
+                <ActivityIndicator size="small" color="#db2777" />
+                <Text style={[styles.inlineInfoText, { color: textColor }]}>
+                  {t("common.loading", "Yükleniyor...")}
+                </Text>
+              </View>
+            )}
             
             <StatsStrip
               totalCustomers={totalCustomers}
@@ -162,9 +175,22 @@ export function HomeScreen(): React.ReactElement {
 
 const styles = StyleSheet.create({
   root: { flex: 1 },
-  center: { flex: 1, alignItems: "center", justifyContent: "center" },
   headerContainer: { marginBottom: 4 },
   footerContainer: { marginTop: 8 },
   sectionTitle: { fontSize: 15, fontWeight: "700", marginBottom: 16, letterSpacing: 0.2 },
   columnWrapper: { justifyContent: "space-between", marginBottom: 12 },
+  inlineInfoBox: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+  },
+  inlineInfoText: {
+    fontSize: 13,
+    fontWeight: "500",
+  },
 });

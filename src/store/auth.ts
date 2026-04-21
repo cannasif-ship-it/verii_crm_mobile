@@ -3,6 +3,7 @@ import { storage } from "../lib/storage";
 import type { User, Branch } from "../features/auth/types";
 import { ACCESS_TOKEN_KEY, USER_STORAGE_KEY, BRANCH_STORAGE_KEY } from "../constants/storage";
 import { isTokenValid, getUserFromToken } from "../features/auth/utils";
+import { perfMark, perfMeasure } from "../lib/perf-metrics";
 
 interface AuthState {
   user: User | null;
@@ -14,7 +15,10 @@ interface AuthState {
   setBranch: (branch: Branch) => Promise<void>;
   clearAuth: () => Promise<void>;
   hydrate: () => Promise<void>;
+  hydrateBranch: () => Promise<Branch | null>;
 }
+
+let branchHydrationPromise: Promise<Branch | null> | null = null;
 
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
@@ -43,30 +47,85 @@ export const useAuthStore = create<AuthState>((set) => ({
     await storage.remove(ACCESS_TOKEN_KEY);
     await storage.remove(USER_STORAGE_KEY);
     await storage.remove(BRANCH_STORAGE_KEY);
+    branchHydrationPromise = null;
     set({ user: null, token: null, branch: null, isAuthenticated: false });
+  },
+
+  hydrateBranch: async (): Promise<Branch | null> => {
+    const currentBranch = useAuthStore.getState().branch;
+    if (currentBranch) {
+      return currentBranch;
+    }
+
+    if (branchHydrationPromise) {
+      return branchHydrationPromise;
+    }
+
+    branchHydrationPromise = (async () => {
+      perfMark("auth:storage_branch_get_start");
+      const branch = await storage.get<Branch>(BRANCH_STORAGE_KEY);
+      perfMark("auth:storage_branch_get_end");
+      void perfMeasure(
+        "auth:storage_branch_get",
+        "auth:storage_branch_get_start",
+        "auth:storage_branch_get_end",
+      );
+
+      const currentState = useAuthStore.getState();
+      if (currentState.isAuthenticated) {
+        set({ branch });
+      }
+
+      return branch;
+    })();
+
+    try {
+      return await branchHydrationPromise;
+    } finally {
+      branchHydrationPromise = null;
+    }
   },
 
   hydrate: async (): Promise<void> => {
     try {
+      perfMark("auth:storage_token_get_start");
       const token = await storage.get<string>(ACCESS_TOKEN_KEY);
-      const branch = await storage.get<Branch>(BRANCH_STORAGE_KEY);
+      perfMark("auth:storage_token_get_end");
+      void perfMeasure(
+        "auth:storage_token_get",
+        "auth:storage_token_get_start",
+        "auth:storage_token_get_end",
+      );
 
       if (token && isTokenValid(token)) {
+        perfMark("auth:user_decode_start");
         const user = getUserFromToken(token);
+        perfMark("auth:user_decode_end");
+        void perfMeasure("auth:user_decode", "auth:user_decode_start", "auth:user_decode_end");
         if (user) {
           set({
             user,
             token,
-            branch,
             isAuthenticated: true,
             isHydrated: true,
           });
+
+          void useAuthStore.getState().hydrateBranch();
+
           return;
         }
       }
 
       await storage.remove(ACCESS_TOKEN_KEY);
       await storage.remove(USER_STORAGE_KEY);
+      perfMark("auth:storage_branch_get_start");
+      const branch = await storage.get<Branch>(BRANCH_STORAGE_KEY);
+      perfMark("auth:storage_branch_get_end");
+      void perfMeasure(
+        "auth:storage_branch_get",
+        "auth:storage_branch_get_start",
+        "auth:storage_branch_get_end",
+      );
       set({ isHydrated: true, branch });
     } catch {
       set({ isHydrated: true });
