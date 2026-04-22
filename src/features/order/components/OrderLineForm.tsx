@@ -6,8 +6,11 @@ import {
   TouchableOpacity,
   TextInput,
   ActivityIndicator,
+  Image,
+  Alert,
   useWindowDimensions,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTranslation } from "react-i18next";
@@ -17,9 +20,12 @@ import { ProductPicker, type ProductPickerRef } from "./ProductPicker";
 import type { StockRelationDto } from "../../stocks/types";
 import { getProductSelectionKey, type ProductSelectionResult } from "../../stocks/types";
 import { orderApi } from "../api";
+import { quotationApi } from "../../quotation/api";
+import type { UploadReportAssetOptions } from "../../quotation/api/quotationApi";
 import { stockApi } from "../../stocks/api";
 import { useStock } from "../../stocks/hooks";
 import { parseDecimalInput, sanitizeDecimalInput } from "../../../lib/decimal-input";
+import { getApiBaseUrl } from "../../../constants/config";
 import type {
   OrderLineFormState,
   PricingRuleLineGetDto,
@@ -47,6 +53,22 @@ interface OrderLineFormProps {
   pricingRules?: PricingRuleLineGetDto[];
   userDiscountLimits?: UserDiscountLimitDto[];
   exchangeRates?: Array<{ dovizTipi: number; kurDegeri: number }>;
+  allowImageUpload?: boolean;
+  imageUploadScope?: "order-line";
+  imageUploadExtras?: Omit<UploadReportAssetOptions, "assetScope">;
+}
+
+function resolveMobileImageUri(path?: string | null): string | null {
+  if (!path) return null;
+  if (path.startsWith("http://") || path.startsWith("https://") || path.startsWith("file://")) {
+    return path;
+  }
+
+  if (path.startsWith("/")) {
+    return `${getApiBaseUrl()}${path}`;
+  }
+
+  return path;
 }
 
 export function OrderLineForm({
@@ -67,6 +89,9 @@ export function OrderLineForm({
   pricingRules,
   userDiscountLimits,
   exchangeRates,
+  allowImageUpload = false,
+  imageUploadScope = "order-line",
+  imageUploadExtras,
 }: OrderLineFormProps): React.ReactElement {
   const { t } = useTranslation();
   const { colors, showUnitInStockSelection } = useUIStore();
@@ -86,6 +111,8 @@ export function OrderLineForm({
   const [relatedLinesDisplay, setRelatedLinesDisplay] = useState<OrderLineFormState[]>([]);
   const [bulkDraftLines, setBulkDraftLines] = useState<OrderLineFormState[]>([]);
   const [activeBulkDraftIndex, setActiveBulkDraftIndex] = useState<number>(0);
+  const [imagePath, setImagePath] = useState<string | null>(null);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
   const productPickerRef = useRef<ProductPickerRef>(null);
 
   const currentLine: OrderLineFormState = useMemo(() => {
@@ -116,6 +143,7 @@ export function OrderLineForm({
       lineTotal: 0,
       lineGrandTotal: 0,
       description: description || null,
+      imagePath,
       isEditing: false,
       approvalStatus,
       relatedStockId: line?.relatedStockId ?? selectedStock?.id ?? null,
@@ -134,6 +162,7 @@ export function OrderLineForm({
     discountRate3,
     vatRate,
     description,
+    imagePath,
     approvalStatus,
   ]);
 
@@ -146,6 +175,7 @@ export function OrderLineForm({
       setDiscountRate3(sanitizeDecimalInput(String(line.discountRate3)));
       setVatRate(sanitizeDecimalInput(String(line.vatRate)));
       setDescription(line.description || "");
+      setImagePath(line.imagePath || null);
       setApprovalStatus(line.approvalStatus || 0);
       setRelatedLinesDisplay(line.relatedLines ?? []);
       if (line.productCode || line.productName) {
@@ -190,6 +220,7 @@ export function OrderLineForm({
     setDiscountRate3("0");
     setVatRate("20");
     setDescription("");
+    setImagePath(null);
     setApprovalStatus(0);
     setApprovalMessage("");
     setRelatedLinesDisplay([]);
@@ -227,6 +258,7 @@ export function OrderLineForm({
     setDiscountRate3(sanitizeDecimalInput(String(draft.discountRate3)));
     setVatRate(sanitizeDecimalInput(String(draft.vatRate)));
     setDescription(draft.description || "");
+    setImagePath(draft.imagePath || null);
     setApprovalStatus(draft.approvalStatus || 0);
     setRelatedLinesDisplay(draft.relatedLines ?? []);
 
@@ -239,6 +271,62 @@ export function OrderLineForm({
       grupKodu: draft.groupCode ?? undefined,
     } as StockGetDto);
   }, []);
+
+  const handlePickImage = useCallback(async (mode: "camera" | "gallery") => {
+    const permission =
+      mode === "camera"
+        ? await ImagePicker.requestCameraPermissionsAsync()
+        : await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) return;
+
+    const result =
+      mode === "camera"
+        ? await ImagePicker.launchCameraAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.8,
+          })
+        : await ImagePicker.launchImageLibraryAsync({
+            mediaTypes: ImagePicker.MediaTypeOptions.Images,
+            allowsEditing: true,
+            quality: 0.8,
+          });
+
+    if (result.canceled || !result.assets?.[0]?.uri) return;
+
+    setIsUploadingImage(true);
+    try {
+      const lineIdFromForm =
+        typeof line?.id === "string" && line.id.startsWith("line-")
+          ? Number(line.id.replace("line-", ""))
+          : undefined;
+
+      const uploaded = await quotationApi.uploadReportAsset(result.assets[0].uri, {
+        assetScope: imageUploadScope,
+        orderId: imageUploadExtras?.orderId,
+        orderLineId:
+          imageUploadExtras?.orderLineId && imageUploadExtras.orderLineId > 0
+            ? imageUploadExtras.orderLineId
+            : Number.isFinite(lineIdFromForm) && (lineIdFromForm as number) > 0
+              ? (lineIdFromForm as number)
+              : undefined,
+      });
+      setImagePath(uploaded.relativeUrl);
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Görsel yüklenemedi";
+      Alert.alert("Görsel", message);
+    } finally {
+      setIsUploadingImage(false);
+    }
+  }, [imageUploadExtras, imageUploadScope, line?.id]);
+
+  const openImagePickerMenu = useCallback(() => {
+    Alert.alert("Kalem Görseli", "Görsel kaynağını seç", [
+      { text: "Vazgeç", style: "cancel" },
+      { text: "Kameradan Çek", onPress: () => void handlePickImage("camera") },
+      { text: "Galeriden Seç", onPress: () => void handlePickImage("gallery") },
+    ]);
+  }, [handlePickImage]);
 
   const upsertActiveDraft = useCallback(() => {
     if (!hasBulkDrafts) return;
@@ -716,6 +804,61 @@ export function OrderLineForm({
               </View>
             ) : null}
 
+            {allowImageUpload ? (
+              <View style={styles.fieldContainer}>
+                <Text style={[styles.label, { color: colors.textSecondary }]}>Kalem Görseli</Text>
+                {imagePath ? (
+                  <Image
+                    source={{ uri: resolveMobileImageUri(imagePath) ?? imagePath }}
+                    style={styles.imagePreview}
+                    resizeMode="cover"
+                  />
+                ) : (
+                  <View
+                    style={[
+                      styles.imagePlaceholder,
+                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                    ]}
+                  >
+                    <Text style={[styles.imagePlaceholderText, { color: colors.textMuted }]}>
+                      Bu kalem için henüz görsel eklenmedi
+                    </Text>
+                  </View>
+                )}
+                <View style={styles.imageActionRow}>
+                  <TouchableOpacity
+                    style={[
+                      styles.imageActionButton,
+                      { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                    ]}
+                    onPress={openImagePickerMenu}
+                    disabled={isUploadingImage}
+                  >
+                    {isUploadingImage ? (
+                      <ActivityIndicator size="small" color={colors.accent} />
+                    ) : (
+                      <Text style={[styles.imageActionButtonText, { color: colors.text }]}>
+                        {imagePath ? "Görseli Değiştir" : "Görsel Ekle"}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                  {imagePath ? (
+                    <TouchableOpacity
+                      style={[
+                        styles.imageActionButton,
+                        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                      ]}
+                      onPress={() => setImagePath(null)}
+                    >
+                      <Text style={[styles.imageActionButtonText, { color: colors.error }]}>
+                        Kaldır
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+            ) : null}
+
             {isLoadingPrice && (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="small" color={colors.accent} />
@@ -992,6 +1135,43 @@ const styles = StyleSheet.create({
   loadingText: {
     marginLeft: 8,
     fontSize: 14,
+  },
+  imagePreview: {
+    width: "100%",
+    height: 160,
+    borderRadius: 12,
+    marginBottom: 10,
+  },
+  imagePlaceholder: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 12,
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 10,
+  },
+  imagePlaceholderText: {
+    fontSize: 13,
+    textAlign: "center",
+  },
+  imageActionRow: {
+    flexDirection: "row",
+    gap: 10,
+  },
+  imageActionButton: {
+    flex: 1,
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 12,
+  },
+  imageActionButtonText: {
+    fontSize: 14,
+    fontWeight: "600",
   },
   fieldContainer: {
     marginBottom: 16,

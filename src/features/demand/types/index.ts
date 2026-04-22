@@ -139,6 +139,7 @@ export interface CreateDemandLineDto {
   lineTotal: number;
   lineGrandTotal: number;
   description?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -166,6 +167,7 @@ export interface DemandLineUpdateDto {
   lineTotal: number;
   lineGrandTotal: number;
   description?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -208,6 +210,7 @@ export interface DemandLineFormState {
   lineTotal: number;
   lineGrandTotal: number;
   description?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -418,6 +421,7 @@ export interface DemandLineDetailGetDto {
   lineTotal: number;
   lineGrandTotal: number;
   description: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId: number | null;
   relatedStockId: number | null;
   relatedProductKey: string | null;

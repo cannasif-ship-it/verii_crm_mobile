@@ -71,10 +71,23 @@ export interface PdfTemplateAssetDto {
 }
 
 export interface UploadReportAssetOptions {
-  assetScope?: "quick-quotation" | "pdf-designer" | "report-builder" | "template";
+  assetScope?:
+    | "quick-quotation"
+    | "pdf-designer"
+    | "report-builder"
+    | "template"
+    | "quotation-line"
+    | "demand-line"
+    | "order-line";
   tempQuotattionId?: number;
   tempQuotattionLineId?: number;
   productCode?: string;
+  quotationId?: number;
+  quotationLineId?: number;
+  demandId?: number;
+  demandLineId?: number;
+  orderId?: number;
+  orderLineId?: number;
 }
 
 export type ErpProjectCodesResponse = ApiResponse<ProjeDto[]>;
@@ -692,6 +705,24 @@ export const quotationApi = {
     }
     if (options?.productCode) {
       formData.append("productCode", options.productCode);
+    }
+    if (typeof options?.quotationId === "number" && options.quotationId > 0) {
+      formData.append("quotationId", String(options.quotationId));
+    }
+    if (typeof options?.quotationLineId === "number" && options.quotationLineId > 0) {
+      formData.append("quotationLineId", String(options.quotationLineId));
+    }
+    if (typeof options?.demandId === "number" && options.demandId > 0) {
+      formData.append("demandId", String(options.demandId));
+    }
+    if (typeof options?.demandLineId === "number" && options.demandLineId > 0) {
+      formData.append("demandLineId", String(options.demandLineId));
+    }
+    if (typeof options?.orderId === "number" && options.orderId > 0) {
+      formData.append("orderId", String(options.orderId));
+    }
+    if (typeof options?.orderLineId === "number" && options.orderLineId > 0) {
+      formData.append("orderLineId", String(options.orderLineId));
     }
 
     const response = await apiClient.post<ApiResponse<PdfTemplateAssetDto>>(

@@ -1318,6 +1318,19 @@ export function OrderDetailScreen(): React.ReactElement {
           pricingRules={pricingRules}
           userDiscountLimits={userDiscountLimits}
           exchangeRates={effectiveRatesForLines}
+          allowImageUpload={Boolean(editingLine)}
+          imageUploadScope="order-line"
+          imageUploadExtras={
+            editingLine
+              ? {
+                  orderId,
+                  orderLineId:
+                    typeof editingLine.id === "string" && editingLine.id.startsWith("line-")
+                      ? Number(editingLine.id.replace("line-", ""))
+                      : undefined,
+                }
+              : undefined
+          }
         />
 
         <RejectModal

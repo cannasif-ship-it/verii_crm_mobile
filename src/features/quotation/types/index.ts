@@ -164,6 +164,7 @@ export interface CreateQuotationLineDto {
   description1?: string | null;
   description2?: string | null;
   description3?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -195,6 +196,7 @@ export interface QuotationLineUpdateDto {
   description1?: string | null;
   description2?: string | null;
   description3?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -267,7 +269,6 @@ export interface QuotationLineFormState {
   productCode: string;
   productName: string;
   unit?: string | null;
-  imagePath?: string | null;
   groupCode?: string | null;
   quantity: number;
   unitPrice: number;
@@ -285,6 +286,7 @@ export interface QuotationLineFormState {
   description1?: string | null;
   description2?: string | null;
   description3?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -513,6 +515,7 @@ export interface QuotationLineDetailGetDto {
   lineTotal: number;
   lineGrandTotal: number;
   description: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId: number | null;
   relatedStockId: number | null;
   relatedProductKey: string | null;

@@ -60,7 +60,12 @@ interface QuotationLineFormProps {
   userDiscountLimits?: UserDiscountLimitDto[];
   exchangeRates?: Array<{ dovizTipi: number; kurDegeri: number }>;
   allowImageUpload?: boolean;
-  imageUploadScope?: "quick-quotation" | "pdf-designer" | "report-builder" | "template";
+  imageUploadScope?:
+    | "quick-quotation"
+    | "pdf-designer"
+    | "report-builder"
+    | "template"
+    | "quotation-line";
   /** Extra fields for /assets/upload (e.g. hızlı teklif temp header / line ids). `assetScope` comes from `imageUploadScope`. */
   imageUploadExtras?: Omit<UploadReportAssetOptions, "assetScope">;
 }
@@ -474,6 +479,13 @@ export function QuotationLineForm({
         tempQuotattionId: imageUploadExtras?.tempQuotattionId,
         tempQuotattionLineId: resolvedLineId,
         productCode: productCodeForUpload,
+        quotationId: imageUploadExtras?.quotationId,
+        quotationLineId:
+          imageUploadExtras?.quotationLineId && imageUploadExtras.quotationLineId > 0
+            ? imageUploadExtras.quotationLineId
+            : imageUploadScope === "quotation-line"
+              ? resolvedLineId
+              : undefined,
       });
       setImagePath(uploaded.relativeUrl);
     } catch (e) {

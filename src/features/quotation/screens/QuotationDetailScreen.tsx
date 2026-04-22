@@ -1550,6 +1550,19 @@ const gradientColors = isDark
           pricingRules={pricingRules}
           userDiscountLimits={userDiscountLimits}
           exchangeRates={effectiveRatesForLines}
+          allowImageUpload={Boolean(editingLine)}
+          imageUploadScope="quotation-line"
+          imageUploadExtras={
+            editingLine
+              ? {
+                  quotationId,
+                  quotationLineId:
+                    typeof editingLine.id === "string" && editingLine.id.startsWith("line-")
+                      ? Number(editingLine.id.replace("line-", ""))
+                      : undefined,
+                }
+              : undefined
+          }
         />
 
         <RejectModal

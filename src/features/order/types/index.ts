@@ -139,6 +139,7 @@ export interface CreateOrderLineDto {
   lineTotal: number;
   lineGrandTotal: number;
   description?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -166,6 +167,7 @@ export interface OrderLineUpdateDto {
   lineTotal: number;
   lineGrandTotal: number;
   description?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -208,6 +210,7 @@ export interface OrderLineFormState {
   lineTotal: number;
   lineGrandTotal: number;
   description?: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
   relatedProductKey?: string | null;
@@ -418,6 +421,7 @@ export interface OrderLineDetailGetDto {
   lineTotal: number;
   lineGrandTotal: number;
   description: string | null;
+  imagePath?: string | null;
   pricingRuleHeaderId: number | null;
   relatedStockId: number | null;
   relatedProductKey: string | null;

@@ -1318,6 +1318,19 @@ export function DemandDetailScreen(): React.ReactElement {
           pricingRules={pricingRules}
           userDiscountLimits={userDiscountLimits}
           exchangeRates={effectiveRatesForLines}
+          allowImageUpload={Boolean(editingLine)}
+          imageUploadScope="demand-line"
+          imageUploadExtras={
+            editingLine
+              ? {
+                  demandId,
+                  demandLineId:
+                    typeof editingLine.id === "string" && editingLine.id.startsWith("line-")
+                      ? Number(editingLine.id.replace("line-", ""))
+                      : undefined,
+                }
+              : undefined
+          }
         />
 
         <RejectModal
