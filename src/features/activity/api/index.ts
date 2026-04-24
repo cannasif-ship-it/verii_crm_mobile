@@ -267,12 +267,7 @@ export const activityImageApi = {
 
     const response = await apiClient.post<ApiResponse<ActivityImageDto[]>>(
       `/api/ActivityImage/upload/${activityId}`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
     );
 
     if (!response.data.success) {

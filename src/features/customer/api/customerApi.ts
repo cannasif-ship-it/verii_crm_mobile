@@ -244,9 +244,6 @@ export const customerApi = {
         formData,
         {
           timeout: 120000,
-          headers: {
-            "Content-Type": "multipart/form-data",
-          },
         }
       );
 
@@ -309,12 +306,7 @@ export const customerApi = {
 
     const response = await apiClient.post<ApiResponse<CustomerImageDto[]>>(
       `/api/CustomerImage/upload/${customerId}`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
     );
 
     if (!response.data.success) {

@@ -105,7 +105,12 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    if (config.data !== undefined && !(config.data instanceof FormData)) {
+    const isFormDataPayload = typeof FormData !== "undefined" && config.data instanceof FormData;
+
+    if (isFormDataPayload) {
+      delete config.headers["Content-Type"];
+      delete config.headers["content-type"];
+    } else if (config.data !== undefined) {
       config.data = normalizeOutgoingUtcDateStrings(config.data);
     }
 

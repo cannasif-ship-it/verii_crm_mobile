@@ -174,12 +174,7 @@ export const stockImageApi = {
 
     const response = await apiClient.post<ApiResponse<unknown>>(
       `/api/StockImage/upload/${stockId}`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
     );
 
     if (!response.data.success) {

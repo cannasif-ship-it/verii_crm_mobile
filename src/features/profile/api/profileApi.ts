@@ -56,12 +56,7 @@ export const profileApi = {
 
     const response = await apiClient.post<UserDetailProfileResponse>(
       `/api/UserDetail/users/${userId}/profile-picture`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
+      formData
     );
 
     if (!response.data.success) {

@@ -2016,12 +2016,14 @@ export function QuotationCreateScreen(): React.ReactElement {
             pricingRules={pricingRules}
             userDiscountLimits={userDiscountLimits}
             exchangeRates={effectiveRatesForLines}
-          onMultiProductSelect={handleMultiProductSelect}
-          onSaveMultiple={(newLines) => {
-            setLines((prev) => [...prev, ...newLines]);
-            setLineFormVisible(false);
-            setEditingLine(null);
-          }}
+            allowImageUpload
+            imageUploadScope="quotation-line"
+            onMultiProductSelect={handleMultiProductSelect}
+            onSaveMultiple={(newLines) => {
+              setLines((prev) => [...prev, ...newLines]);
+              setLineFormVisible(false);
+              setEditingLine(null);
+            }}
           />
 
           <ExchangeRateDialog

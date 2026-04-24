@@ -300,6 +300,11 @@ export function OrderLineForm({
         typeof line?.id === "string" && line.id.startsWith("line-")
           ? Number(line.id.replace("line-", ""))
           : undefined;
+      const productCodeForUpload =
+        imageUploadExtras?.productCode ||
+        line?.productCode ||
+        selectedStock?.erpStockCode ||
+        undefined;
 
       const uploaded = await quotationApi.uploadReportAsset(result.assets[0].uri, {
         assetScope: imageUploadScope,
@@ -310,6 +315,7 @@ export function OrderLineForm({
             : Number.isFinite(lineIdFromForm) && (lineIdFromForm as number) > 0
               ? (lineIdFromForm as number)
               : undefined,
+        productCode: productCodeForUpload,
       });
       setImagePath(uploaded.relativeUrl);
     } catch (e) {
@@ -318,7 +324,7 @@ export function OrderLineForm({
     } finally {
       setIsUploadingImage(false);
     }
-  }, [imageUploadExtras, imageUploadScope, line?.id]);
+  }, [imageUploadExtras, imageUploadScope, line?.id, line?.productCode, selectedStock?.erpStockCode]);
 
   const openImagePickerMenu = useCallback(() => {
     Alert.alert("Kalem Görseli", "Görsel kaynağını seç", [
@@ -832,7 +838,7 @@ export function OrderLineForm({
                       { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
                     ]}
                     onPress={openImagePickerMenu}
-                    disabled={isUploadingImage}
+                    disabled={isUploadingImage || !(selectedStock?.erpStockCode || lineToSave.productCode)}
                   >
                     {isUploadingImage ? (
                       <ActivityIndicator size="small" color={colors.accent} />

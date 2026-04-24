@@ -1064,7 +1064,7 @@ export function QuotationLineForm({
                           { borderColor: softPinkBorder, backgroundColor: inputBg },
                         ]}
                         onPress={openImagePickerMenu}
-                        disabled={isUploadingImage}
+                        disabled={isUploadingImage || !(selectedStock?.erpStockCode || lineToSave.productCode)}
                       >
                         {isUploadingImage ? (
                           <ActivityIndicator size="small" color={brandColor} />

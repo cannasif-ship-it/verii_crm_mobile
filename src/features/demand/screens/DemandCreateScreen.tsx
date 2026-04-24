@@ -1382,6 +1382,7 @@ export function DemandCreateScreen(): React.ReactElement {
           pricingRules={pricingRules}
           userDiscountLimits={userDiscountLimits}
           exchangeRates={effectiveRatesForLines}
+          allowImageUpload
           onMultiProductSelect={handleMultiProductSelect}
           onSaveMultiple={(newLines) => {
             setLines((prev) => [...prev, ...newLines]);
