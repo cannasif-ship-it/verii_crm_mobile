@@ -72,6 +72,8 @@ import {
 import {
   type QuotationLineFormState,
   type QuotationExchangeRateFormState,
+  type QuotationGetDto,
+  type QuotationLineUpdateDto,
   type StockGetDto,
   normalizeOfferType,
 } from "../types";
@@ -89,6 +91,38 @@ import {
   Delete02Icon,
   Alert02Icon,
 } from "hugeicons-react-native";
+
+async function finalizePendingQuotationImages(
+  quotation: QuotationGetDto,
+  draftLines: QuotationLineFormState[]
+): Promise<void> {
+  const createdLines =
+    quotation.lines && quotation.lines.length > 0
+      ? quotation.lines
+      : await quotationApi.getLinesByQuotation(quotation.id);
+
+  for (let index = 0; index < draftLines.length; index += 1) {
+    const draftLine = draftLines[index];
+    const pendingImageUri = draftLine.pendingImageUri;
+    const createdLine = createdLines[index];
+
+    if (!pendingImageUri || !createdLine?.id) continue;
+
+    const uploaded = await quotationApi.uploadReportAsset(pendingImageUri, {
+      assetScope: "quotation-line",
+      quotationId: quotation.id,
+      quotationLineId: createdLine.id,
+      productCode: draftLine.productCode || undefined,
+    });
+
+    await quotationApi.updateQuotationLines([
+      {
+        ...(createdLine as QuotationLineUpdateDto),
+        imagePath: uploaded.relativeUrl,
+      },
+    ]);
+  }
+}
 import { LinearGradient } from "expo-linear-gradient";
 import { getApiBaseUrl } from "../../../constants/config";
 
@@ -833,7 +867,7 @@ export function QuotationCreateScreen(): React.ReactElement {
       }
 
       const cleanedLines = lines.map((line) => {
-        const { id, isEditing, relatedLines, relationQuantity, ...rest } = line;
+        const { id, isEditing, relatedLines, relationQuantity, pendingImageUri, ...rest } = line;
         return {
           ...rest,
           quotationId: 0,
@@ -882,15 +916,19 @@ export function QuotationCreateScreen(): React.ReactElement {
       const quotationNotes = notesToDto(notes);
       const hasNotes = Object.keys(quotationNotes).length > 0;
 
-      createQuotation.mutate({
+      const result = await createQuotation.mutateAsync({
         quotation: quotationPayload,
         lines: cleanedLines,
         exchangeRates:
           cleanedExchangeRates.length > 0 ? cleanedExchangeRates : undefined,
         quotationNotes: hasNotes ? quotationNotes : undefined,
       });
+
+      await finalizePendingQuotationImages(result, lines);
+      showToast("success", t("common.quotationCreatedAndSentForApproval"));
+      router.push(`/(tabs)/sales/quotations/${result.id}`);
     },
-    [lines, exchangeRates, erpRatesForQuotation, currencyOptions, notes, createQuotation, setError]
+    [lines, exchangeRates, erpRatesForQuotation, currencyOptions, notes, createQuotation, setError, showToast, t, router]
   );
 
   const onInvalidSubmit = useCallback(() => {

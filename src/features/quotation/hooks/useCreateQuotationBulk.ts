@@ -1,5 +1,4 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
 import { quotationApi } from "../api";
 import type { QuotationBulkCreateDto, QuotationGetDto, QuotationNotesDto } from "../types";
 import { useToastStore } from "../../../store/toast";
@@ -16,7 +15,6 @@ function dtoToNotesArray(dto: QuotationNotesDto): string[] {
 
 export function useCreateQuotationBulk() {
   const queryClient = useQueryClient();
-  const router = useRouter();
   const showToast = useToastStore((state) => state.showToast);
   const { t } = useTranslation();
 
@@ -34,8 +32,6 @@ export function useCreateQuotationBulk() {
         }
       }
       queryClient.invalidateQueries({ queryKey: ["quotation", "list"] });
-      showToast("success", t("common.quotationCreatedAndSentForApproval"));
-      router.push(`/(tabs)/sales/quotations/${data.id}`);
     },
     onError: (error) => {
       showToast(

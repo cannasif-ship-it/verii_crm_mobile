@@ -204,6 +204,7 @@ export function QuotationLineForm({
   const [activeBulkDraftIndex, setActiveBulkDraftIndex] = useState<number>(0);
   const [erpProjectCode, setErpProjectCode] = useState<string | null>(null);
   const [imagePath, setImagePath] = useState<string | null>(null);
+  const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [projectCodeModalVisible, setProjectCodeModalVisible] = useState(false);
   const productPickerRef = useRef<ProductPickerRef>(null);
@@ -267,6 +268,7 @@ export function QuotationLineForm({
       description2: description2 || null,
       description3: description3 || null,
       erpProjectCode: erpProjectCode || null,
+      pendingImageUri,
       isEditing: false,
       approvalStatus,
       relatedStockId: line?.relatedStockId ?? selectedStock?.id ?? null,
@@ -293,6 +295,7 @@ export function QuotationLineForm({
     description2,
     description3,
     imagePath,
+    pendingImageUri,
     erpProjectCode,
     approvalStatus,
   ]);
@@ -342,6 +345,7 @@ export function QuotationLineForm({
     setDescription2("");
     setDescription3("");
     setImagePath(null);
+    setPendingImageUri(null);
     setErpProjectCode(null);
     setApprovalStatus(0);
     setApprovalMessage("");
@@ -362,6 +366,7 @@ export function QuotationLineForm({
     setDescription2(draft.description2 || "");
     setDescription3(draft.description3 || "");
     setImagePath(draft.imagePath || null);
+    setPendingImageUri(draft.pendingImageUri || null);
     setErpProjectCode(draft.erpProjectCode ?? null);
     setApprovalStatus(draft.approvalStatus || 0);
     setRelatedLinesDisplay(draft.relatedLines ?? []);
@@ -390,6 +395,7 @@ export function QuotationLineForm({
     setDescription2(editing.description2 || "");
     setDescription3(editing.description3 || "");
     setImagePath(editing.imagePath || null);
+    setPendingImageUri(editing.pendingImageUri || null);
     setErpProjectCode(editing.erpProjectCode ?? null);
     setApprovalStatus(editing.approvalStatus || 0);
     setRelatedLinesDisplay(editing.relatedLines ?? []);
@@ -454,20 +460,31 @@ export function QuotationLineForm({
 
     if (result.canceled || !result.assets?.[0]?.uri) return;
 
+    const tempLineIdFromFormId =
+      line?.id?.startsWith("db-") === true
+        ? Number(line.id.replace("db-", ""))
+        : undefined;
+    const resolvedLineId =
+      typeof imageUploadExtras?.tempQuotattionLineId === "number" &&
+      imageUploadExtras.tempQuotattionLineId > 0
+        ? imageUploadExtras.tempQuotattionLineId
+        : Number.isFinite(tempLineIdFromFormId) && (tempLineIdFromFormId as number) > 0
+          ? (tempLineIdFromFormId as number)
+          : undefined;
+
+    const canUploadImmediately =
+      imageUploadScope !== "quotation-line" ||
+      (typeof imageUploadExtras?.quotationLineId === "number" && imageUploadExtras.quotationLineId > 0) ||
+      (typeof resolvedLineId === "number" && resolvedLineId > 0);
+
+    if (!canUploadImmediately) {
+      setPendingImageUri(result.assets[0].uri);
+      setImagePath(null);
+      return;
+    }
+
     setIsUploadingImage(true);
     try {
-      const tempLineIdFromFormId =
-        line?.id?.startsWith("db-") === true
-          ? Number(line.id.replace("db-", ""))
-          : undefined;
-      const resolvedLineId =
-        typeof imageUploadExtras?.tempQuotattionLineId === "number" &&
-        imageUploadExtras.tempQuotattionLineId > 0
-          ? imageUploadExtras.tempQuotattionLineId
-          : Number.isFinite(tempLineIdFromFormId) && (tempLineIdFromFormId as number) > 0
-            ? (tempLineIdFromFormId as number)
-            : undefined;
-
       const productCodeForUpload =
         imageUploadExtras?.productCode ||
         line?.productCode ||
@@ -488,6 +505,7 @@ export function QuotationLineForm({
               : undefined,
       });
       setImagePath(uploaded.relativeUrl);
+      setPendingImageUri(null);
     } catch (e) {
       const message = e instanceof Error ? e.message : "Görsel yüklenemedi";
       Alert.alert("Görsel", message);
@@ -495,6 +513,8 @@ export function QuotationLineForm({
       setIsUploadingImage(false);
     }
   }, [imageUploadScope, imageUploadExtras, line?.id, line?.productCode, selectedStock?.erpStockCode]);
+
+  const displayImageUri = pendingImageUri || imagePath;
 
   const openImagePickerMenu = useCallback(() => {
     Alert.alert("Kalem Görseli", "Görsel kaynağını seç", [
@@ -1038,9 +1058,9 @@ export function QuotationLineForm({
                       Kalem Görseli
                     </Text>
 
-                    {imagePath ? (
+                    {displayImageUri ? (
                       <Image
-                        source={{ uri: resolveMobileImageUri(imagePath) ?? imagePath }}
+                        source={{ uri: resolveMobileImageUri(displayImageUri) ?? displayImageUri }}
                         style={styles.imagePreview}
                         resizeMode="cover"
                       />
@@ -1070,18 +1090,21 @@ export function QuotationLineForm({
                           <ActivityIndicator size="small" color={brandColor} />
                         ) : (
                           <Text style={[styles.imageActionButtonText, { color: textColor }]}>
-                            {imagePath ? "Görseli Değiştir" : "Görsel Ekle"}
+                            {displayImageUri ? "Görseli Değiştir" : "Görsel Ekle"}
                           </Text>
                         )}
                       </TouchableOpacity>
 
-                      {imagePath ? (
+                      {displayImageUri ? (
                         <TouchableOpacity
                           style={[
                             styles.imageActionButton,
                             { borderColor: softPinkBorder, backgroundColor: inputBg },
                           ]}
-                          onPress={() => setImagePath(null)}
+                          onPress={() => {
+                            setImagePath(null);
+                            setPendingImageUri(null);
+                          }}
                         >
                           <Text style={[styles.imageActionButtonText, { color: warningColor }]}>
                             Kaldır

@@ -117,6 +117,35 @@ function resolveMobileImageUri(path?: string | null): string | null {
   return path;
 }
 
+async function finalizeCreatedQuotationLineImages(
+  quotationId: number,
+  draftLines: QuotationLineFormState[],
+  createdLines: Awaited<ReturnType<typeof quotationApi.createQuotationLines>>
+): Promise<void> {
+  for (let index = 0; index < draftLines.length; index += 1) {
+    const draftLine = draftLines[index];
+    const createdLine = createdLines[index];
+
+    if (!draftLine.pendingImageUri || !createdLine?.id) continue;
+
+    const uploaded = await quotationApi.uploadReportAsset(draftLine.pendingImageUri, {
+      assetScope: "quotation-line",
+      quotationId,
+      quotationLineId: createdLine.id,
+      productCode: draftLine.productCode || createdLine.productCode || undefined,
+    });
+
+    await quotationApi.updateQuotationLines([
+      {
+        ...createdLine,
+        productCode: createdLine.productCode ?? draftLine.productCode ?? "",
+        productName: createdLine.productName ?? draftLine.productName ?? "",
+        imagePath: uploaded.relativeUrl,
+      },
+    ]);
+  }
+}
+
 export function QuotationDetailScreen(): React.ReactElement {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -614,8 +643,10 @@ const gradientColors = isDark
         createQuotationLinesMutation.mutate(
           { quotationId, body },
           {
-            onSuccess: (data) => {
-              setLines((prev) => [...prev, ...mapDetailLinesToFormState(data)]);
+            onSuccess: async (data) => {
+              await finalizeCreatedQuotationLineImages(quotationId, toAdd, data);
+              const fetched = await quotationApi.getLinesByQuotation(quotationId);
+              setLines(mapDetailLinesToFormState(fetched));
               setLineFormVisible(false);
               setEditingLine(null);
             },

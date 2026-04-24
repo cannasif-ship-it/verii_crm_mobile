@@ -296,6 +296,7 @@ export interface QuotationLineFormState {
   isEditing: boolean;
   relatedLines?: QuotationLineFormState[];
   relationQuantity?: number;
+  pendingImageUri?: string | null;
 }
 
 export interface QuotationExchangeRateFormState {
