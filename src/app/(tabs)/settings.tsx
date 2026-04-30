@@ -35,6 +35,7 @@ import { useUIStore } from "../../store/ui";
 import { setLanguage, getCurrentLanguage } from "../../locales";
 import { profileApi } from "../../features/profile";
 import { useToast } from "../../hooks/useToast";
+import { hasPermission } from "../../features/access-control/utils/hasPermission";
 import {
   DEFAULT_API_BASE_URL,
   getApiBaseUrl,
@@ -68,14 +69,13 @@ export default function SettingsScreen(): React.ReactElement {
 
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const authUser = useAuthStore((state) => state.user);
+  const permissions = useAuthStore((state) => state.permissions);
   const themeMode = useUIStore((s) => s.themeMode);
   const toggleTheme = useUIStore((s) => s.toggleTheme);
   const uppercaseCompanyNameAfterScan = useUIStore((s) => s.uppercaseCompanyNameAfterScan);
   const setUppercaseCompanyNameAfterScan = useUIStore((s) => s.setUppercaseCompanyNameAfterScan);
   const showUnitInStockSelection = useUIStore((s) => s.showUnitInStockSelection);
   const setShowUnitInStockSelection = useUIStore((s) => s.setShowUnitInStockSelection);
-  const showQuotationLineDetails = useUIStore((s) => s.showQuotationLineDetails);
-  const setShowQuotationLineDetails = useUIStore((s) => s.setShowQuotationLineDetails);
 
   const [currentLang, setCurrentLang] = useState(getCurrentLanguage());
   const [apiUrlInput, setApiUrlInput] = useState(getApiBaseUrl());
@@ -143,6 +143,10 @@ export default function SettingsScreen(): React.ReactElement {
 
   const handleOpenIntegrationSettings = (): void => {
     router.push("/integrations-settings");
+  };
+
+  const handleOpenAccessControlSimulator = (): void => {
+    router.push("/access-control-simulator");
   };
 
   const handleTestApiUrl = async (): Promise<void> => {
@@ -226,6 +230,10 @@ export default function SettingsScreen(): React.ReactElement {
 
   const email = myProfileQuery.data?.email || authUser?.email || "-";
   const profileImageUrl = userDetailQuery.data?.profilePictureUrl || undefined;
+  const canOpenAccessControlSimulator = hasPermission(
+    permissions,
+    "access-control.permission-groups.view",
+  );
 
   const canSaveApiUrl =
     !!lastSuccessfulApiUrl &&
@@ -394,23 +402,6 @@ export default function SettingsScreen(): React.ReactElement {
                 style={{ transform: [{ scaleX: 0.72 }, { scaleY: 0.72 }] }}
               />
             </View>
-            <View style={[styles.preferenceRow, { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: borderColor }]}>
-              <View style={styles.preferenceTextCol}>
-                <Text style={[styles.preferenceTitle, { color: textColor }]}>
-                  {t("settings.showQuotationLineDetails")}
-                </Text>
-                <Text style={[styles.preferenceHint, { color: mutedColor }]}>
-                  {t("settings.showQuotationLineDetailsHint")}
-                </Text>
-              </View>
-              <Switch
-                value={showQuotationLineDetails}
-                onValueChange={setShowQuotationLineDetails}
-                trackColor={{ false: "#E2E8F0", true: "#10B981" }}
-                thumbColor="#FFFFFF"
-                style={{ transform: [{ scaleX: 0.72 }, { scaleY: 0.72 }] }}
-              />
-            </View>
           </MenuGroup>
 
           <Text style={[styles.groupTitle, { color: mutedColor }]}>{t("language.title")}</Text>
@@ -477,6 +468,25 @@ export default function SettingsScreen(): React.ReactElement {
 
               <ArrowRight01Icon size={18} color={mutedColor} />
             </TouchableOpacity>
+
+            {canOpenAccessControlSimulator ? (
+              <TouchableOpacity style={styles.menuRow} onPress={handleOpenAccessControlSimulator}>
+                <View style={[styles.iconBox, { backgroundColor: "rgba(236, 72, 153, 0.1)" }]}>
+                  <LockPasswordIcon size={18} color={brandColor} variant="stroke" />
+                </View>
+
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.menuText, { color: textColor }]}>
+                    {t("settings.visibilitySimulator")}
+                  </Text>
+                  <Text style={[styles.sectionDescription, { color: mutedColor, marginTop: -2 }]}>
+                    {t("settings.visibilitySimulatorDescription")}
+                  </Text>
+                </View>
+
+                <ArrowRight01Icon size={18} color={mutedColor} />
+              </TouchableOpacity>
+            ) : null}
           </MenuGroup>
 
           <Text style={[styles.groupTitle, { color: mutedColor }]}>{t("settings.apiUrlTitle")}</Text>

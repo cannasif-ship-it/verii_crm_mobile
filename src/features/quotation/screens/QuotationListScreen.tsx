@@ -17,6 +17,8 @@ import { ScreenHeader } from "../../../components/navigation";
 import { PagedFlatList, SalesListCreateButton } from "../../../components/paged";
 import { useKeyboardBottomInset } from "../../../hooks/useKeyboardBottomInset";
 import { useUIStore } from "../../../store/ui";
+import { PermissionDeniedState } from "../../access-control/components/PermissionDeniedState";
+import { isForbiddenError } from "../../access-control/utils/isForbiddenError";
 import { useQuotationList, useCreateRevisionOfQuotation } from "../hooks";
 import { QuotationRow } from "../components/QuotationRow";
 import { CustomerMailComposerModal } from "../../integration";
@@ -175,6 +177,10 @@ export function QuotationListScreen(): React.ReactElement {
   }, [isFetchingNextPage, brandColor]);
 
   if (error) {
+    if (isForbiddenError(error)) {
+      return <PermissionDeniedState />;
+    }
+
     return (
       <View style={[styles.container, { backgroundColor: mainBg }]}>
         <StatusBar style={isDark ? "light" : "dark"} />

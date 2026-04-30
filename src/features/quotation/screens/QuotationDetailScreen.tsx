@@ -25,6 +25,8 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { PermissionDeniedState } from "../../access-control/components/PermissionDeniedState";
+import { isForbiddenError } from "../../access-control/utils/isForbiddenError";
 import { useAuthStore } from "../../../store/auth";
 import { useToastStore } from "../../../store/toast";
 import { FormField } from "../../activity/components";
@@ -32,6 +34,7 @@ import { useCustomer, useCustomerScopeAccess } from "../../customer/hooks";
 import { useCustomerShippingAddresses } from "../../shipping-address/hooks";
 import { stockApi } from "../../stocks/api";
 import { quotationApi } from "../api";
+import { useWindoDefinitionOptions } from "../../windo-profil-demir-vida/hooks/useWindoDefinitionOptions";
 import {
   useQuotationDetail,
   useStartApprovalFlow,
@@ -158,6 +161,7 @@ const gradientColors = isDark
   const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.showToast);
+  const { profilMap, demirMap, vidaMap } = useWindoDefinitionOptions();
 
   const quotationId = id != null && id !== "" ? Number(id) : undefined;
   const {
@@ -957,6 +961,10 @@ const gradientColors = isDark
   }
 
   if (detailError && !header) {
+    if (isForbiddenError(detailErrorObj)) {
+      return <PermissionDeniedState />;
+    }
+
     return (
       <>
         <StatusBar style="light" />
@@ -1367,7 +1375,7 @@ const gradientColors = isDark
                                   style={[styles.lineExtraText, { color: colors.textMuted }]}
                                   numberOfLines={1}
                                 >
-                                  Profile: {line.description1}
+                                  Açıklama 1: {line.description1}
                                 </Text>
                               ) : null}
                               {line.description2 ? (
@@ -1375,7 +1383,7 @@ const gradientColors = isDark
                                   style={[styles.lineExtraText, { color: colors.textMuted }]}
                                   numberOfLines={1}
                                 >
-                                  Demir: {line.description2}
+                                  Açıklama 2: {line.description2}
                                 </Text>
                               ) : null}
                               {line.description3 ? (
@@ -1383,7 +1391,26 @@ const gradientColors = isDark
                                   style={[styles.lineExtraText, { color: colors.textMuted }]}
                                   numberOfLines={1}
                                 >
-                                  Vida: {line.description3}
+                                  Açıklama 3: {line.description3}
+                                </Text>
+                              ) : null}
+                            </View>
+                          )}
+                          {(line.profilDefinitionId || line.demirDefinitionId || line.vidaDefinitionId) && (
+                            <View style={styles.lineExtraBlock}>
+                              {line.profilDefinitionId ? (
+                                <Text style={[styles.lineExtraText, { color: colors.textMuted }]} numberOfLines={1}>
+                                  Profil: {profilMap[line.profilDefinitionId] || `#${line.profilDefinitionId}`}
+                                </Text>
+                              ) : null}
+                              {line.demirDefinitionId ? (
+                                <Text style={[styles.lineExtraText, { color: colors.textMuted }]} numberOfLines={1}>
+                                  Demir: {demirMap[line.demirDefinitionId] || `#${line.demirDefinitionId}`}
+                                </Text>
+                              ) : null}
+                              {line.vidaDefinitionId ? (
+                                <Text style={[styles.lineExtraText, { color: colors.textMuted }]} numberOfLines={1}>
+                                  Vida: {vidaMap[line.vidaDefinitionId] || `#${line.vidaDefinitionId}`}
                                 </Text>
                               ) : null}
                             </View>
@@ -1449,7 +1476,7 @@ const gradientColors = isDark
                                       style={[styles.lineExtraText, { color: colors.textMuted }]}
                                       numberOfLines={1}
                                     >
-                                      Profile: {relatedLine.description1}
+                                      Açıklama 1: {relatedLine.description1}
                                     </Text>
                                   ) : null}
                                   {relatedLine.description2 ? (
@@ -1457,7 +1484,7 @@ const gradientColors = isDark
                                       style={[styles.lineExtraText, { color: colors.textMuted }]}
                                       numberOfLines={1}
                                     >
-                                      Demir: {relatedLine.description2}
+                                      Açıklama 2: {relatedLine.description2}
                                     </Text>
                                   ) : null}
                                   {relatedLine.description3 ? (
@@ -1465,7 +1492,26 @@ const gradientColors = isDark
                                       style={[styles.lineExtraText, { color: colors.textMuted }]}
                                       numberOfLines={1}
                                     >
-                                      Vida: {relatedLine.description3}
+                                      Açıklama 3: {relatedLine.description3}
+                                    </Text>
+                                  ) : null}
+                                </View>
+                              )}
+                              {(relatedLine.profilDefinitionId || relatedLine.demirDefinitionId || relatedLine.vidaDefinitionId) && (
+                                <View style={styles.lineExtraBlock}>
+                                  {relatedLine.profilDefinitionId ? (
+                                    <Text style={[styles.lineExtraText, { color: colors.textMuted }]} numberOfLines={1}>
+                                      Profil: {profilMap[relatedLine.profilDefinitionId] || `#${relatedLine.profilDefinitionId}`}
+                                    </Text>
+                                  ) : null}
+                                  {relatedLine.demirDefinitionId ? (
+                                    <Text style={[styles.lineExtraText, { color: colors.textMuted }]} numberOfLines={1}>
+                                      Demir: {demirMap[relatedLine.demirDefinitionId] || `#${relatedLine.demirDefinitionId}`}
+                                    </Text>
+                                  ) : null}
+                                  {relatedLine.vidaDefinitionId ? (
+                                    <Text style={[styles.lineExtraText, { color: colors.textMuted }]} numberOfLines={1}>
+                                      Vida: {vidaMap[relatedLine.vidaDefinitionId] || `#${relatedLine.vidaDefinitionId}`}
                                     </Text>
                                   ) : null}
                                 </View>

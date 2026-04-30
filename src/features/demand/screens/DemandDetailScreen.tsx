@@ -24,6 +24,8 @@ import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/dat
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { PermissionDeniedState } from "../../access-control/components/PermissionDeniedState";
+import { isForbiddenError } from "../../access-control/utils/isForbiddenError";
 import { useAuthStore } from "../../../store/auth";
 import { useToastStore } from "../../../store/toast";
 import { FormField } from "../../activity/components";
@@ -794,6 +796,10 @@ export function DemandDetailScreen(): React.ReactElement {
   }
 
   if (detailError && !header) {
+    if (isForbiddenError(detailErrorObj)) {
+      return <PermissionDeniedState />;
+    }
+
     return (
       <>
         <StatusBar style="light" />

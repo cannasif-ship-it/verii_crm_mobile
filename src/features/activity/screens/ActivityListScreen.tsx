@@ -20,6 +20,8 @@ import {
   type PagedAdvancedFilterRow,
 } from "../../../components/paged";
 import { useUIStore } from "../../../store/ui";
+import { PermissionDeniedState } from "../../access-control/components/PermissionDeniedState";
+import { isForbiddenError } from "../../access-control/utils/isForbiddenError";
 import { useActivities } from "../hooks";
 import { ActivityCard } from "../components";
 import type { ActivityDto } from "../types";
@@ -223,6 +225,10 @@ export function ActivityListScreen(): React.ReactElement {
       </TouchableOpacity>
     </>
   );
+
+  if (isError && isForbiddenError(error)) {
+    return <PermissionDeniedState />;
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: mainBg }]}>

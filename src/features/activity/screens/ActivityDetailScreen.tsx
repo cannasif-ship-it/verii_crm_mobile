@@ -26,6 +26,8 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
+import { PermissionDeniedState } from "../../access-control/components/PermissionDeniedState";
+import { isForbiddenError } from "../../access-control/utils/isForbiddenError";
 import { formatSystemDateTime } from "../../../lib/systemSettings";
 import { useActivity, useDeleteActivity, useUpdateActivity } from "../hooks";
 import { activityImageApi } from "../api";
@@ -287,7 +289,7 @@ export function ActivityDetailScreen(): React.ReactElement {
   );
 
   const queryClient = useQueryClient();
-  const { data: activity, isLoading, isError, refetch } = useActivity(activityId);
+  const { data: activity, isLoading, isError, error, refetch } = useActivity(activityId);
   const deleteActivity = useDeleteActivity();
   const updateActivity = useUpdateActivity();
 
@@ -622,6 +624,10 @@ export function ActivityDetailScreen(): React.ReactElement {
   }
 
   if (isError || !activity) {
+    if (isForbiddenError(error)) {
+      return <PermissionDeniedState />;
+    }
+
     return (
       <View style={[styles.container, { backgroundColor: mainBg }]}>
         <StatusBar style={isDark ? "light" : "dark"} />

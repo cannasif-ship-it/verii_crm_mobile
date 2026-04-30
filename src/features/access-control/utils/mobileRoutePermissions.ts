@@ -25,6 +25,7 @@ const ACTIVITY_VIEW_CODES = [
 
 export const MOBILE_ROUTE_PERMISSION_RULES: MobileRoutePermissionRule[] = [
   { pattern: /^\/$/, requiredCodes: ["dashboard.view"] },
+  { pattern: /^\/access-control-simulator$/, requiredCodes: ["access-control.permission-groups.view"] },
 
   { pattern: /^\/customers\/create$/, requiredCodes: ["customers.customer-management.create"] },
   { pattern: /^\/customers\/edit\/[^/]+$/, requiredCodes: ["customers.customer-management.update"] },

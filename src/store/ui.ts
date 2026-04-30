@@ -15,7 +15,6 @@ interface UIState {
   uppercaseCompanyNameAfterScan: boolean;
   /** Stok seçme ekranında birim bilgisini meta satırında göster/gizle. */
   showUnitInStockSelection: boolean;
-  showQuotationLineDetails: boolean;
   setIsLoading: (value: boolean) => void;
   setThemeMode: (mode: ThemeMode) => void;
   toggleTheme: () => void;
@@ -25,7 +24,6 @@ interface UIState {
   setMenuViewType: (type: MenuViewType) => void;
   setUppercaseCompanyNameAfterScan: (value: boolean) => void;
   setShowUnitInStockSelection: (value: boolean) => void;
-  setShowQuotationLineDetails: (value: boolean) => void;
 }
 
 export const useUIStore = create<UIState>()(
@@ -38,7 +36,6 @@ export const useUIStore = create<UIState>()(
       menuViewType: "list",
       uppercaseCompanyNameAfterScan: true,
       showUnitInStockSelection: true,
-      showQuotationLineDetails: true,
       setIsLoading: (value: boolean) => set({ isLoading: value }),
       setThemeMode: (mode: ThemeMode) =>
         set({ themeMode: mode, colors: COLORS[mode] }),
@@ -53,7 +50,6 @@ export const useUIStore = create<UIState>()(
       setMenuViewType: (type: MenuViewType) => set({ menuViewType: type }),
       setUppercaseCompanyNameAfterScan: (value: boolean) => set({ uppercaseCompanyNameAfterScan: value }),
       setShowUnitInStockSelection: (value: boolean) => set({ showUnitInStockSelection: value }),
-      setShowQuotationLineDetails: (value: boolean) => set({ showQuotationLineDetails: value }),
     }),
     {
       name: "ui-storage",
@@ -63,9 +59,8 @@ export const useUIStore = create<UIState>()(
         menuViewType: state.menuViewType,
         uppercaseCompanyNameAfterScan: state.uppercaseCompanyNameAfterScan,
         showUnitInStockSelection: state.showUnitInStockSelection,
-        showQuotationLineDetails: state.showQuotationLineDetails,
       }),
-      version: 6,
+      version: 7,
       migrate: (persistedState, version) => {
         const state = (persistedState ?? {}) as Partial<UIState>;
         const savedMode = state.themeMode;
@@ -88,10 +83,6 @@ export const useUIStore = create<UIState>()(
           typeof state.showUnitInStockSelection === "boolean"
             ? state.showUnitInStockSelection
             : true;
-        const showQuotationLineDetails =
-          typeof state.showQuotationLineDetails === "boolean"
-            ? state.showQuotationLineDetails
-            : true;
 
         return {
           ...state,
@@ -100,7 +91,6 @@ export const useUIStore = create<UIState>()(
           menuViewType,
           uppercaseCompanyNameAfterScan,
           showUnitInStockSelection,
-          showQuotationLineDetails,
         };
       },
       onRehydrateStorage: () => (state) => {

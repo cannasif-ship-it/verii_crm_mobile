@@ -282,8 +282,6 @@
     "uppercaseCompanyAfterScanHint": "Manuell eingegebener Text bleibt unverändert.",
     "showUnitInStockPicker": "Einheit im Lagerauswahl-Bildschirm anzeigen",
     "showUnitInStockPickerHint": "Wenn deaktiviert, wird die Einheit in der Produktliste ausgeblendet.",
-    "showQuotationLineDetails": "Zusatzdetails in Angebotszeile anzeigen",
-    "showQuotationLineDetailsHint": "Wenn deaktiviert, werden Profile-, Demir- und Vida-Felder zusammen ausgeblendet.",
     "errorNoUser": "Benutzerinfo nicht gefunden",
     "successPhoto": "Profilbild aktualisiert",
     "errorPhoto": "Profilbild konnte nicht aktualisiert werden",

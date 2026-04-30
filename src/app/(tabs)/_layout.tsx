@@ -11,7 +11,9 @@ import { getMobileRoutePermissionRule } from "../../features/access-control/util
 export default function TabsLayout(): React.ReactElement {
   const pathname = usePathname();
   const hideNavBarByRoute =
-    pathname === "/settings" || pathname === "/integrations-settings";
+    pathname === "/settings" ||
+    pathname === "/integrations-settings" ||
+    pathname === "/access-control-simulator";
 
   const { colors } = useUIStore();
   const permissions = useAuthStore((state) => state.permissions);
