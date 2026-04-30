@@ -27,6 +27,7 @@ import { useErpProjects } from "../hooks";
 import { useStock } from "../../stocks/hooks";
 import { parseDecimalInput, sanitizeDecimalInput } from "../../../lib/decimal-input";
 import { getApiBaseUrl } from "../../../constants/config";
+import { useWindoDefinitionOptions } from "../../windo-profil-demir-vida/hooks/useWindoDefinitionOptions";
 import type {
   QuotationLineFormState,
   PricingRuleLineGetDto,
@@ -158,11 +159,7 @@ export function QuotationLineForm({
   imageUploadExtras,
 }: QuotationLineFormProps): React.ReactElement {
   const { t } = useTranslation();
-  const {
-    themeMode,
-    showUnitInStockSelection,
-    showQuotationLineDetails,
-  } = useUIStore();
+  const { themeMode, showUnitInStockSelection } = useUIStore();
   const insets = useSafeAreaInsets();
 
   const isDark = themeMode === "dark";
@@ -196,6 +193,9 @@ export function QuotationLineForm({
   const [description1, setDescription1] = useState<string>("");
   const [description2, setDescription2] = useState<string>("");
   const [description3, setDescription3] = useState<string>("");
+  const [profilDefinitionId, setProfilDefinitionId] = useState<number | null>(null);
+  const [demirDefinitionId, setDemirDefinitionId] = useState<number | null>(null);
+  const [vidaDefinitionId, setVidaDefinitionId] = useState<number | null>(null);
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<number>(0);
   const [approvalMessage, setApprovalMessage] = useState<string>("");
@@ -207,11 +207,15 @@ export function QuotationLineForm({
   const [pendingImageUri, setPendingImageUri] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [projectCodeModalVisible, setProjectCodeModalVisible] = useState(false);
+  const [profilPickerVisible, setProfilPickerVisible] = useState(false);
+  const [demirPickerVisible, setDemirPickerVisible] = useState(false);
+  const [vidaPickerVisible, setVidaPickerVisible] = useState(false);
   const productPickerRef = useRef<ProductPickerRef>(null);
   const prevLineFormVisibleRef = useRef(false);
   const lastHydratedLineIdRef = useRef<string | null>(null);
 
   const { data: projects = [] } = useErpProjects();
+  const { profilOptions, demirOptions, vidaOptions, profilMap, demirMap, vidaMap, isLoading: isDefinitionOptionsLoading } = useWindoDefinitionOptions();
   const { data: stockData } = useStock(selectedStock?.id);
   const isMultiSelectMode = !line && Boolean(onMultiProductSelect);
   const hasBulkDrafts = bulkDraftLines.length > 0;
@@ -267,6 +271,9 @@ export function QuotationLineForm({
       description1: description1 || null,
       description2: description2 || null,
       description3: description3 || null,
+      profilDefinitionId,
+      demirDefinitionId,
+      vidaDefinitionId,
       erpProjectCode: erpProjectCode || null,
       pendingImageUri,
       isEditing: false,
@@ -294,6 +301,9 @@ export function QuotationLineForm({
     description1,
     description2,
     description3,
+    profilDefinitionId,
+    demirDefinitionId,
+    vidaDefinitionId,
     imagePath,
     pendingImageUri,
     erpProjectCode,
@@ -344,6 +354,9 @@ export function QuotationLineForm({
     setDescription1("");
     setDescription2("");
     setDescription3("");
+    setProfilDefinitionId(null);
+    setDemirDefinitionId(null);
+    setVidaDefinitionId(null);
     setImagePath(null);
     setPendingImageUri(null);
     setErpProjectCode(null);
@@ -365,6 +378,9 @@ export function QuotationLineForm({
     setDescription1(draft.description1 || "");
     setDescription2(draft.description2 || "");
     setDescription3(draft.description3 || "");
+    setProfilDefinitionId(draft.profilDefinitionId ?? null);
+    setDemirDefinitionId(draft.demirDefinitionId ?? null);
+    setVidaDefinitionId(draft.vidaDefinitionId ?? null);
     setImagePath(draft.imagePath || null);
     setPendingImageUri(draft.pendingImageUri || null);
     setErpProjectCode(draft.erpProjectCode ?? null);
@@ -394,6 +410,9 @@ export function QuotationLineForm({
     setDescription1(editing.description1 || "");
     setDescription2(editing.description2 || "");
     setDescription3(editing.description3 || "");
+    setProfilDefinitionId(editing.profilDefinitionId ?? null);
+    setDemirDefinitionId(editing.demirDefinitionId ?? null);
+    setVidaDefinitionId(editing.vidaDefinitionId ?? null);
     setImagePath(editing.imagePath || null);
     setPendingImageUri(editing.pendingImageUri || null);
     setErpProjectCode(editing.erpProjectCode ?? null);
@@ -1280,60 +1299,94 @@ export function QuotationLineForm({
                     />
                   </View>
 
-                  {showQuotationLineDetails ? (
-                    <View style={[styles.detailCard, { borderColor: softPinkBorder, backgroundColor: softPinkBg }]}>
-                      <Text style={[styles.sectionMiniTitle, { color: textColor }]}>
-                        Ek Detaylar
-                      </Text>
+                  <View style={[styles.detailCard, { borderColor: softPinkBorder, backgroundColor: softPinkBg }]}>
+                    <Text style={[styles.sectionMiniTitle, { color: textColor }]}>
+                      Açıklama Alanları
+                    </Text>
 
-                      <View style={styles.rowThree}>
-                        <View style={styles.fieldThird}>
-                          <Text style={[styles.label, { color: mutedColor }]}>Profile</Text>
-                          <TextInput
-                            style={[
-                              styles.input,
-                              styles.compactInput,
-                              { backgroundColor: inputBg, borderColor: softPinkBorder, color: softInputText },
-                            ]}
-                            value={description1}
-                            onChangeText={setDescription1}
-                            placeholder="Profile"
-                            placeholderTextColor={mutedColor}
-                          />
-                        </View>
+                    <View style={styles.rowThree}>
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Açıklama 1</Text>
+                        <TextInput
+                          style={[
+                            styles.input,
+                            styles.compactInput,
+                            { backgroundColor: inputBg, borderColor: softPinkBorder, color: softInputText },
+                          ]}
+                          value={description1}
+                          onChangeText={setDescription1}
+                          placeholder="Açıklama 1"
+                          placeholderTextColor={mutedColor}
+                        />
+                      </View>
 
-                        <View style={styles.fieldThird}>
-                          <Text style={[styles.label, { color: mutedColor }]}>Demir</Text>
-                          <TextInput
-                            style={[
-                              styles.input,
-                              styles.compactInput,
-                              { backgroundColor: inputBg, borderColor: softPinkBorder, color: softInputText },
-                            ]}
-                            value={description2}
-                            onChangeText={setDescription2}
-                            placeholder="Demir"
-                            placeholderTextColor={mutedColor}
-                          />
-                        </View>
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Açıklama 2</Text>
+                        <TextInput
+                          style={[
+                            styles.input,
+                            styles.compactInput,
+                            { backgroundColor: inputBg, borderColor: softPinkBorder, color: softInputText },
+                          ]}
+                          value={description2}
+                          onChangeText={setDescription2}
+                          placeholder="Açıklama 2"
+                          placeholderTextColor={mutedColor}
+                        />
+                      </View>
 
-                        <View style={styles.fieldThird}>
-                          <Text style={[styles.label, { color: mutedColor }]}>Vida</Text>
-                          <TextInput
-                            style={[
-                              styles.input,
-                              styles.compactInput,
-                              { backgroundColor: inputBg, borderColor: softPinkBorder, color: softInputText },
-                            ]}
-                            value={description3}
-                            onChangeText={setDescription3}
-                            placeholder="Vida"
-                            placeholderTextColor={mutedColor}
-                          />
-                        </View>
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Açıklama 3</Text>
+                        <TextInput
+                          style={[
+                            styles.input,
+                            styles.compactInput,
+                            { backgroundColor: inputBg, borderColor: softPinkBorder, color: softInputText },
+                          ]}
+                          value={description3}
+                          onChangeText={setDescription3}
+                          placeholder="Açıklama 3"
+                          placeholderTextColor={mutedColor}
+                        />
                       </View>
                     </View>
-                  ) : null}
+
+                    <View style={styles.rowThree}>
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Profil</Text>
+                        <TouchableOpacity
+                          style={[styles.pickerButton, styles.compactInput, { backgroundColor: inputBg, borderColor: softPinkBorder }]}
+                          onPress={() => setProfilPickerVisible(true)}
+                        >
+                          <Text style={[styles.pickerText, { color: profilDefinitionId ? textColor : mutedColor }]}>
+                            {profilDefinitionId ? profilMap[profilDefinitionId] ?? `#${profilDefinitionId}` : "Profil seç"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Demir</Text>
+                        <TouchableOpacity
+                          style={[styles.pickerButton, styles.compactInput, { backgroundColor: inputBg, borderColor: softPinkBorder }]}
+                          onPress={() => setDemirPickerVisible(true)}
+                        >
+                          <Text style={[styles.pickerText, { color: demirDefinitionId ? textColor : mutedColor }]}>
+                            {demirDefinitionId ? demirMap[demirDefinitionId] ?? `#${demirDefinitionId}` : "Demir seç"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                      <View style={styles.fieldThird}>
+                        <Text style={[styles.label, { color: mutedColor }]}>Vida</Text>
+                        <TouchableOpacity
+                          style={[styles.pickerButton, styles.compactInput, { backgroundColor: inputBg, borderColor: softPinkBorder }]}
+                          onPress={() => setVidaPickerVisible(true)}
+                        >
+                          <Text style={[styles.pickerText, { color: vidaDefinitionId ? textColor : mutedColor }]}>
+                            {vidaDefinitionId ? vidaMap[vidaDefinitionId] ?? `#${vidaDefinitionId}` : "Vida seç"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
                 </View>
 
                 {approvalStatus === 1 && approvalMessage && (
@@ -1555,6 +1608,36 @@ export function QuotationLineForm({
         onClose={() => setProjectCodeModalVisible(false)}
         title={t("quotation.projectCode")}
         searchPlaceholder={t("quotation.projectCodeSearch")}
+      />
+      <PickerModal
+        visible={profilPickerVisible}
+        options={profilOptions}
+        selectedValue={profilDefinitionId ?? undefined}
+        onSelect={(option) => setProfilDefinitionId(Number(option.id))}
+        onClose={() => setProfilPickerVisible(false)}
+        title="Profil seç"
+        searchPlaceholder="Profil ara..."
+        isLoading={isDefinitionOptionsLoading}
+      />
+      <PickerModal
+        visible={demirPickerVisible}
+        options={demirOptions}
+        selectedValue={demirDefinitionId ?? undefined}
+        onSelect={(option) => setDemirDefinitionId(Number(option.id))}
+        onClose={() => setDemirPickerVisible(false)}
+        title="Demir seç"
+        searchPlaceholder="Demir ara..."
+        isLoading={isDefinitionOptionsLoading}
+      />
+      <PickerModal
+        visible={vidaPickerVisible}
+        options={vidaOptions}
+        selectedValue={vidaDefinitionId ?? undefined}
+        onSelect={(option) => setVidaDefinitionId(Number(option.id))}
+        onClose={() => setVidaPickerVisible(false)}
+        title="Vida seç"
+        searchPlaceholder="Vida ara..."
+        isLoading={isDefinitionOptionsLoading}
       />
     </>
   );

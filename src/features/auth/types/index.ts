@@ -35,6 +35,60 @@ export interface AppBootstrapDto {
   permissions: MyPermissionsDto;
 }
 
+export interface VisibilityPreviewPolicy {
+  policyId: number;
+  code: string;
+  name: string;
+  scopeType: number;
+  includeSelf: boolean;
+}
+
+export interface VisibilityPreviewUser {
+  userId: number;
+  fullName: string;
+  email?: string | null;
+}
+
+export interface ApprovalOverrideAuditEntry {
+  entityId: number;
+  approvalRequestId: number;
+  approvalActionId: number;
+  stepOrder: number;
+  currentStep: number;
+  approvalStatus: number;
+  approvalStatusName: string;
+  documentType: string;
+  flowDescription?: string | null;
+  approvedByUserId: number;
+  approvedByUserName?: string | null;
+  reason: string;
+}
+
+export interface VisibilityPreviewResult {
+  userId: number;
+  entityType: string;
+  hasExplicitPolicy: boolean;
+  isUnrestricted: boolean;
+  visibleUserIds: number[];
+  visibleUsers: VisibilityPreviewUser[];
+  policies: VisibilityPreviewPolicy[];
+  approvalOverrideEntityIds: number[];
+  approvalOverrideAuditEntries: ApprovalOverrideAuditEntry[];
+}
+
+export interface ActionSimulationResult {
+  action: string;
+  allowed: boolean;
+  reason: string;
+}
+
+export interface VisibilityActionSimulationResult {
+  userId: number;
+  entityType: string;
+  entityId: number;
+  actions: ActionSimulationResult[];
+}
+
 export interface BranchErp {
   subeKodu: number;
   unvan: string;

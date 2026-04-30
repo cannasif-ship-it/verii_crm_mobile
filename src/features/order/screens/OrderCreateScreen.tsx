@@ -42,6 +42,7 @@ import { useErpCustomers } from "../../erp-customer/hooks";
 import { useStock } from "../../stocks/hooks";
 import { stockApi } from "../../stocks/api";
 import { orderApi } from "../api";
+import { useWindoDefinitionOptions } from "../../windo-profil-demir-vida/hooks/useWindoDefinitionOptions";
 import {
   useCreateOrderBulk,
   usePriceRuleOfOrder,
@@ -384,6 +385,7 @@ export function OrderCreateScreen(): React.ReactElement {
     () => resolveLineListCurrencyLabel(watchedCurrency, currencyOptions ?? null),
     [watchedCurrency, currencyOptions]
   );
+  const { profilMap, demirMap, vidaMap } = useWindoDefinitionOptions();
 
   const handleEditLine = useCallback(
     (line: OrderLineFormState) => {
@@ -1068,6 +1070,16 @@ export function OrderCreateScreen(): React.ReactElement {
                       </>
                     );
                   };
+                  const descLine = (l: typeof line) =>
+                    [l.description1, l.description2, l.description3].filter(Boolean).join(" · ");
+                  const selectedDefinitions = (l: typeof line) =>
+                    [
+                      l.profilDefinitionId ? `Profil: ${profilMap[l.profilDefinitionId] || `#${l.profilDefinitionId}`}` : "",
+                      l.demirDefinitionId ? `Demir: ${demirMap[l.demirDefinitionId] || `#${l.demirDefinitionId}`}` : "",
+                      l.vidaDefinitionId ? `Vida: ${vidaMap[l.vidaDefinitionId] || `#${l.vidaDefinitionId}`}` : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" · ");
                   const renderLineRow = (l: typeof line, opts: { related?: boolean }) => (
                     <View
                       style={[
@@ -1088,6 +1100,16 @@ export function OrderCreateScreen(): React.ReactElement {
                           <Text style={[styles.lineRowName, { color: titleText }]} numberOfLines={2}>
                             {l.productName || t("order.productNotSelected")}
                           </Text>
+                          {descLine(l) ? (
+                            <Text style={[styles.lineRowDesc, { color: softText }]} numberOfLines={2}>
+                              {descLine(l)}
+                            </Text>
+                          ) : null}
+                          {selectedDefinitions(l) ? (
+                            <Text style={[styles.lineRowDesc, { color: mutedText }]} numberOfLines={2}>
+                              {selectedDefinitions(l)}
+                            </Text>
+                          ) : null}
                           <Text style={[styles.lineRowMeta, styles.lineRowMetaFine, { color: mutedText }]} numberOfLines={2}>
                             <Text style={{ color: titleText, fontWeight: "600" }}>{formatQtyTr(l.quantity)}</Text>
                             <Text>{` ad. · `}</Text>

@@ -3,6 +3,7 @@ import { View, StyleSheet } from "react-native";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useTranslation } from "react-i18next";
+import { useWindoDefinitionOptions } from "../../windo-profil-demir-vida/hooks/useWindoDefinitionOptions";
 import type { DemandLineDetailGetDto } from "../types";
 
 interface DemandDetailLineRowProps {
@@ -57,8 +58,19 @@ function DemandDetailLineRowComponent({
 }: DemandDetailLineRowProps): React.ReactElement {
   const { colors, themeMode } = useUIStore();
   const { t, i18n } = useTranslation();
+  const { profilMap, demirMap, vidaMap } = useWindoDefinitionOptions();
   const locale = i18n.language;
   const cardBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.7)" : colors.card;
+  const descriptionSummary = [line.description1, line.description2, line.description3]
+    .filter(Boolean)
+    .join(" · ");
+  const definitionSummary = [
+    line.profilDefinitionId ? `Profil: ${profilMap[line.profilDefinitionId] || `#${line.profilDefinitionId}`}` : "",
+    line.demirDefinitionId ? `Demir: ${demirMap[line.demirDefinitionId] || `#${line.demirDefinitionId}`}` : "",
+    line.vidaDefinitionId ? `Vida: ${vidaMap[line.vidaDefinitionId] || `#${line.vidaDefinitionId}`}` : "",
+  ]
+    .filter(Boolean)
+    .join(" · ");
 
   return (
     <View
@@ -88,6 +100,12 @@ function DemandDetailLineRowComponent({
           {t("demand.unit")}: {(line as { unit?: string | null }).unit}
         </Text>
       )}
+      {descriptionSummary ? (
+        <Text style={[styles.productCode, { color: colors.textMuted }]}>{descriptionSummary}</Text>
+      ) : null}
+      {definitionSummary ? (
+        <Text style={[styles.productCode, { color: colors.textMuted }]}>{definitionSummary}</Text>
+      ) : null}
       <View style={styles.row}>
         <Text style={[styles.label, { color: colors.textMuted }]}>{t("demand.quantity")}:</Text>
         <Text style={[styles.value, { color: colors.text }]}>

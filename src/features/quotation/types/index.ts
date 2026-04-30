@@ -164,6 +164,9 @@ export interface CreateQuotationLineDto {
   description1?: string | null;
   description2?: string | null;
   description3?: string | null;
+  profilDefinitionId?: number | null;
+  demirDefinitionId?: number | null;
+  vidaDefinitionId?: number | null;
   imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
@@ -196,6 +199,9 @@ export interface QuotationLineUpdateDto {
   description1?: string | null;
   description2?: string | null;
   description3?: string | null;
+  profilDefinitionId?: number | null;
+  demirDefinitionId?: number | null;
+  vidaDefinitionId?: number | null;
   imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
@@ -286,6 +292,9 @@ export interface QuotationLineFormState {
   description1?: string | null;
   description2?: string | null;
   description3?: string | null;
+  profilDefinitionId?: number | null;
+  demirDefinitionId?: number | null;
+  vidaDefinitionId?: number | null;
   imagePath?: string | null;
   pricingRuleHeaderId?: number | null;
   relatedStockId?: number | null;
@@ -516,6 +525,12 @@ export interface QuotationLineDetailGetDto {
   lineTotal: number;
   lineGrandTotal: number;
   description: string | null;
+  description1?: string | null;
+  description2?: string | null;
+  description3?: string | null;
+  profilDefinitionId?: number | null;
+  demirDefinitionId?: number | null;
+  vidaDefinitionId?: number | null;
   imagePath?: string | null;
   pricingRuleHeaderId: number | null;
   relatedStockId: number | null;

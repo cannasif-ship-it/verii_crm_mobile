@@ -17,6 +17,7 @@ import { useTranslation } from "react-i18next";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { ProductPicker, type ProductPickerRef } from "./ProductPicker";
+import { PickerModal } from "./PickerModal";
 import type { StockRelationDto } from "../../stocks/types";
 import { getProductSelectionKey, type ProductSelectionResult } from "../../stocks/types";
 import { demandApi } from "../api";
@@ -26,6 +27,7 @@ import { stockApi } from "../../stocks/api";
 import { useStock } from "../../stocks/hooks";
 import { parseDecimalInput, sanitizeDecimalInput } from "../../../lib/decimal-input";
 import { getApiBaseUrl } from "../../../constants/config";
+import { useWindoDefinitionOptions } from "../../windo-profil-demir-vida/hooks/useWindoDefinitionOptions";
 import type {
   DemandLineFormState,
   PricingRuleLineGetDto,
@@ -105,6 +107,12 @@ export function DemandLineForm({
   const [discountRate3, setDiscountRate3] = useState<string>("0");
   const [vatRate, setVatRate] = useState<string>("20");
   const [description, setDescription] = useState<string>("");
+  const [description1, setDescription1] = useState<string>("");
+  const [description2, setDescription2] = useState<string>("");
+  const [description3, setDescription3] = useState<string>("");
+  const [profilDefinitionId, setProfilDefinitionId] = useState<number | null>(null);
+  const [demirDefinitionId, setDemirDefinitionId] = useState<number | null>(null);
+  const [vidaDefinitionId, setVidaDefinitionId] = useState<number | null>(null);
   const [isLoadingPrice, setIsLoadingPrice] = useState(false);
   const [approvalStatus, setApprovalStatus] = useState<number>(0);
   const [approvalMessage, setApprovalMessage] = useState<string>("");
@@ -113,7 +121,19 @@ export function DemandLineForm({
   const [activeBulkDraftIndex, setActiveBulkDraftIndex] = useState<number>(0);
   const [imagePath, setImagePath] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
+  const [profilPickerVisible, setProfilPickerVisible] = useState(false);
+  const [demirPickerVisible, setDemirPickerVisible] = useState(false);
+  const [vidaPickerVisible, setVidaPickerVisible] = useState(false);
   const productPickerRef = useRef<ProductPickerRef>(null);
+  const {
+    profilOptions,
+    demirOptions,
+    vidaOptions,
+    profilMap,
+    demirMap,
+    vidaMap,
+    isLoading: isDefinitionOptionsLoading,
+  } = useWindoDefinitionOptions();
 
   const currentLine: DemandLineFormState = useMemo(() => {
     const qty = parseDecimalInput(quantity);
@@ -143,6 +163,12 @@ export function DemandLineForm({
       lineTotal: 0,
       lineGrandTotal: 0,
       description: description || null,
+      description1: description1 || null,
+      description2: description2 || null,
+      description3: description3 || null,
+      profilDefinitionId,
+      demirDefinitionId,
+      vidaDefinitionId,
       imagePath,
       isEditing: false,
       approvalStatus,
@@ -162,6 +188,12 @@ export function DemandLineForm({
     discountRate3,
     vatRate,
     description,
+    description1,
+    description2,
+    description3,
+    profilDefinitionId,
+    demirDefinitionId,
+    vidaDefinitionId,
     imagePath,
     approvalStatus,
   ]);
@@ -175,6 +207,12 @@ export function DemandLineForm({
       setDiscountRate3(sanitizeDecimalInput(String(line.discountRate3)));
       setVatRate(sanitizeDecimalInput(String(line.vatRate)));
       setDescription(line.description || "");
+      setDescription1(line.description1 || "");
+      setDescription2(line.description2 || "");
+      setDescription3(line.description3 || "");
+      setProfilDefinitionId(line.profilDefinitionId ?? null);
+      setDemirDefinitionId(line.demirDefinitionId ?? null);
+      setVidaDefinitionId(line.vidaDefinitionId ?? null);
       setImagePath(line.imagePath || null);
       setApprovalStatus(line.approvalStatus || 0);
       setRelatedLinesDisplay(line.relatedLines ?? []);
@@ -220,6 +258,12 @@ export function DemandLineForm({
     setDiscountRate3("0");
     setVatRate("20");
     setDescription("");
+    setDescription1("");
+    setDescription2("");
+    setDescription3("");
+    setProfilDefinitionId(null);
+    setDemirDefinitionId(null);
+    setVidaDefinitionId(null);
     setImagePath(null);
     setApprovalStatus(0);
     setApprovalMessage("");
@@ -258,6 +302,12 @@ export function DemandLineForm({
     setDiscountRate3(sanitizeDecimalInput(String(draft.discountRate3)));
     setVatRate(sanitizeDecimalInput(String(draft.vatRate)));
     setDescription(draft.description || "");
+    setDescription1(draft.description1 || "");
+    setDescription2(draft.description2 || "");
+    setDescription3(draft.description3 || "");
+    setProfilDefinitionId(draft.profilDefinitionId ?? null);
+    setDemirDefinitionId(draft.demirDefinitionId ?? null);
+    setVidaDefinitionId(draft.vidaDefinitionId ?? null);
     setImagePath(draft.imagePath || null);
     setApprovalStatus(draft.approvalStatus || 0);
     setRelatedLinesDisplay(draft.relatedLines ?? []);
@@ -980,6 +1030,94 @@ export function DemandLineForm({
               />
             </View>
 
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Açıklama Alanları</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text },
+                ]}
+                value={description1}
+                onChangeText={setDescription1}
+                placeholder="Açıklama 1"
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text, marginTop: 8 },
+                ]}
+                value={description2}
+                onChangeText={setDescription2}
+                placeholder="Açıklama 2"
+              />
+              <TextInput
+                style={[
+                  styles.input,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border, color: colors.text, marginTop: 8 },
+                ]}
+                value={description3}
+                onChangeText={setDescription3}
+                placeholder="Açıklama 3"
+              />
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Profil</Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerButton,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                ]}
+                onPress={() => setProfilPickerVisible(true)}
+              >
+                <Text style={[styles.pickerText, { color: colors.text }]}>
+                  {profilDefinitionId != null
+                    ? profilMap[profilDefinitionId] || `#${profilDefinitionId}`
+                    : isDefinitionOptionsLoading
+                      ? "Yükleniyor..."
+                      : "Profil seçin"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Demir</Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerButton,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                ]}
+                onPress={() => setDemirPickerVisible(true)}
+              >
+                <Text style={[styles.pickerText, { color: colors.text }]}>
+                  {demirDefinitionId != null
+                    ? demirMap[demirDefinitionId] || `#${demirDefinitionId}`
+                    : isDefinitionOptionsLoading
+                      ? "Yükleniyor..."
+                      : "Demir seçin"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.fieldContainer}>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Vida</Text>
+              <TouchableOpacity
+                style={[
+                  styles.pickerButton,
+                  { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
+                ]}
+                onPress={() => setVidaPickerVisible(true)}
+              >
+                <Text style={[styles.pickerText, { color: colors.text }]}>
+                  {vidaDefinitionId != null
+                    ? vidaMap[vidaDefinitionId] || `#${vidaDefinitionId}`
+                    : isDefinitionOptionsLoading
+                      ? "Yükleniyor..."
+                      : "Vida seçin"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {approvalStatus === 1 && approvalMessage && (
               <View style={[styles.approvalWarning, { backgroundColor: colors.warning + "20" }]}>
                 <Text style={[styles.approvalWarningText, { color: colors.warning }]}>
@@ -1071,6 +1209,36 @@ export function DemandLineForm({
         </View>
       </View>
     </Modal>
+    <PickerModal
+      visible={profilPickerVisible}
+      title="Profil seç"
+      options={profilOptions}
+      selectedValue={profilDefinitionId ?? undefined}
+      onClose={() => setProfilPickerVisible(false)}
+      onSelect={(option) =>
+        setProfilDefinitionId(typeof option.id === "number" ? option.id : Number(option.id) || null)
+      }
+    />
+    <PickerModal
+      visible={demirPickerVisible}
+      title="Demir seç"
+      options={demirOptions}
+      selectedValue={demirDefinitionId ?? undefined}
+      onClose={() => setDemirPickerVisible(false)}
+      onSelect={(option) =>
+        setDemirDefinitionId(typeof option.id === "number" ? option.id : Number(option.id) || null)
+      }
+    />
+    <PickerModal
+      visible={vidaPickerVisible}
+      title="Vida seç"
+      options={vidaOptions}
+      selectedValue={vidaDefinitionId ?? undefined}
+      onClose={() => setVidaPickerVisible(false)}
+      onSelect={(option) =>
+        setVidaDefinitionId(typeof option.id === "number" ? option.id : Number(option.id) || null)
+      }
+    />
   </>
   );
 }
@@ -1192,6 +1360,17 @@ const styles = StyleSheet.create({
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 12,
+    fontSize: 15,
+  },
+  pickerButton: {
+    borderWidth: 1,
+    borderRadius: 10,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    justifyContent: "center",
+  },
+  pickerText: {
     fontSize: 15,
   },
   inputReadOnly: {

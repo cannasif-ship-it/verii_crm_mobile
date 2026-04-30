@@ -39,6 +39,7 @@ import { useCustomer, useCustomerScopeAccess } from "../../customer/hooks";
 import { useCustomerShippingAddresses } from "../../shipping-address/hooks";
 import { stockApi } from "../../stocks/api";
 import { quotationApi } from "../api";
+import { useWindoDefinitionOptions } from "../../windo-profil-demir-vida/hooks/useWindoDefinitionOptions";
 import {
   useCreateQuotationBulk,
   usePriceRuleOfQuotation,
@@ -544,6 +545,7 @@ export function QuotationCreateScreen(): React.ReactElement {
     () => resolveLineListCurrencyLabel(watchedCurrency, currencyOptions ?? null),
     [watchedCurrency, currencyOptions]
   );
+  const { profilMap, demirMap, vidaMap } = useWindoDefinitionOptions();
 
   const handleEditLine = useCallback((line: QuotationLineFormState) => {
     setEditingLine(line);
@@ -1659,7 +1661,15 @@ export function QuotationCreateScreen(): React.ReactElement {
                       );
                     };
                     const descLine = (l: typeof line) =>
-                      [l.description1 ? `P ${l.description1}` : "", l.description2 ? `D ${l.description2}` : "", l.description3 ? `V ${l.description3}` : ""]
+                      [l.description1, l.description2, l.description3]
+                        .filter(Boolean)
+                        .join(" · ");
+                    const selectedDefinitions = (l: typeof line) =>
+                      [
+                        l.profilDefinitionId ? `Profil: ${profilMap[l.profilDefinitionId] || `#${l.profilDefinitionId}`}` : "",
+                        l.demirDefinitionId ? `Demir: ${demirMap[l.demirDefinitionId] || `#${l.demirDefinitionId}`}` : "",
+                        l.vidaDefinitionId ? `Vida: ${vidaMap[l.vidaDefinitionId] || `#${l.vidaDefinitionId}`}` : "",
+                      ]
                         .filter(Boolean)
                         .join(" · ");
                     const renderLineRow = (l: typeof line, opts: { related?: boolean }) => {
@@ -1694,6 +1704,11 @@ export function QuotationCreateScreen(): React.ReactElement {
                             {(l.description1 || l.description2 || l.description3) ? (
                               <Text style={[styles.lineRowDesc, { color: softText }]} numberOfLines={1}>
                                 {descLine(l)}
+                              </Text>
+                            ) : null}
+                            {selectedDefinitions(l) ? (
+                              <Text style={[styles.lineRowDesc, { color: mutedText }]} numberOfLines={2}>
+                                {selectedDefinitions(l)}
                               </Text>
                             ) : null}
                             <Text style={[styles.lineRowMeta, styles.lineRowMetaFine, { color: mutedText }]} numberOfLines={2}>
