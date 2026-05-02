@@ -2,7 +2,6 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   View,
   StyleSheet,
-  FlatList,
   ActivityIndicator,
   TouchableOpacity,
   Alert,
@@ -11,16 +10,32 @@ import {
   Platform,
   Image,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { resolveDocumentSerialCustomerTypeId } from "@/lib/resolve-document-serial-customer-type-id";
 import { resolveExchangeRateByCurrency as findExchangeRateByCurrency } from "@/lib/resolve-exchange-rate";
 import { useLocalSearchParams, useRouter } from "expo-router";
+import { useIsFocused } from "@react-navigation/native";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import DateTimePicker, { DateTimePickerEvent } from "@react-native-community/datetimepicker";
+import {
+  UserIcon,
+  ArrowRight01Icon,
+  MoneyExchange01Icon,
+  Edit02Icon,
+  Delete02Icon,
+  Alert02Icon,
+  CheckmarkCircle02Icon,
+  Cancel01Icon,
+  Clock04Icon,
+  FileEditIcon,
+  Tick02Icon,
+  SentIcon,
+} from "hugeicons-react-native";
 import { ScreenHeader } from "../../../components/navigation";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
@@ -57,7 +72,6 @@ import {
   OfferTypePicker,
   DemandLineForm,
   DemandApprovalFlowTab,
-  ProductPicker,
   RejectModal,
 } from "../components";
 import { CustomerSelectDialog, type CustomerSelectionResult } from "../../customer";
@@ -86,10 +100,10 @@ import {
   parseLineId,
   mapDemandLineFormStateToCreateDto,
   mapDemandLineFormStateToUpdateDto,
-  groupDemandLines,
   totalsFromDetailLines,
 } from "../utils";
 import { calculateLineTotals, calculateTotals } from "../utils";
+import { resolveLineListCurrencyLabel } from "../../../lib/currencyDisplay";
 import { getApiBaseUrl } from "../../../constants/config";
 
 function resolveMobileImageUri(path?: string | null): string | null {
@@ -103,16 +117,112 @@ function resolveMobileImageUri(path?: string | null): string | null {
   return path;
 }
 
+function formatQtyTr(n: number): string {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "0";
+  if (Math.abs(v - Math.round(v)) < 1e-6) return Math.round(v).toLocaleString("tr-TR");
+  return v.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 3 });
+}
+
+function formatMoneyTr(n: number): string {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "0";
+  return v.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+function formatRateTr(n: number): string {
+  const v = Number(n);
+  if (!Number.isFinite(v)) return "0";
+  if (Math.abs(v - Math.round(v)) < 1e-6) return Math.round(v).toLocaleString("tr-TR");
+  return v.toLocaleString("tr-TR", { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+
+type StatusKind = "draft" | "pending" | "approved" | "rejected";
+
+function resolveStatusKind(status: number | null | undefined): StatusKind | null {
+  if (status === APPROVAL_HAVENOT_STARTED) return "draft";
+  if (status === APPROVAL_WAITING) return "pending";
+  if (status === APPROVAL_APPROVED) return "approved";
+  if (status === APPROVAL_REJECTED) return "rejected";
+  return null;
+}
+
+interface StatusBadgeProps {
+  kind: StatusKind | null;
+  isDark: boolean;
+}
+
+function StatusBadge({ kind, isDark }: StatusBadgeProps): React.ReactElement | null {
+  if (kind == null) return null;
+
+  const palette = (() => {
+    switch (kind) {
+      case "approved":
+        return {
+          bg: isDark ? "rgba(52,211,153,0.16)" : "rgba(16,185,129,0.12)",
+          border: isDark ? "rgba(52,211,153,0.40)" : "rgba(16,185,129,0.32)",
+          icon: <CheckmarkCircle02Icon size={18} color={isDark ? "#34d399" : "#059669"} variant="stroke" strokeWidth={2.2} />,
+        };
+      case "rejected":
+        return {
+          bg: isDark ? "rgba(244,114,182,0.16)" : "rgba(219,39,119,0.10)",
+          border: isDark ? "rgba(244,114,182,0.40)" : "rgba(219,39,119,0.32)",
+          icon: <Cancel01Icon size={16} color={isDark ? "#f472b6" : "#DB2777"} variant="stroke" strokeWidth={2.4} />,
+        };
+      case "pending":
+        return {
+          bg: isDark ? "rgba(251,191,36,0.16)" : "rgba(245,158,11,0.12)",
+          border: isDark ? "rgba(251,191,36,0.40)" : "rgba(245,158,11,0.34)",
+          icon: <Clock04Icon size={18} color={isDark ? "#fbbf24" : "#D97706"} variant="stroke" strokeWidth={2.2} />,
+        };
+      default:
+        return {
+          bg: isDark ? "rgba(148,163,184,0.14)" : "rgba(148,163,184,0.16)",
+          border: isDark ? "rgba(148,163,184,0.34)" : "rgba(148,163,184,0.34)",
+          icon: <FileEditIcon size={16} color={isDark ? "#94A3B8" : "#475569"} variant="stroke" strokeWidth={2.2} />,
+        };
+    }
+  })();
+
+  return (
+    <View style={[styles.statusBadge, { backgroundColor: palette.bg, borderColor: palette.border }]}>
+      {palette.icon}
+    </View>
+  );
+}
+
 export function DemandDetailScreen(): React.ReactElement {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { t } = useTranslation();
   const { colors, themeMode } = useUIStore();
+  const isDark = themeMode === "dark";
   const { user } = useAuthStore();
   const insets = useSafeAreaInsets();
   const showToast = useToastStore((s) => s.showToast);
 
+  const mainBg = isDark ? "#0c0516" : "#FFFFFF";
+  const gradientColors = (
+    isDark
+      ? ["rgba(236,72,153,0.12)", "transparent", "rgba(249,115,22,0.12)"]
+      : ["rgba(255,235,240,0.6)", "#FFFFFF", "rgba(255,240,225,0.6)"]
+  ) as [string, string, ...string[]];
+
+  const shellBg = colors.card;
+  const shellBgAlt = isDark ? "rgba(23,10,38,0.99)" : "rgba(255,255,255,0.98)";
+  const sectionOutline = isDark ? "rgba(255,255,255,0.12)" : "rgba(15,23,42,0.08)";
+  const innerBg = isDark ? "rgba(255,255,255,0.06)" : "#FFFFFF";
+  const innerBorder = isDark ? "rgba(255,255,255,0.10)" : colors.border;
+  const titleText = colors.text;
+  const mutedText = colors.textSecondary;
+  const softText = colors.textMuted;
+  const accent = colors.accent;
+  const tabSurface = isDark ? "rgba(255,255,255,0.04)" : "rgba(255,255,255,0.72)";
+  const tabSurfaceBorder = isDark ? "rgba(255,255,255,0.06)" : "rgba(15,23,42,0.04)";
+  const tabActiveBg = isDark ? "rgba(236,72,153,0.22)" : "rgba(236,72,153,0.12)";
+
   const demandId = id != null && id !== "" ? Number(id) : undefined;
+  const isFocused = useIsFocused();
   const {
     header,
     lines: linesData,
@@ -121,9 +231,7 @@ export function DemandDetailScreen(): React.ReactElement {
     isError: detailError,
     error: detailErrorObj,
     refetch,
-  } = useDemandDetail(demandId);
-
-  const contentBackground = themeMode === "dark" ? "rgba(20, 10, 30, 0.5)" : colors.background;
+  } = useDemandDetail(isFocused ? demandId : undefined);
 
   const formInitRef = useRef(false);
   const linesInitRef = useRef(false);
@@ -162,7 +270,6 @@ export function DemandDetailScreen(): React.ReactElement {
     setValue,
     watch,
     reset,
-    setError,
     clearErrors,
     formState: { errors },
   } = useForm<CreateDemandSchema>({
@@ -236,10 +343,16 @@ export function DemandDetailScreen(): React.ReactElement {
     watchedRepresentativeId || undefined
   );
 
-  const lineGroups = useMemo(() => groupDemandLines(linesData), [linesData]);
   const apiTotals = useMemo(() => totalsFromDetailLines(linesData), [linesData]);
   const totals = useMemo(() => calculateTotals(lines), [lines]);
-  const displayCurrency = header?.currency ?? watchedCurrency ?? "";
+  const visibleMainLines = useMemo(
+    () => lines.filter((line) => !line.relatedProductKey || line.isMainRelatedProduct === true),
+    [lines]
+  );
+  const lineListCurrencyLabel = useMemo(
+    () => resolveLineListCurrencyLabel(watchedCurrency, currencyOptions ?? null),
+    [watchedCurrency, currencyOptions]
+  );
 
   const startApproval = useStartApprovalFlow();
   const { data: waitingApprovalsData } = useWaitingApprovals();
@@ -426,7 +539,7 @@ export function DemandDetailScreen(): React.ReactElement {
     }
     setEditingLine(null);
     setLineFormVisible(true);
-  }, [watchedCustomerId, watchedErpCustomerCode, watchedRepresentativeId, watchedCurrency, showToast]);
+  }, [watchedCustomerId, watchedErpCustomerCode, watchedRepresentativeId, watchedCurrency, showToast, t]);
 
   const canAddLine = Boolean((watchedCustomerId || watchedErpCustomerCode) && watchedRepresentativeId && watchedCurrency);
 
@@ -534,10 +647,6 @@ export function DemandDetailScreen(): React.ReactElement {
   const handleDeleteLineConfirm = useCallback(() => {
     if (deleteLineId == null) return;
     const lineId = deleteLineId;
-    const lineToDelete = lines.find((line) => line.id === lineId);
-    const sameGroup = lineToDelete?.relatedProductKey
-      ? lines.filter((l) => l.relatedProductKey === lineToDelete.relatedProductKey)
-      : [];
     const backendLineId = demandId != null ? parseLineId(lineId) : 0;
     const isExistingDemand = demandId != null && demandId > 0 && backendLineId > 0;
     if (isExistingDemand && demandId != null) {
@@ -567,7 +676,7 @@ export function DemandDetailScreen(): React.ReactElement {
     });
     setDeleteLineDialogVisible(false);
     setDeleteLineId(null);
-  }, [deleteLineId, lines, demandId, deleteDemandLineMutation]);
+  }, [deleteLineId, demandId, deleteDemandLineMutation]);
 
   const handleProductSelectWithRelatedStocks = useCallback(
     async (stock: StockGetDto, relatedStockIds?: number[]) => {
@@ -694,7 +803,7 @@ export function DemandDetailScreen(): React.ReactElement {
         setLines((prev) => [...prev, mainLine]);
       }
     },
-    [watchedCurrency, exchangeRates, erpRatesForDemand]
+    [watchedCurrency, exchangeRates, erpRatesForDemand, currencyOptions]
   );
 
   const handleStartApproval = useCallback(() => {
@@ -713,6 +822,8 @@ export function DemandDetailScreen(): React.ReactElement {
   const isReadonly = header?.status === APPROVAL_APPROVED || header?.status === APPROVAL_REJECTED;
   const showOnayaGonder = header?.status === APPROVAL_HAVENOT_STARTED;
   const showApproveReject = header?.status === APPROVAL_WAITING;
+
+  const statusKind = useMemo(() => resolveStatusKind(header?.status), [header?.status]);
 
   const currentWaitingApproval = useMemo(
     () => (waitingApprovalsData ?? []).find((a) => a.approvalRequestId === demandId) ?? null,
@@ -762,17 +873,14 @@ export function DemandDetailScreen(): React.ReactElement {
   if (!demandId) {
     return (
       <>
-        <StatusBar style="light" />
-        <View style={[styles.container, { backgroundColor: colors.header }]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={[styles.container, { backgroundColor: mainBg }]}>
+          <LinearGradient colors={gradientColors} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
           <ScreenHeader title={t("demand.detail")} showBackButton />
-          <View style={[styles.content, { backgroundColor: contentBackground }]}>
-            <View style={styles.centered}>
-              <TouchableOpacity onPress={() => router.back()}>
-                <Text style={[styles.errText, { color: colors.error }]}>
-                  {t("demand.invalidId")}
-                </Text>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.centered}>
+            <TouchableOpacity onPress={() => router.back()}>
+              <Text style={[styles.errText, { color: colors.error }]}>{t("demand.invalidId")}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </>
@@ -782,13 +890,12 @@ export function DemandDetailScreen(): React.ReactElement {
   if (detailLoading && !header) {
     return (
       <>
-        <StatusBar style="light" />
-        <View style={[styles.container, { backgroundColor: colors.header }]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={[styles.container, { backgroundColor: mainBg }]}>
+          <LinearGradient colors={gradientColors} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
           <ScreenHeader title={t("demand.detail")} showBackButton />
-          <View style={[styles.content, { backgroundColor: contentBackground }]}>
-            <View style={styles.centered}>
-              <ActivityIndicator size="large" color={colors.accent} />
-            </View>
+          <View style={styles.centered}>
+            <ActivityIndicator size="large" color={colors.accent} />
           </View>
         </View>
       </>
@@ -802,900 +909,1327 @@ export function DemandDetailScreen(): React.ReactElement {
 
     return (
       <>
-        <StatusBar style="light" />
-        <View style={[styles.container, { backgroundColor: colors.header }]}>
+        <StatusBar style={isDark ? "light" : "dark"} />
+        <View style={[styles.container, { backgroundColor: mainBg }]}>
+          <LinearGradient colors={gradientColors} style={StyleSheet.absoluteFill} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} />
           <ScreenHeader title={t("demand.detail")} showBackButton />
-          <View style={[styles.content, { backgroundColor: contentBackground }]}>
-            <View style={styles.centered}>
-              <Text style={[styles.errText, { color: colors.error }]}>
-                {detailErrorObj?.message ?? t("common.error")}
-              </Text>
-              <TouchableOpacity
-                style={[styles.retryBtn, { backgroundColor: colors.accent }]}
-                onPress={() => refetch()}
-              >
-                <Text style={styles.retryBtnText}>{t("common.retry")}</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.centered}>
+            <Text style={[styles.errText, { color: colors.error }]}>
+              {detailErrorObj?.message ?? t("common.error")}
+            </Text>
+            <TouchableOpacity
+              style={[styles.retryBtn, { backgroundColor: colors.accent }]}
+              onPress={() => refetch()}
+            >
+              <Text style={styles.retryBtnText}>{t("common.retry")}</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </>
     );
   }
 
-  return (
-    <>
-      <StatusBar style="light" />
-      <KeyboardAvoidingView
-        style={[styles.container, { backgroundColor: colors.header }]}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
-      >
-        <ScreenHeader title={pageTitle} showBackButton />
-        <View style={[styles.tabBar, { backgroundColor: colors.header }]}>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === "detail" && styles.tabActive,
-              activeTab === "detail" && { borderBottomColor: colors.accent },
-            ]}
-            onPress={() => setActiveTab("detail")}
-          >
-            <Text style={[styles.tabText, activeTab === "detail" && { color: colors.accent }]}>
-              {t("common.tabDetail")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === "approval" && styles.tabActive,
-              activeTab === "approval" && { borderBottomColor: colors.accent },
-            ]}
-            onPress={() => setActiveTab("approval")}
-          >
-            <Text style={[styles.tabText, activeTab === "approval" && { color: colors.accent }]}>
-              {t("common.tabApprovalFlow")}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[
-              styles.tab,
-              activeTab === "report" && styles.tabActive,
-              activeTab === "report" && { borderBottomColor: colors.accent },
-            ]}
-            onPress={() => setActiveTab("report")}
-          >
-            <Text style={[styles.tabText, activeTab === "report" && { color: colors.accent }]}>
-              {t("common.tabReport")}
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {activeTab === "approval" && demandId != null ? (
-          <DemandApprovalFlowTab demandId={demandId} />
-        ) : activeTab === "report" && demandId != null ? (
-          <ReportTab entityId={demandId} ruleType={DocumentRuleType.Demand} />
-        ) : (
-        <FlatListScrollView
-          style={[styles.content, { backgroundColor: contentBackground }]}
-          contentContainerStyle={[styles.contentContainer, { paddingBottom: insets.bottom + 100 }]}
-          showsVerticalScrollIndicator={false}
-        >
-          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t("demand.customerSection")}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.customerBtn,
-                {
-                  backgroundColor: colors.backgroundSecondary,
-                  borderColor: errors.demand?.potentialCustomerId ? colors.error : colors.border,
-                },
-              ]}
-              onPress={() => !isReadonly && setCustomerSelectDialogOpen(true)}
-              disabled={isReadonly}
-              activeOpacity={isReadonly ? 1 : undefined}
-            >
-              <View style={styles.customerBtnInner}>
-                <Text style={styles.customerIcon}>👤</Text>
-                <View style={styles.customerTextWrap}>
-                  <Text style={[styles.customerLabel, { color: colors.textSecondary }]}>
-                    {t("demand.selectCustomer")}
-                  </Text>
-                  <Text style={[styles.customerValue, { color: colors.text }]} numberOfLines={1}>
-                    {selectedCustomer?.name ??
-                      (watchedErpCustomerCode ? `ERP: ${watchedErpCustomerCode}` : t("demand.selectCustomerPlaceholder"))}
-                  </Text>
-                </View>
-              </View>
-              <Text style={[styles.customerArrow, { color: colors.textMuted }]}>›</Text>
-            </TouchableOpacity>
-            {errors.demand?.potentialCustomerId?.message && (
-              <Text style={[styles.fieldErr, { color: colors.error }]}>
-                {errors.demand.potentialCustomerId.message}
-              </Text>
-            )}
-            {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
-              <Controller
-                control={control}
-                name="demand.shippingAddressId"
-                render={({ field: { value } }) => (
-                  <View style={styles.field}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>
-                      {t("demand.shippingAddress")}
-                    </Text>
-                    <TouchableOpacity
-                      style={[styles.pickerBtn, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
-                      onPress={() => !isReadonly && setShippingAddressModalVisible(true)}
-                      disabled={isReadonly}
-                      activeOpacity={isReadonly ? 1 : undefined}
-                    >
-                      <Text style={[styles.pickerTxt, { color: colors.text }]}>
-                        {shippingAddresses.find((a) => a.id === value)?.address ?? t("demand.select")}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              />
-            )}
-          </View>
+  const renderLineRow = (l: DemandLineFormState, opts: { related?: boolean }): React.ReactElement => {
+    const hasImage = Boolean(l.imagePath?.trim());
+    const descs = [l.description1, l.description2, l.description3].filter(Boolean).join(" · ");
+    const rates = [l.discountRate1, l.discountRate2, l.discountRate3]
+      .filter((r) => r > 0)
+      .map((r) => `${formatRateTr(r)}%`);
 
-          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t("demand.demandInfo")}
+    return (
+      <View
+        style={[
+          styles.lineRow,
+          opts.related && styles.lineRowRelated,
+          {
+            borderColor: innerBorder,
+            backgroundColor: opts.related
+              ? isDark
+                ? "rgba(255,255,255,0.03)"
+                : "rgba(15,23,42,0.02)"
+              : innerBg,
+          },
+          !opts.related && l.approvalStatus === 1 && {
+            borderColor: colors.warning,
+            borderWidth: 1.5,
+          },
+        ]}
+      >
+        <View style={[styles.lineRowMain, hasImage ? styles.lineRowMainWithThumb : undefined]}>
+          {hasImage ? (
+            <Image
+              source={{ uri: resolveMobileImageUri(l.imagePath) ?? l.imagePath ?? "" }}
+              style={opts.related ? styles.lineRowThumbRelated : styles.lineRowThumb}
+              resizeMode="cover"
+            />
+          ) : null}
+          <View style={[styles.lineRowTextBlock, opts.related && styles.lineRowTextBlockRelated]}>
+            <Text style={[styles.lineRowCode, { color: softText }]} numberOfLines={1}>
+              {l.productCode || "—"}
             </Text>
-            <OfferTypePicker control={control} disabled={isReadonly} />
-            <Controller
-              control={control}
-              name="demand.representativeId"
-              render={() => (
-                <View style={styles.field}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t("demand.representative")}
-                  </Text>
-                  <TouchableOpacity
-                    style={[styles.pickerBtn, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
-                    onPress={() => !isReadonly && setRepresentativeModalVisible(true)}
-                    disabled={isReadonly}
-                    activeOpacity={isReadonly ? 1 : undefined}
-                  >
-                    <Text style={[styles.pickerTxt, { color: colors.text }]}>
-                      {watchedRepresentativeId
-                        ? (() => {
-                            const u = relatedUsers.find((u) => u.userId === watchedRepresentativeId);
-                            return u ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim() : String(watchedRepresentativeId);
-                          })()
-                        : t("demand.select")}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              )}
-            />
-            <Controller
-              control={control}
-              name="demand.paymentTypeId"
-              render={() => (
-                <View style={styles.field}>
-                  <Text style={[styles.label, { color: colors.textSecondary }]}>
-                    {t("demand.paymentType")} <Text style={{ color: colors.error }}>*</Text>
-                  </Text>
-                  <TouchableOpacity
-                    style={[
-                      styles.pickerBtn,
-                      {
-                        backgroundColor: colors.backgroundSecondary,
-                        borderColor: errors.demand?.paymentTypeId ? colors.error : colors.border,
-                      },
-                    ]}
-                    onPress={() => !isReadonly && setPaymentTypeModalVisible(true)}
-                    disabled={isReadonly}
-                    activeOpacity={isReadonly ? 1 : undefined}
-                  >
-                    <Text style={[styles.pickerTxt, { color: colors.text }]}>
-                      {paymentTypes?.find((p) => p.id === watch("demand.paymentTypeId"))?.name ?? t("demand.select")}
-                    </Text>
-                  </TouchableOpacity>
-                  {errors.demand?.paymentTypeId?.message && (
-                    <Text style={[styles.fieldErr, { color: colors.error }]}>
-                      {errors.demand.paymentTypeId.message}
-                    </Text>
-                  )}
-                </View>
-              )}
-            />
-            <View style={styles.field}>
+            <Text style={[styles.lineRowName, { color: titleText }]} numberOfLines={2}>
+              {l.productName || t("demand.productNotSelected")}
+            </Text>
+            {descs ? (
+              <Text style={[styles.lineRowDesc, { color: softText }]} numberOfLines={1}>
+                {descs}
+              </Text>
+            ) : null}
+            <Text style={[styles.lineRowMeta, styles.lineRowMetaFine, { color: mutedText }]} numberOfLines={2}>
+              <Text style={{ color: titleText, fontWeight: "600" }}>{formatQtyTr(l.quantity)}</Text>
+              <Text>{` ad. · `}</Text>
+              <Text style={{ color: titleText, fontWeight: "600" }}>{formatMoneyTr(l.unitPrice)}</Text>
+              {lineListCurrencyLabel ? (
+                <Text style={{ color: titleText, fontWeight: "600" }}>{` ${lineListCurrencyLabel}`}</Text>
+              ) : null}
+              {rates.length > 0 ? (
+                <>
+                  <Text>{` · ${t("common.discount")} `}</Text>
+                  <Text style={{ color: titleText, fontWeight: "600" }}>{rates.join("/")}</Text>
+                </>
+              ) : null}
+            </Text>
+            <Text style={[styles.lineRowMeta, styles.lineRowMetaFine, { color: mutedText }]} numberOfLines={2}>
+              <Text style={{ color: titleText, fontWeight: "600" }}>{formatMoneyTr(l.lineTotal)}</Text>
+              {lineListCurrencyLabel ? <Text style={{ color: mutedText }}>{` ${lineListCurrencyLabel}`}</Text> : null}
+              <Text>{` · KDV ${formatRateTr(l.vatRate)}% `}</Text>
+              <Text style={{ color: titleText, fontWeight: "600" }}>{formatMoneyTr(l.vatAmount)}</Text>
+              {lineListCurrencyLabel ? <Text>{` ${lineListCurrencyLabel}`}</Text> : null}
+              <Text>{` · `}</Text>
+              <Text style={{ color: accent, fontWeight: "700" }}>{formatMoneyTr(l.lineGrandTotal)}</Text>
+              {lineListCurrencyLabel ? (
+                <Text style={{ color: accent, fontWeight: "700" }}>{` ${lineListCurrencyLabel}`}</Text>
+              ) : null}
+            </Text>
+            {!opts.related && l.approvalStatus === 1 ? (
+              <View style={[styles.lineRowApproval, { backgroundColor: colors.warning + "18" }]}>
+                <Alert02Icon size={12} color={colors.warning} variant="stroke" strokeWidth={1.8} />
+                <Text style={[styles.lineRowApprovalText, { color: colors.warning }]}>{t("demand.approvalRequired")}</Text>
+              </View>
+            ) : null}
+          </View>
+        </View>
+        <View style={styles.lineRowTopRight}>
+          {!opts.related ? (
+            <View style={[styles.lineRowMainBadge, { backgroundColor: colors.activeBackground }]}>
+              <Text style={[styles.lineRowMainBadgeText, { color: accent }]}>{t("demand.main")}</Text>
+            </View>
+          ) : null}
+          {!isReadonly ? (
+            <>
               <TouchableOpacity
                 style={[
-                  styles.dateBtn,
+                  styles.lineIconButton,
                   {
-                    backgroundColor: colors.backgroundSecondary,
-                    borderColor: errors.demand?.deliveryDate ? colors.error : colors.border,
+                    borderColor: isDark ? "rgba(236,72,153,0.35)" : "rgba(219,39,119,0.22)",
+                    backgroundColor: isDark ? "rgba(236,72,153,0.10)" : "rgba(219,39,119,0.06)",
                   },
                 ]}
-                onPress={() => !isReadonly && setDeliveryDateModalOpen(true)}
-                disabled={isReadonly}
-                activeOpacity={isReadonly ? 1 : undefined}
+                onPress={() => handleEditLine(l)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
               >
-                <Text style={[styles.dateBtnTxt, { color: colors.text }]}>
-                  {t("demand.deliveryDate")}: {watchedDeliveryDate ?? t("demand.select")}
-                </Text>
+                <Edit02Icon size={16} color={accent} variant="stroke" strokeWidth={1.8} />
               </TouchableOpacity>
-              {errors.demand?.deliveryDate?.message && (
-                <Text style={[styles.fieldErr, { color: colors.error }]}>
-                  {errors.demand.deliveryDate.message}
-                </Text>
-              )}
-            </View>
-            <TouchableOpacity
-              style={[styles.dateBtn, { backgroundColor: colors.backgroundSecondary, borderColor: colors.border }]}
-              onPress={() => !isReadonly && setOfferDateModalOpen(true)}
-              disabled={isReadonly}
-              activeOpacity={isReadonly ? 1 : undefined}
-            >
-              <Text style={[styles.dateBtnTxt, { color: colors.text }]}>
-                {t("demand.offerDate")}: {watchedOfferDate ?? t("demand.select")}
-              </Text>
-            </TouchableOpacity>
-            <Controller
-              control={control}
-              name="demand.currency"
-              render={({ field: { value } }) => (
-                <View style={styles.field}>
-                  <View style={styles.currencyRow}>
-                    <Text style={[styles.label, { color: colors.textSecondary }]}>
-                      {t("demand.currency")} <Text style={{ color: colors.error }}>*</Text>
-                    </Text>
-                    {value && (
-                      <TouchableOpacity
-                        style={[styles.kurlarBtn, { backgroundColor: colors.accent }]}
-                        onPress={() => !isReadonly && setExchangeRateDialogVisible(true)}
-                        disabled={isReadonly}
-                        activeOpacity={isReadonly ? 1 : undefined}
-                      >
-                        <Text style={styles.kurlarBtnTxt}>💱 {t("demand.exchangeRates")}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                  <TouchableOpacity
-                    style={[
-                      styles.pickerBtn,
-                      {
-                        backgroundColor: colors.backgroundSecondary,
-                        borderColor: errors.demand?.currency ? colors.error : colors.border,
-                      },
-                    ]}
-                    onPress={() => !isReadonly && setCurrencyModalVisible(true)}
-                    disabled={isReadonly}
-                    activeOpacity={isReadonly ? 1 : undefined}
-                  >
-                    <Text style={[styles.pickerTxt, { color: colors.text }]}>
-                      {currencyOptions?.find((c) => c.code === value)?.dovizIsmi ?? t("demand.select")}
-                    </Text>
-                  </TouchableOpacity>
-                  {errors.demand?.currency?.message && (
-                    <Text style={[styles.fieldErr, { color: colors.error }]}>
-                      {errors.demand.currency.message}
-                    </Text>
-                  )}
-                </View>
-              )}
-            />
-            <DocumentSerialTypePicker
-              control={control}
-              customerTypeId={customerTypeId}
-              representativeId={watchedRepresentativeId ?? undefined}
-              disabled={isReadonly || !watchedRepresentativeId}
-            />
-            <FormField
-              label={t("demand.description")}
-              value={watch("demand.description") || ""}
-              onChangeText={(txt) => setValue("demand.description", txt || null)}
-              placeholder={t("demand.descriptionPlaceholder")}
-              multiline
-              numberOfLines={3}
-              maxLength={500}
-              editable={!isReadonly}
-            />
+              <TouchableOpacity
+                style={[
+                  styles.lineIconButton,
+                  {
+                    borderColor: isDark ? "rgba(239,68,68,0.35)" : "rgba(239,68,68,0.22)",
+                    backgroundColor: isDark ? "rgba(239,68,68,0.10)" : "rgba(239,68,68,0.06)",
+                  },
+                ]}
+                onPress={() => handleDeleteLine(l.id)}
+                hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+              >
+                <Delete02Icon size={16} color={colors.error} variant="stroke" strokeWidth={1.8} />
+              </TouchableOpacity>
+            </>
+          ) : null}
+        </View>
+      </View>
+    );
+  };
+
+  return (
+    <>
+      <StatusBar style={isDark ? "light" : "dark"} />
+      <View style={[styles.container, { backgroundColor: mainBg }]}>
+        <LinearGradient
+          colors={gradientColors}
+          style={StyleSheet.absoluteFill}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        />
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
+          keyboardVerticalOffset={Platform.OS === "ios" ? 0 : 20}
+        >
+          <ScreenHeader
+            title={pageTitle}
+            showBackButton
+            rightElement={statusKind ? <StatusBadge kind={statusKind} isDark={isDark} /> : undefined}
+          />
+
+          <View
+            style={[
+              styles.tabBarCard,
+              { backgroundColor: tabSurface, borderColor: tabSurfaceBorder },
+            ]}
+          >
+            {(["detail", "approval", "report"] as const).map((tab) => {
+              const isActive = activeTab === tab;
+              const tabLabel =
+                tab === "detail"
+                  ? t("common.tabDetail")
+                  : tab === "approval"
+                    ? t("common.tabApprovalFlow")
+                    : t("common.tabReport");
+              return (
+                <TouchableOpacity
+                  key={tab}
+                  style={[
+                    styles.tabPill,
+                    isActive
+                      ? [styles.tabPillActive, { borderColor: accent, backgroundColor: tabActiveBg }]
+                      : styles.tabPillInactive,
+                  ]}
+                  onPress={() => setActiveTab(tab)}
+                  activeOpacity={0.9}
+                >
+                  <Text style={[styles.tabPillText, { color: isActive ? accent : softText }]}>
+                    {tabLabel}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
           </View>
 
-          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("demand.lines")}</Text>
-              {!isReadonly && (
+          {activeTab === "approval" && demandId != null ? (
+            <DemandApprovalFlowTab demandId={demandId} />
+          ) : activeTab === "report" && demandId != null ? (
+            <ReportTab entityId={demandId} ruleType={DocumentRuleType.Demand} />
+          ) : (
+            <FlatListScrollView
+              style={styles.content}
+              contentContainerStyle={[
+                styles.contentContainer,
+                { paddingBottom: insets.bottom + (showApproveReject || showOnayaGonder ? 110 : 28) },
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              <View style={[styles.section, { backgroundColor: shellBg, borderColor: sectionOutline }]}>
+                <View style={[styles.sectionLeadHeader, { borderBottomColor: sectionOutline }]}>
+                  <Text style={[styles.sectionTitle, { color: titleText }]}>{t("demand.customerSection")}</Text>
+                </View>
+
                 <TouchableOpacity
                   style={[
-                    styles.addButton,
-                    { backgroundColor: colors.accent },
-                    !canAddLine && styles.submitBtnDisabled,
+                    styles.customerSelectButton,
+                    {
+                      backgroundColor: innerBg,
+                      borderColor: errors.demand?.potentialCustomerId ? colors.error : innerBorder,
+                    },
                   ]}
-                  onPress={handleAddLine}
-                  disabled={!canAddLine}
+                  onPress={() => !isReadonly && setCustomerSelectDialogOpen(true)}
+                  disabled={isReadonly}
+                  activeOpacity={isReadonly ? 1 : 0.85}
                 >
-                  <Text style={styles.addButtonText}>+ Satır Ekle</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-            {errors.root?.message && (
-              <Text style={[styles.fieldErr, { color: colors.error }]}>{errors.root.message}</Text>
-            )}
-
-            {lines.length === 0 ? (
-              <Text style={[styles.emptyTxt, { color: colors.textMuted }]}>
-                {t("demand.noLinesYet")}
-              </Text>
-            ) : (
-              <FlatList
-                data={lines.filter((line) => !line.relatedProductKey || line.isMainRelatedProduct === true)}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-                renderItem={({ item: line }) => (
-                  <View style={styles.lineCardWrapper}>
+                  <View style={styles.customerSelectContent}>
                     <View
-                      style={[
-                        styles.lineCard,
-                        { backgroundColor: colors.backgroundSecondary, borderColor: colors.border },
-                        line.approvalStatus === 1 && { borderColor: colors.warning, borderWidth: 2 },
-                      ]}
+                      style={{
+                        width: 28,
+                        height: 28,
+                        borderRadius: 9,
+                        borderWidth: 1,
+                        alignItems: "center",
+                        justifyContent: "center",
+                        marginRight: 8,
+                        backgroundColor: `${accent}10`,
+                        borderColor: `${accent}18`,
+                      }}
                     >
-                      <View style={styles.lineCardHeader}>
-                        {line.imagePath ? (
-                          <Image
-                            source={{ uri: resolveMobileImageUri(line.imagePath) ?? line.imagePath }}
-                            style={styles.lineCardThumb}
-                            resizeMode="cover"
-                          />
-                        ) : null}
-                        <View style={styles.lineCardContent}>
-                          <View style={styles.lineCardTitleRow}>
-                            <Text style={[styles.lineProductName, { color: colors.text }]} numberOfLines={2}>
-                              {line.productName || t("demand.productNotSelected")}
+                      <UserIcon size={14} color={accent} variant="stroke" strokeWidth={1.8} />
+                    </View>
+                    <View style={styles.customerSelectTextContainer}>
+                      <Text style={[styles.customerSelectLabel, { color: softText }]}>
+                        {t("demand.selectCustomer")}
+                      </Text>
+                      <Text style={[styles.customerSelectValue, { color: titleText }]} numberOfLines={1}>
+                        {selectedCustomer?.name ??
+                          (watchedErpCustomerCode ? `ERP: ${watchedErpCustomerCode}` : t("demand.selectCustomerPlaceholder"))}
+                      </Text>
+                    </View>
+                  </View>
+                  <ArrowRight01Icon size={18} color={softText} variant="stroke" strokeWidth={1.8} />
+                </TouchableOpacity>
+
+                {errors.demand?.potentialCustomerId?.message && (
+                  <Text style={[styles.fieldError, { color: colors.error }]}>
+                    {errors.demand.potentialCustomerId.message}
+                  </Text>
+                )}
+
+                {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
+                  <Controller
+                    control={control}
+                    name="demand.shippingAddressId"
+                    render={({ field: { value } }) => (
+                      <View style={styles.fieldContainerTight}>
+                        <Text style={[styles.labelCompact, { color: mutedText }]}>
+                          {t("demand.shippingAddress")}
+                        </Text>
+                        <TouchableOpacity
+                          style={[
+                            styles.pickerButton,
+                            styles.pickerShellCompact,
+                            { backgroundColor: innerBg, borderColor: innerBorder },
+                          ]}
+                          onPress={() => !isReadonly && setShippingAddressModalVisible(true)}
+                          disabled={isReadonly}
+                          activeOpacity={isReadonly ? 1 : 0.85}
+                        >
+                          <Text style={[styles.pickerText, styles.pickerTextCompact, { color: titleText }]} numberOfLines={1}>
+                            {shippingAddresses.find((a) => a.id === value)?.address ?? t("demand.select")}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  />
+                )}
+              </View>
+
+              <View style={[styles.section, { backgroundColor: shellBg, borderColor: sectionOutline }]}>
+                <View style={[styles.sectionLeadHeader, { borderBottomColor: sectionOutline }]}>
+                  <Text style={[styles.sectionTitle, { color: titleText }]}>{t("demand.demandInfo")}</Text>
+                </View>
+
+                <View style={styles.twoColumnRow}>
+                  <View style={styles.twoColumnItem}>
+                    <OfferTypePicker control={control} disabled={isReadonly} compact />
+                  </View>
+                  <View style={styles.twoColumnItem}>
+                    <Controller
+                      control={control}
+                      name="demand.representativeId"
+                      render={() => (
+                        <View style={styles.fieldContainerTight}>
+                          <Text style={[styles.labelCompact, { color: mutedText }]}>
+                            {t("demand.representative")}
+                          </Text>
+                          <TouchableOpacity
+                            style={[
+                              styles.pickerButton,
+                              styles.pickerShellCompact,
+                              { backgroundColor: innerBg, borderColor: innerBorder },
+                            ]}
+                            onPress={() => !isReadonly && setRepresentativeModalVisible(true)}
+                            disabled={isReadonly}
+                            activeOpacity={isReadonly ? 1 : 0.85}
+                          >
+                            <Text style={[styles.pickerText, styles.pickerTextCompact, { color: titleText }]} numberOfLines={1}>
+                              {watchedRepresentativeId
+                                ? (() => {
+                                    const u = relatedUsers.find((rel) => rel.userId === watchedRepresentativeId);
+                                    return u
+                                      ? `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim()
+                                      : String(watchedRepresentativeId);
+                                  })()
+                                : t("demand.select")}
                             </Text>
-                            {(line.isMainRelatedProduct || !line.relatedProductKey) && (
-                              <View style={[styles.mainBadge, { backgroundColor: colors.backgroundSecondary }]}>
-                                <Text style={[styles.mainBadgeText, { color: colors.accent }]}>
-                                  {t("demand.main")}
-                                </Text>
-                              </View>
-                            )}
-                          </View>
-                          {line.productCode ? (
-                            <Text style={[styles.lineProductCode, { color: colors.textMuted }]}>{line.productCode}</Text>
-                          ) : null}
-                          <View style={styles.lineDetailRows}>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>{t("demand.quantity")}:</Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.quantity.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>{t("demand.unitPrice")}:</Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.unitPrice.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </Text>
-                            </View>
-                            <View style={styles.lineDetailRow}>
-                              <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>{t("demand.lineTotal")}:</Text>
-                              <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                {line.lineTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </Text>
-                            </View>
-                            <View style={[styles.lineGrandTotalRow, { borderTopColor: colors.border }]}>
-                              <Text style={[styles.lineGrandTotalLabel, { color: colors.text }]}>{t("demand.lineGrandTotalLabel")}:</Text>
-                              <Text style={[styles.lineGrandTotalValue, { color: colors.accent }]}>
-                                {line.lineGrandTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                              </Text>
-                            </View>
-                          </View>
-                          {line.approvalStatus === 1 && (
-                            <View style={[styles.approvalBadge, { backgroundColor: colors.warning + "20" }]}>
-                              <Text style={[styles.approvalBadgeText, { color: colors.warning }]}>⚠️ {t("demand.approvalRequired")}</Text>
-                            </View>
-                          )}
-                        </View>
-                        {!isReadonly && (
-                        <View style={styles.lineActions}>
-                          <TouchableOpacity style={[styles.editButton, { backgroundColor: colors.accent }]} onPress={() => handleEditLine(line)}>
-                            <Text style={styles.editButtonText}>✏️</Text>
-                          </TouchableOpacity>
-                          <TouchableOpacity style={[styles.deleteButton, { backgroundColor: colors.error }]} onPress={() => handleDeleteLine(line.id)}>
-                            <Text style={styles.deleteButtonText}>🗑️</Text>
                           </TouchableOpacity>
                         </View>
                       )}
-                      </View>
-                      {line.relatedLines && line.relatedLines.length > 0 && (
-                        <View style={[styles.relatedLinesContainer, { borderTopColor: colors.border }]}>
-                          <Text style={[styles.relatedLinesTitle, { color: colors.textMuted }]}>{t("demand.relatedStocks")}</Text>
-                          {line.relatedLines.map((relatedLine) => (
-                            <View key={relatedLine.id} style={[styles.relatedLineCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-                              <Text style={[styles.relatedLineProductName, { color: colors.text }]} numberOfLines={2}>{relatedLine.productName}</Text>
-                              {relatedLine.productCode ? (
-                                <Text style={[styles.relatedLineProductCode, { color: colors.textMuted }]}>{relatedLine.productCode}</Text>
-                              ) : null}
-                              <View style={styles.lineDetailRow}>
-                                <Text style={[styles.lineDetailLabel, { color: colors.textMuted }]}>{t("demand.quantity")}:</Text>
-                                <Text style={[styles.lineDetailValue, { color: colors.text }]}>
-                                  {relatedLine.quantity.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </Text>
-                              </View>
-                              <View style={[styles.lineGrandTotalRow, { borderTopColor: colors.border }]}>
-                                <Text style={[styles.lineGrandTotalLabel, { color: colors.text }]}>{t("demand.lineGrandTotalLabel")}:</Text>
-                                <Text style={[styles.lineGrandTotalValue, { color: colors.accent }]}>
-                                  {relatedLine.lineGrandTotal.toLocaleString("tr-TR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                                </Text>
-                              </View>
-                            </View>
-                          ))}
-                        </View>
+                    />
+                  </View>
+                </View>
+
+                <Controller
+                  control={control}
+                  name="demand.paymentTypeId"
+                  render={() => (
+                    <View style={styles.fieldContainerTight}>
+                      <Text style={[styles.labelCompact, { color: mutedText }]}>
+                        {t("demand.paymentType")} <Text style={{ color: colors.error }}>*</Text>
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.pickerButton,
+                          styles.pickerShellCompact,
+                          {
+                            backgroundColor: innerBg,
+                            borderColor: errors.demand?.paymentTypeId ? colors.error : innerBorder,
+                          },
+                        ]}
+                        onPress={() => !isReadonly && setPaymentTypeModalVisible(true)}
+                        disabled={isReadonly}
+                        activeOpacity={isReadonly ? 1 : 0.85}
+                      >
+                        <Text style={[styles.pickerText, styles.pickerTextCompact, { color: titleText }]} numberOfLines={1}>
+                          {paymentTypes?.find((p) => p.id === watch("demand.paymentTypeId"))?.name ?? t("demand.select")}
+                        </Text>
+                      </TouchableOpacity>
+                      {errors.demand?.paymentTypeId?.message && (
+                        <Text style={[styles.fieldError, { color: colors.error }]}>
+                          {errors.demand.paymentTypeId.message}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                />
+
+                <View style={styles.twoColumnRow}>
+                  <View style={styles.twoColumnItem}>
+                    <View style={styles.fieldContainerTight}>
+                      <Text style={[styles.labelCompact, { color: mutedText }]}>
+                        {t("demand.deliveryDate")}
+                      </Text>
+                      <TouchableOpacity
+                        style={[
+                          styles.dateCell,
+                          {
+                            backgroundColor: innerBg,
+                            borderColor: errors.demand?.deliveryDate ? colors.error : innerBorder,
+                          },
+                        ]}
+                        onPress={() => !isReadonly && setDeliveryDateModalOpen(true)}
+                        disabled={isReadonly}
+                        activeOpacity={isReadonly ? 1 : 0.85}
+                      >
+                        <Text style={[styles.dateCellValue, { color: titleText }]} numberOfLines={1}>
+                          {watchedDeliveryDate || t("demand.select")}
+                        </Text>
+                      </TouchableOpacity>
+                      {errors.demand?.deliveryDate?.message && (
+                        <Text style={[styles.fieldError, { color: colors.error }]}>
+                          {errors.demand.deliveryDate.message}
+                        </Text>
                       )}
                     </View>
                   </View>
-                )}
-              />
-            )}
-          </View>
+                  <View style={styles.twoColumnItem}>
+                    <View style={styles.fieldContainerTight}>
+                      <Text style={[styles.labelCompact, { color: mutedText }]}>
+                        {t("demand.offerDate")}
+                      </Text>
+                      <TouchableOpacity
+                        style={[styles.dateCell, { backgroundColor: innerBg, borderColor: innerBorder }]}
+                        onPress={() => !isReadonly && setOfferDateModalOpen(true)}
+                        disabled={isReadonly}
+                        activeOpacity={isReadonly ? 1 : 0.85}
+                      >
+                        <Text style={[styles.dateCellValue, { color: titleText }]} numberOfLines={1}>
+                          {watchedOfferDate || t("demand.select")}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                </View>
 
-          {lines.length > 0 && (
-            <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.cardBorder }]}>
-              <Text style={[styles.sectionTitle, { color: colors.text }]}>{t("demand.summary")}</Text>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-                  {t("demand.subtotal")}:
-                </Text>
-                <Text style={[styles.summaryVal, { color: colors.text }]}>
-                  {totals.subtotal.toFixed(2)}
-                </Text>
+                <Controller
+                  control={control}
+                  name="demand.currency"
+                  render={({ field: { value } }) => (
+                    <View style={styles.fieldContainerTight}>
+                      <View style={styles.currencyHeader}>
+                        <Text style={[styles.labelCompact, { color: mutedText }]}>
+                          {t("demand.currency")} <Text style={{ color: colors.error }}>*</Text>
+                        </Text>
+                        {value ? (
+                          <TouchableOpacity
+                            style={[styles.exchangeRateButtonCompact, { backgroundColor: accent + "D6" }]}
+                            onPress={() => !isReadonly && setExchangeRateDialogVisible(true)}
+                            disabled={isReadonly}
+                            activeOpacity={isReadonly ? 1 : 0.9}
+                          >
+                            <View style={{ flexDirection: "row", alignItems: "center", gap: 4 }}>
+                              <MoneyExchange01Icon size={13} color="#FFFFFF" variant="stroke" strokeWidth={1.8} />
+                              <Text style={styles.exchangeRateButtonTextCompact}>
+                                {t("demand.exchangeRates")}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        ) : null}
+                      </View>
+                      <TouchableOpacity
+                        style={[
+                          styles.pickerButton,
+                          styles.pickerShellCompact,
+                          {
+                            backgroundColor: innerBg,
+                            borderColor: errors.demand?.currency ? colors.error : innerBorder,
+                          },
+                        ]}
+                        onPress={() => !isReadonly && setCurrencyModalVisible(true)}
+                        disabled={isReadonly}
+                        activeOpacity={isReadonly ? 1 : 0.85}
+                      >
+                        <Text style={[styles.pickerText, styles.pickerTextCompact, { color: titleText }]} numberOfLines={1}>
+                          {currencyOptions?.find((c) => c.code === value)?.dovizIsmi ?? t("demand.select")}
+                        </Text>
+                      </TouchableOpacity>
+                      {errors.demand?.currency?.message && (
+                        <Text style={[styles.fieldError, { color: colors.error }]}>
+                          {errors.demand.currency.message}
+                        </Text>
+                      )}
+                    </View>
+                  )}
+                />
+
+                <DocumentSerialTypePicker
+                  control={control}
+                  customerTypeId={customerTypeId}
+                  representativeId={watchedRepresentativeId ?? undefined}
+                  disabled={isReadonly || !watchedRepresentativeId}
+                />
+
+                <FormField
+                  label={t("demand.description")}
+                  value={watch("demand.description") || ""}
+                  onChangeText={(txt) => setValue("demand.description", txt || null)}
+                  placeholder={t("demand.descriptionPlaceholder")}
+                  multiline
+                  numberOfLines={3}
+                  maxLength={500}
+                  editable={!isReadonly}
+                />
               </View>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>
-                  {t("demand.totalVat")}:
-                </Text>
-                <Text style={[styles.summaryVal, { color: colors.text }]}>
-                  {totals.totalVat.toFixed(2)}
-                </Text>
+
+              <View style={[styles.section, { backgroundColor: shellBg, borderColor: sectionOutline }]}>
+                <View style={[styles.sectionHeader, { borderBottomColor: sectionOutline }]}>
+                  <Text style={[styles.sectionTitle, { color: titleText }]}>
+                    {t("demand.lines")}
+                    {visibleMainLines.length > 0 ? ` (${visibleMainLines.length})` : ""}
+                  </Text>
+                  {!isReadonly && (
+                    <TouchableOpacity
+                      style={[
+                        styles.addButton,
+                        { backgroundColor: accent + "CC" },
+                        !canAddLine && styles.submitButtonDisabled,
+                      ]}
+                      onPress={handleAddLine}
+                      disabled={!canAddLine}
+                      activeOpacity={0.9}
+                    >
+                      <Text style={styles.addButtonText}>+ {t("demand.addLine")}</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {errors.root?.message && (
+                  <Text style={[styles.fieldError, { color: colors.error }]}>{errors.root.message}</Text>
+                )}
+
+                {lines.length === 0 ? (
+                  <Text style={[styles.emptyText, { color: softText }]}>{t("demand.noLinesYet")}</Text>
+                ) : (
+                  <View style={{ gap: 8 }}>
+                    {visibleMainLines.map((line) => (
+                      <View key={line.id} style={styles.lineCardWrapper}>
+                        {renderLineRow(line, {})}
+                        {line.relatedLines && line.relatedLines.length > 0 ? (
+                          <View style={styles.relatedLinesBlock}>
+                            <Text style={[styles.relatedLinesTitle, { color: softText }]}>
+                              {t("demand.relatedStocks")}
+                            </Text>
+                            {line.relatedLines.map((relatedLine) => (
+                              <View
+                                key={relatedLine.id}
+                                style={[
+                                  styles.relatedLineIndent,
+                                  {
+                                    borderLeftColor: isDark
+                                      ? "rgba(236,72,153,0.45)"
+                                      : "rgba(219,39,119,0.28)",
+                                  },
+                                ]}
+                              >
+                                {renderLineRow(relatedLine, { related: true })}
+                              </View>
+                            ))}
+                          </View>
+                        ) : null}
+                      </View>
+                    ))}
+                  </View>
+                )}
               </View>
-              <View style={styles.summaryRow}>
-                <Text style={[styles.summaryLabel, { color: colors.text }]}>
-                  {t("demand.grandTotal")}:
-                </Text>
-                <Text style={[styles.summaryVal, { color: colors.accent, fontWeight: "600" }]}>
-                  {totals.grandTotal.toFixed(2)}
-                </Text>
-              </View>
+
+              {lines.length > 0 && (
+                <View style={[styles.section, { backgroundColor: shellBg, borderColor: sectionOutline }]}>
+                  <View style={[styles.sectionLeadHeader, { borderBottomColor: sectionOutline }]}>
+                    <Text style={[styles.sectionTitle, { color: titleText }]}>
+                      {t("demand.summary")}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: mutedText }]}>{t("demand.subtotal")}</Text>
+                    <Text style={[styles.summaryValue, { color: titleText }]}>
+                      {formatMoneyTr(totals.subtotal)}
+                      {lineListCurrencyLabel ? ` ${lineListCurrencyLabel}` : ""}
+                    </Text>
+                  </View>
+                  <View style={styles.summaryRow}>
+                    <Text style={[styles.summaryLabel, { color: mutedText }]}>{t("demand.totalVat")}</Text>
+                    <Text style={[styles.summaryValue, { color: titleText }]}>
+                      {formatMoneyTr(totals.totalVat)}
+                      {lineListCurrencyLabel ? ` ${lineListCurrencyLabel}` : ""}
+                    </Text>
+                  </View>
+                  <View style={[styles.summaryGrandRow, { borderTopColor: sectionOutline }]}>
+                    <Text style={[styles.summaryGrandLabel, { color: titleText }]}>
+                      {t("demand.grandTotal")}
+                    </Text>
+                    <Text style={[styles.summaryGrandValue, { color: accent }]}>
+                      {formatMoneyTr(totals.grandTotal)}
+                      {lineListCurrencyLabel ? ` ${lineListCurrencyLabel}` : ""}
+                    </Text>
+                  </View>
+                </View>
+              )}
+            </FlatListScrollView>
+          )}
+
+          {activeTab === "detail" && (showApproveReject || showOnayaGonder) && (
+            <View
+              style={[
+                styles.actionBar,
+                {
+                  backgroundColor: shellBgAlt,
+                  borderTopColor: sectionOutline,
+                  paddingBottom: insets.bottom + 12,
+                },
+              ]}
+            >
+              {showApproveReject && (
+                <>
+                  <TouchableOpacity
+                    style={[styles.actionRejectButton, { backgroundColor: colors.error }]}
+                    onPress={handleRejectClick}
+                    disabled={!canApproveReject || rejectAction.isPending}
+                    activeOpacity={0.9}
+                  >
+                    {rejectAction.isPending ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                        <Cancel01Icon size={18} color="#FFFFFF" variant="stroke" strokeWidth={2} />
+                        <Text style={styles.actionButtonText}>{t("demand.rejectButton")}</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionApproveButtonWrap]}
+                    onPress={handleApprove}
+                    disabled={!canApproveReject || approveAction.isPending}
+                    activeOpacity={0.9}
+                  >
+                    <LinearGradient
+                      colors={["#10b981", "#059669"]}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                      style={styles.actionApproveButton}
+                    >
+                      {approveAction.isPending ? (
+                        <ActivityIndicator color="#FFFFFF" />
+                      ) : (
+                        <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                          <Tick02Icon size={18} color="#FFFFFF" variant="stroke" strokeWidth={2} />
+                          <Text style={styles.actionButtonText}>{t("demand.approveButton")}</Text>
+                        </View>
+                      )}
+                    </LinearGradient>
+                  </TouchableOpacity>
+                </>
+              )}
+
+              {!showApproveReject && showOnayaGonder && (
+                <TouchableOpacity
+                  style={styles.actionFullButtonWrap}
+                  onPress={handleStartApproval}
+                  disabled={startApproval.isPending}
+                  activeOpacity={0.9}
+                >
+                  <LinearGradient
+                    colors={[accent, colors.accentSecondary || "#f97316"]}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.actionFullButton}
+                  >
+                    {startApproval.isPending ? (
+                      <ActivityIndicator color="#FFFFFF" />
+                    ) : (
+                      <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                        <SentIcon size={18} color="#FFFFFF" variant="stroke" strokeWidth={2} />
+                        <Text style={styles.actionButtonText}>{t("demand.sendForApproval")}</Text>
+                      </View>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              )}
             </View>
           )}
 
-          <View style={styles.submitRow}>
-            {showApproveReject && (
-              <>
-                <TouchableOpacity
-                  style={[styles.submitBtn, { backgroundColor: colors.error }]}
-                  onPress={handleRejectClick}
-                  disabled={!canApproveReject || rejectAction.isPending}
-                >
-                  {rejectAction.isPending ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <Text style={styles.submitBtnTxt}>{t("demand.rejectButton")}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.submitBtn, { backgroundColor: colors.success }]}
-                  onPress={handleApprove}
-                  disabled={!canApproveReject || approveAction.isPending}
-                >
-                  {approveAction.isPending ? (
-                    <ActivityIndicator color="#FFF" />
-                  ) : (
-                    <Text style={styles.submitBtnTxt}>{t("demand.approveButton")}</Text>
-                  )}
-                </TouchableOpacity>
-              </>
-            )}
-            {!isReadonly && !showApproveReject && showOnayaGonder && (
+          <DemandLineForm
+            visible={lineFormVisible}
+            line={editingLine}
+            onClose={() => {
+              setLineFormVisible(false);
+              setEditingLine(null);
+            }}
+            onSave={handleSaveLine}
+            onRequestRelatedStocksSelection={
+              !editingLine
+                ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }) => {
+                    setPendingStockForRelated(stock);
+                  }
+                : undefined
+            }
+            onCancelRelatedSelection={() => setPendingStockForRelated(null)}
+            onApplyRelatedSelection={
+              !editingLine
+                ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }, selectedIds: number[]) => {
+                    handleProductSelectWithRelatedStocks(stock, selectedIds);
+                    setPendingStockForRelated(null);
+                  }
+                : undefined
+            }
+            pendingRelatedStock={pendingStockForRelated}
+            currency={watchedCurrency || ""}
+            currencyOptions={currencyOptions?.map((c) => ({
+              code: c.code,
+              dovizTipi: c.dovizTipi,
+              dovizIsmi: c.dovizIsmi ?? c.code,
+            }))}
+            pricingRules={pricingRules}
+            userDiscountLimits={userDiscountLimits}
+            exchangeRates={effectiveRatesForLines}
+          />
+
+          <RejectModal
+            visible={rejectModalVisible}
+            approval={selectedApprovalForReject}
+            onClose={handleRejectModalClose}
+            onConfirm={handleRejectConfirm}
+            isPending={rejectAction.isPending}
+          />
+
+          <Modal visible={deleteLineDialogVisible} transparent animationType="fade">
+            <View style={[styles.modalOverlay, styles.deleteConfirmOverlay]}>
               <TouchableOpacity
-                style={[styles.submitBtn, { backgroundColor: colors.success }]}
-                onPress={handleStartApproval}
-                disabled={startApproval.isPending}
+                style={styles.modalBackdrop}
+                onPress={handleDeleteLineCancel}
+                disabled={deleteDemandLineMutation.isPending}
+              />
+              <View style={[styles.deleteConfirmBox, { backgroundColor: shellBgAlt, borderColor: sectionOutline }]}>
+                <Text style={[styles.deleteConfirmTitle, { color: titleText }]}>
+                  {deleteLineId != null && (() => {
+                    const lineToDelete = lines.find((l) => l.id === deleteLineId);
+                    const sameGroup = lineToDelete?.relatedProductKey
+                      ? lines.filter((l) => l.relatedProductKey === lineToDelete.relatedProductKey)
+                      : [];
+                    const relatedCount = sameGroup.length - 1;
+                    return relatedCount > 0
+                      ? t("demand.deleteRelatedGroupTitle")
+                      : t("demand.deleteLineTitle");
+                  })()}
+                </Text>
+                <Text style={[styles.deleteConfirmMessage, { color: mutedText }]}>
+                  {deleteLineId != null && (() => {
+                    const lineToDelete = lines.find((l) => l.id === deleteLineId);
+                    const sameGroup = lineToDelete?.relatedProductKey
+                      ? lines.filter((l) => l.relatedProductKey === lineToDelete.relatedProductKey)
+                      : [];
+                    const relatedCount = sameGroup.length - 1;
+                    return relatedCount > 0
+                      ? t("demand.deleteRelatedGroupMessage", { count: relatedCount })
+                      : t("demand.deleteLineMessage");
+                  })()}
+                </Text>
+                <View style={styles.deleteConfirmActions}>
+                  <TouchableOpacity
+                    style={[styles.deleteConfirmCancelBtn, { borderColor: innerBorder }]}
+                    onPress={handleDeleteLineCancel}
+                    disabled={deleteDemandLineMutation.isPending}
+                  >
+                    <Text style={[styles.deleteConfirmCancelTxt, { color: titleText }]}>
+                      {t("common.cancel")}
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[
+                      styles.deleteConfirmDeleteBtn,
+                      { backgroundColor: colors.error },
+                      deleteDemandLineMutation.isPending && styles.deleteConfirmBtnDisabled,
+                    ]}
+                    onPress={handleDeleteLineConfirm}
+                    disabled={deleteDemandLineMutation.isPending}
+                  >
+                    {deleteDemandLineMutation.isPending ? (
+                      <ActivityIndicator color="#FFFFFF" size="small" />
+                    ) : (
+                      <Text style={styles.deleteConfirmDeleteTxt}>{t("common.delete")}</Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+          </Modal>
+
+          <Modal visible={deliveryDateModalOpen} transparent animationType="slide">
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity style={styles.modalBackdrop} onPress={() => setDeliveryDateModalOpen(false)} />
+              <View
+                style={[
+                  styles.modalContent,
+                  { backgroundColor: shellBgAlt, paddingBottom: insets.bottom + 16 },
+                ]}
               >
-                {startApproval.isPending ? (
-                  <ActivityIndicator color="#FFF" />
-                ) : (
-                  <Text style={styles.submitBtnTxt}>{t("demand.sendForApproval")}</Text>
-                )}
-              </TouchableOpacity>
-            )}
-          </View>
-        </FlatListScrollView>
-        )}
-
-        <DemandLineForm
-          visible={lineFormVisible}
-          line={editingLine}
-          onClose={() => {
-            setLineFormVisible(false);
-            setEditingLine(null);
-          }}
-          onSave={handleSaveLine}
-          onRequestRelatedStocksSelection={
-            !editingLine
-              ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }) => {
-                  setPendingStockForRelated(stock);
-                }
-              : undefined
-          }
-          onCancelRelatedSelection={() => setPendingStockForRelated(null)}
-          onApplyRelatedSelection={
-            !editingLine
-              ? (stock: StockGetDto & { parentRelations: StockRelationDto[] }, selectedIds: number[]) => {
-                  handleProductSelectWithRelatedStocks(stock, selectedIds);
-                  setPendingStockForRelated(null);
-                }
-              : undefined
-          }
-          pendingRelatedStock={pendingStockForRelated}
-          currency={watchedCurrency || ""}
-          currencyOptions={currencyOptions?.map((c) => ({
-            code: c.code,
-            dovizTipi: c.dovizTipi,
-            dovizIsmi: c.dovizIsmi ?? c.code,
-          }))}
-          pricingRules={pricingRules}
-          userDiscountLimits={userDiscountLimits}
-          exchangeRates={effectiveRatesForLines}
-          allowImageUpload={Boolean(editingLine)}
-          imageUploadScope="demand-line"
-          imageUploadExtras={
-            editingLine
-              ? {
-                  demandId,
-                  demandLineId:
-                    typeof editingLine.id === "string" && editingLine.id.startsWith("line-")
-                      ? Number(editingLine.id.replace("line-", ""))
-                      : undefined,
-                }
-              : undefined
-          }
-        />
-
-        <RejectModal
-          visible={rejectModalVisible}
-          approval={selectedApprovalForReject}
-          onClose={handleRejectModalClose}
-          onConfirm={handleRejectConfirm}
-          isPending={rejectAction.isPending}
-        />
-
-        <Modal visible={deleteLineDialogVisible} transparent animationType="fade">
-          <View style={[styles.modalOverlay, styles.deleteConfirmOverlay]}>
-            <TouchableOpacity
-              style={styles.modalBackdrop}
-              onPress={handleDeleteLineCancel}
-              disabled={deleteDemandLineMutation.isPending}
-            />
-            <View style={[styles.deleteConfirmBox, { backgroundColor: colors.card }]}>
-              <Text style={[styles.deleteConfirmTitle, { color: colors.text }]}>
-                {deleteLineId != null && (() => {
-                  const lineToDelete = lines.find((l) => l.id === deleteLineId);
-                  const sameGroup = lineToDelete?.relatedProductKey
-                    ? lines.filter((l) => l.relatedProductKey === lineToDelete.relatedProductKey)
-                    : [];
-                  const relatedCount = sameGroup.length - 1;
-                  return relatedCount > 0
-                    ? t("demand.deleteRelatedGroupTitle")
-                    : t("demand.deleteLineTitle");
-                })()}
-              </Text>
-              <Text style={[styles.deleteConfirmMessage, { color: colors.textSecondary }]}>
-                {deleteLineId != null && (() => {
-                  const lineToDelete = lines.find((l) => l.id === deleteLineId);
-                  const sameGroup = lineToDelete?.relatedProductKey
-                    ? lines.filter((l) => l.relatedProductKey === lineToDelete.relatedProductKey)
-                    : [];
-                  const relatedCount = sameGroup.length - 1;
-                  return relatedCount > 0
-                    ? t("demand.deleteRelatedGroupMessage", { count: relatedCount })
-                    : t("demand.deleteLineMessage");
-                })()}
-              </Text>
-              <View style={styles.deleteConfirmActions}>
+                <View
+                  style={{
+                    width: 42,
+                    height: 4,
+                    borderRadius: 2,
+                    marginBottom: 12,
+                    backgroundColor: isDark ? "rgba(255,255,255,0.24)" : "rgba(15,23,42,0.10)",
+                    alignSelf: "center",
+                  }}
+                />
+                <View style={[styles.modalHeader, { borderBottomColor: innerBorder }]}>
+                  <Text style={[styles.modalTitle, { color: titleText }]}>{t("demand.deliveryDate")}</Text>
+                </View>
+                <DateTimePicker
+                  value={tempDeliveryDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleDeliveryDateChange}
+                  locale="tr-TR"
+                />
                 <TouchableOpacity
-                  style={[styles.deleteConfirmCancelBtn, { borderColor: colors.border }]}
-                  onPress={handleDeleteLineCancel}
-                  disabled={deleteDemandLineMutation.isPending}
+                  style={[styles.modalOkBtn, { backgroundColor: accent }]}
+                  onPress={() => {
+                    setValue("demand.deliveryDate", tempDeliveryDate.toISOString().split("T")[0]);
+                    setDeliveryDateModalOpen(false);
+                  }}
                 >
-                  <Text style={[styles.deleteConfirmCancelTxt, { color: colors.text }]}>
-                    {t("common.cancel")}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.deleteConfirmDeleteBtn,
-                    { backgroundColor: colors.error },
-                    deleteDemandLineMutation.isPending && styles.deleteConfirmBtnDisabled,
-                  ]}
-                  onPress={handleDeleteLineConfirm}
-                  disabled={deleteDemandLineMutation.isPending}
-                >
-                  {deleteDemandLineMutation.isPending ? (
-                    <ActivityIndicator color="#FFF" size="small" />
-                  ) : (
-                    <Text style={styles.deleteConfirmDeleteTxt}>{t("common.delete")}</Text>
-                  )}
+                  <Text style={styles.modalOkTxt}>{t("common.confirm")}</Text>
                 </TouchableOpacity>
               </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
 
-        <Modal visible={deliveryDateModalOpen} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity style={styles.modalBackdrop} onPress={() => setDeliveryDateModalOpen(false)} />
-            <View style={[styles.modalBox, { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>{t("demand.deliveryDate")}</Text>
-              <DateTimePicker
-                value={tempDeliveryDate}
-                mode="date"
-                display="spinner"
-                onChange={handleDeliveryDateChange}
-                locale="tr-TR"
-              />
-              <TouchableOpacity
-                style={[styles.modalOkBtn, { backgroundColor: colors.accent }]}
-                onPress={() => {
-                  setValue("demand.deliveryDate", tempDeliveryDate.toISOString().split("T")[0]);
-                  setDeliveryDateModalOpen(false);
-                }}
+          <Modal visible={offerDateModalOpen} transparent animationType="slide">
+            <View style={styles.modalOverlay}>
+              <TouchableOpacity style={styles.modalBackdrop} onPress={() => setOfferDateModalOpen(false)} />
+              <View
+                style={[
+                  styles.modalContent,
+                  { backgroundColor: shellBgAlt, paddingBottom: insets.bottom + 16 },
+                ]}
               >
-                <Text style={styles.modalOkTxt}>{t("common.confirm")}</Text>
-              </TouchableOpacity>
+                <View
+                  style={{
+                    width: 42,
+                    height: 4,
+                    borderRadius: 2,
+                    marginBottom: 12,
+                    backgroundColor: isDark ? "rgba(255,255,255,0.24)" : "rgba(15,23,42,0.10)",
+                    alignSelf: "center",
+                  }}
+                />
+                <View style={[styles.modalHeader, { borderBottomColor: innerBorder }]}>
+                  <Text style={[styles.modalTitle, { color: titleText }]}>{t("demand.offerDate")}</Text>
+                </View>
+                <DateTimePicker
+                  value={tempOfferDate}
+                  mode="date"
+                  display="spinner"
+                  onChange={handleOfferDateChange}
+                  locale="tr-TR"
+                />
+                <TouchableOpacity
+                  style={[styles.modalOkBtn, { backgroundColor: accent }]}
+                  onPress={() => {
+                    setValue("demand.offerDate", tempOfferDate.toISOString().split("T")[0]);
+                    setOfferDateModalOpen(false);
+                  }}
+                >
+                  <Text style={styles.modalOkTxt}>{t("common.confirm")}</Text>
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        </Modal>
+          </Modal>
 
-        <Modal visible={offerDateModalOpen} transparent animationType="slide">
-          <View style={styles.modalOverlay}>
-            <TouchableOpacity style={styles.modalBackdrop} onPress={() => setOfferDateModalOpen(false)} />
-            <View style={[styles.modalBox, { backgroundColor: colors.card, paddingBottom: insets.bottom + 16 }]}>
-              <Text style={[styles.modalTitle, { color: colors.text }]}>{t("demand.offerDate")}</Text>
-              <DateTimePicker
-                value={tempOfferDate}
-                mode="date"
-                display="spinner"
-                onChange={handleOfferDateChange}
-                locale="tr-TR"
-              />
-              <TouchableOpacity
-                style={[styles.modalOkBtn, { backgroundColor: colors.accent }]}
-                onPress={() => {
-                  setValue("demand.offerDate", tempOfferDate.toISOString().split("T")[0]);
-                  setOfferDateModalOpen(false);
-                }}
-              >
-                <Text style={styles.modalOkTxt}>{t("common.confirm")}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Modal>
-
-        <ExchangeRateDialog
-          visible={exchangeRateDialogVisible}
-          exchangeRates={exchangeRates}
-          currencyOptions={currencyOptions}
-          erpExchangeRates={erpRatesForDemand}
-          isLoadingErpRates={isLoadingErpRates && erpRatesForDemand.length === 0}
-          currencyInUse={linesData.length > 0 ? (watchedCurrency || undefined) : undefined}
-          useDemandRatesAsPrimary={true}
-          onClose={() => setExchangeRateDialogVisible(false)}
-          onSave={(rates) => {
-            if (demandId != null && demandId > 0 && header != null) {
-              const body = mapExchangeRateFormStateToUpdateDtos(
-                rates,
-                demandId,
-                header.offerNo ?? null
-              );
-              updateExchangeRateInDemand.mutate(
-                { demandId, body },
-                {
-                  onSuccess: () => {
-                    setExchangeRates(rates);
-                    setExchangeRateDialogVisible(false);
-                  },
-                }
-              );
-            } else {
-              setExchangeRates(rates);
-              setExchangeRateDialogVisible(false);
-            }
-          }}
-          offerDate={watchedOfferDate ?? undefined}
-        />
-
-        <CustomerSelectDialog
-          open={customerSelectDialogOpen}
-          onOpenChange={setCustomerSelectDialogOpen}
-          onSelect={handleCustomerSelect}
-          contextUserId={watchedRepresentativeId ?? undefined}
-        />
-
-        <PickerModal
-          visible={paymentTypeModalVisible}
-          options={paymentTypes?.map((p) => ({ id: p.id, name: p.name })) ?? []}
-          selectedValue={watch("demand.paymentTypeId") ?? undefined}
-          onSelect={(o) => {
-            setValue("demand.paymentTypeId", o.id as number);
-            setPaymentTypeModalVisible(false);
-          }}
-          onClose={() => setPaymentTypeModalVisible(false)}
-          title={t("demand.selectPaymentType")}
-          searchPlaceholder={t("demand.searchPaymentType")}
-        />
-
-        <PickerModal
-          visible={currencyModalVisible}
-          options={currencyOptions?.map((c) => ({ id: c.code, name: c.dovizIsmi ?? c.code, code: c.code })) ?? []}
-          selectedValue={watch("demand.currency")}
-          onSelect={(o) => handleCurrencySelect(o.id as string)}
-          onClose={() => setCurrencyModalVisible(false)}
-          title={t("demand.selectCurrency")}
-          searchPlaceholder={t("demand.searchCurrency")}
-        />
-
-        <PickerModal
-          visible={representativeModalVisible}
-          options={relatedUsers.map((u) => ({
-            id: u.userId,
-            name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(),
-          }))}
-          selectedValue={watch("demand.representativeId") ?? undefined}
-          onSelect={(o) => {
-            setValue("demand.representativeId", o.id as number);
-            setRepresentativeModalVisible(false);
-          }}
-          onClose={() => setRepresentativeModalVisible(false)}
-          title={t("demand.selectRepresentative")}
-          searchPlaceholder={t("demand.searchRepresentative")}
-        />
-
-        {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
-          <PickerModal
-            visible={shippingAddressModalVisible}
-            options={shippingAddresses.map((a) => ({ id: a.id, name: a.address ?? "" }))}
-            selectedValue={watch("demand.shippingAddressId") ?? undefined}
-            onSelect={(o) => {
-              setValue("demand.shippingAddressId", o.id as number);
-              setShippingAddressModalVisible(false);
+          <ExchangeRateDialog
+            visible={exchangeRateDialogVisible}
+            exchangeRates={exchangeRates}
+            currencyOptions={currencyOptions}
+            erpExchangeRates={erpRatesForDemand}
+            isLoadingErpRates={isLoadingErpRates && erpRatesForDemand.length === 0}
+            currencyInUse={linesData.length > 0 ? (watchedCurrency || undefined) : undefined}
+            useDemandRatesAsPrimary={true}
+            onClose={() => setExchangeRateDialogVisible(false)}
+            onSave={(rates) => {
+              if (demandId != null && demandId > 0 && header != null) {
+                const body = mapExchangeRateFormStateToUpdateDtos(
+                  rates,
+                  demandId,
+                  header.offerNo ?? null
+                );
+                updateExchangeRateInDemand.mutate(
+                  { demandId, body },
+                  {
+                    onSuccess: () => {
+                      setExchangeRates(rates);
+                      setExchangeRateDialogVisible(false);
+                    },
+                  }
+                );
+              } else {
+                setExchangeRates(rates);
+                setExchangeRateDialogVisible(false);
+              }
             }}
-            onClose={() => setShippingAddressModalVisible(false)}
-            title={t("demand.selectShippingAddress")}
-            searchPlaceholder={t("demand.searchAddress")}
+            offerDate={watchedOfferDate ?? undefined}
           />
-        )}
-      </KeyboardAvoidingView>
+
+          <CustomerSelectDialog
+            open={customerSelectDialogOpen}
+            onOpenChange={setCustomerSelectDialogOpen}
+            onSelect={handleCustomerSelect}
+            contextUserId={watchedRepresentativeId ?? undefined}
+          />
+
+          <PickerModal
+            visible={paymentTypeModalVisible}
+            options={paymentTypes?.map((p) => ({ id: p.id, name: p.name })) ?? []}
+            selectedValue={watch("demand.paymentTypeId") ?? undefined}
+            onSelect={(o) => {
+              setValue("demand.paymentTypeId", o.id as number);
+              setPaymentTypeModalVisible(false);
+            }}
+            onClose={() => setPaymentTypeModalVisible(false)}
+            title={t("demand.selectPaymentType")}
+            searchPlaceholder={t("demand.searchPaymentType")}
+          />
+
+          <PickerModal
+            visible={currencyModalVisible}
+            options={currencyOptions?.map((c) => ({ id: c.code, name: c.dovizIsmi ?? c.code, code: c.code })) ?? []}
+            selectedValue={watch("demand.currency")}
+            onSelect={(o) => handleCurrencySelect(o.id as string)}
+            onClose={() => setCurrencyModalVisible(false)}
+            title={t("demand.selectCurrency")}
+            searchPlaceholder={t("demand.searchCurrency")}
+          />
+
+          <PickerModal
+            visible={representativeModalVisible}
+            options={relatedUsers.map((u) => ({
+              id: u.userId,
+              name: `${u.firstName ?? ""} ${u.lastName ?? ""}`.trim(),
+            }))}
+            selectedValue={watch("demand.representativeId") ?? undefined}
+            onSelect={(o) => {
+              setValue("demand.representativeId", o.id as number);
+              setRepresentativeModalVisible(false);
+            }}
+            onClose={() => setRepresentativeModalVisible(false)}
+            title={t("demand.selectRepresentative")}
+            searchPlaceholder={t("demand.searchRepresentative")}
+          />
+
+          {watchedCustomerId && shippingAddresses && shippingAddresses.length > 0 && (
+            <PickerModal
+              visible={shippingAddressModalVisible}
+              options={shippingAddresses.map((a) => ({ id: a.id, name: a.address ?? "" }))}
+              selectedValue={watch("demand.shippingAddressId") ?? undefined}
+              onSelect={(o) => {
+                setValue("demand.shippingAddressId", o.id as number);
+                setShippingAddressModalVisible(false);
+              }}
+              onClose={() => setShippingAddressModalVisible(false)}
+              title={t("demand.selectShippingAddress")}
+              searchPlaceholder={t("demand.searchAddress")}
+            />
+          )}
+        </KeyboardAvoidingView>
+      </View>
     </>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  tabBar: { flexDirection: "row", borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.2)" },
-  tab: { flex: 1, paddingVertical: 12, alignItems: "center", justifyContent: "center", borderBottomWidth: 2, borderBottomColor: "transparent" },
-  tabActive: {},
-  tabText: { fontSize: 14, fontWeight: "600", color: "rgba(255,255,255,0.8)" },
-  content: { flex: 1, borderTopLeftRadius: 24, borderTopRightRadius: 24 },
-  contentContainer: { padding: 20 },
   centered: { flex: 1, alignItems: "center", justifyContent: "center", padding: 20 },
   errText: { fontSize: 16, marginBottom: 16, textAlign: "center" },
-  retryBtn: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 8 },
+  retryBtn: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 12 },
   retryBtnText: { color: "#FFF", fontSize: 14, fontWeight: "600" },
-  section: { padding: 16, borderRadius: 12, borderWidth: 1, marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: "600", marginBottom: 12 },
-  field: { marginBottom: 16 },
-  label: { fontSize: 14, fontWeight: "500", marginBottom: 6 },
-  pickerBtn: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12 },
-  pickerTxt: { fontSize: 15 },
-  dateBtn: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 16 },
-  dateBtnTxt: { fontSize: 15 },
-  currencyRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 6 },
-  kurlarBtn: { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 6 },
-  kurlarBtnTxt: { color: "#FFF", fontSize: 12, fontWeight: "600" },
-  customerBtn: {
+
+  statusBadge: {
+    width: 32,
+    height: 32,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  tabBarCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderRadius: 18,
+    padding: 6,
+    gap: 6,
+    marginHorizontal: 14,
+    marginTop: 12,
+    marginBottom: 6,
+  },
+  tabPill: {
+    flex: 1,
+    minHeight: 40,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 10,
+  },
+  tabPillActive: { borderWidth: 1.6 },
+  tabPillInactive: { borderWidth: 0, backgroundColor: "transparent" },
+  tabPillText: { fontSize: 12, fontWeight: "700" },
+
+  content: { flex: 1, backgroundColor: "transparent" },
+  contentContainer: { paddingHorizontal: 14, paddingTop: 8, paddingBottom: 28 },
+
+  section: {
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1.35,
+    marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 3,
+  },
+  sectionHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    flexWrap: "wrap",
+    marginBottom: 10,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    gap: 8,
+  },
+  sectionLeadHeader: {
+    paddingBottom: 10,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+  },
+  sectionTitle: {
+    fontSize: 12.3,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 0.4,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(236,72,153,0.08)",
+    overflow: "hidden",
+    alignSelf: "flex-start",
+  },
+
+  twoColumnRow: {
+    flexDirection: "row",
+    gap: 10,
+    marginBottom: 10,
+    alignItems: "flex-start",
+  },
+  twoColumnItem: { flex: 1, minWidth: 0 },
+  fieldContainerTight: { marginBottom: 10 },
+  labelCompact: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.25,
+    marginBottom: 5,
+  },
+  pickerButton: {
+    borderWidth: 1.3,
+    borderRadius: 16,
+    minHeight: 48,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    justifyContent: "center",
+  },
+  pickerShellCompact: {
+    minHeight: 40,
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    borderRadius: 12,
+  },
+  pickerText: { fontSize: 15 },
+  pickerTextCompact: { fontSize: 13 },
+  dateCell: {
+    borderWidth: 1.3,
+    borderRadius: 12,
+    minHeight: 40,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    justifyContent: "center",
+  },
+  dateCellValue: { fontSize: 13, fontWeight: "500" },
+  fieldError: { fontSize: 12, marginTop: 4, marginBottom: 4 },
+
+  customerSelectButton: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
     borderWidth: 1,
-    borderRadius: 10,
+    borderRadius: 16,
     paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 16,
+    paddingVertical: 11,
+    marginBottom: 10,
+    minHeight: 50,
   },
-  customerBtnInner: { flexDirection: "row", alignItems: "center", flex: 1 },
-  customerIcon: { fontSize: 20, marginRight: 12 },
-  customerTextWrap: { flex: 1 },
-  customerLabel: { fontSize: 12, marginBottom: 2 },
-  customerValue: { fontSize: 15, fontWeight: "500" },
-  customerArrow: { fontSize: 20, fontWeight: "300", marginLeft: 8 },
-  fieldErr: { fontSize: 12, marginTop: 4, marginBottom: 4 },
-  emptyTxt: { fontSize: 14, textAlign: "center", paddingVertical: 20 },
-  sectionHeader: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
-  addButton: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 8 },
-  addButtonText: { color: "#FFF", fontSize: 14, fontWeight: "600" },
-  lineCardWrapper: { marginBottom: 12 },
-  lineCard: { padding: 16, borderRadius: 12, borderWidth: 1 },
-  lineCardHeader: { flexDirection: "row", justifyContent: "space-between" },
-  lineCardThumb: { width: 56, height: 56, borderRadius: 10, marginRight: 12 },
-  lineCardContent: { flex: 1, marginRight: 12 },
-  lineCardTitleRow: { flexDirection: "row", alignItems: "flex-start", justifyContent: "space-between", gap: 10, marginBottom: 4 },
-  lineProductName: { fontSize: 15, fontWeight: "600", flex: 1 },
-  mainBadge: { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
-  mainBadgeText: { fontSize: 11, fontWeight: "700" },
-  lineProductCode: { fontSize: 12, marginBottom: 8 },
-  lineDetailRows: { marginBottom: 4 },
-  lineDetailRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 4 },
-  lineDetailLabel: { fontSize: 13 },
-  lineDetailValue: { fontSize: 13, fontWeight: "500" },
-  lineGrandTotalRow: { marginTop: 8, paddingTop: 8, borderTopWidth: 1 },
-  lineGrandTotalLabel: { fontSize: 13 },
-  lineGrandTotalValue: { fontSize: 13, fontWeight: "600" },
-  lineActions: { justifyContent: "center", gap: 8 },
-  editButton: { width: 44, height: 44, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  editButtonText: { fontSize: 18 },
-  deleteButton: { width: 44, height: 44, borderRadius: 8, alignItems: "center", justifyContent: "center" },
-  deleteButtonText: { fontSize: 18 },
-  approvalBadge: { padding: 8, borderRadius: 6, marginTop: 8 },
-  approvalBadgeText: { fontSize: 12 },
-  relatedLinesContainer: { marginTop: 12, paddingTop: 12, borderTopWidth: 1 },
-  relatedLinesTitle: { fontSize: 13, fontWeight: "600", marginBottom: 8 },
-  relatedLineCard: { padding: 12, borderRadius: 8, borderWidth: 1, marginBottom: 8 },
-  relatedLineProductName: { fontSize: 14, fontWeight: "600", marginBottom: 4 },
-  relatedLineProductCode: { fontSize: 12, marginBottom: 8 },
-  lineGroup: { marginBottom: 16 },
-  relatedBlock: { marginTop: 8, marginLeft: 4 },
-  relatedTitle: { fontSize: 13, fontWeight: "600", marginBottom: 8 },
-  summaryRow: { flexDirection: "row", justifyContent: "space-between", marginBottom: 8 },
-  summaryLabel: { fontSize: 14 },
-  summaryVal: { fontSize: 14, fontWeight: "500" },
-  submitRow: { flexDirection: "row", gap: 12, marginTop: 8 },
-  cancelBtn: { flex: 1, borderWidth: 1, borderRadius: 12, height: 52, alignItems: "center", justifyContent: "center" },
-  cancelBtnTxt: { fontSize: 16, fontWeight: "600" },
-  submitBtn: { flex: 1, height: 52, borderRadius: 12, alignItems: "center", justifyContent: "center" },
-  submitBtnDisabled: { opacity: 0.6 },
-  submitBtnTxt: { color: "#FFF", fontSize: 16, fontWeight: "600" },
+  customerSelectContent: { flexDirection: "row", alignItems: "center", flex: 1 },
+  customerSelectTextContainer: { flex: 1 },
+  customerSelectLabel: { fontSize: 11, fontWeight: "600", marginBottom: 2, letterSpacing: 0.25 },
+  customerSelectValue: { fontSize: 14, fontWeight: "600" },
+
+  currencyHeader: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+  },
+  exchangeRateButtonCompact: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+  },
+  exchangeRateButtonTextCompact: {
+    color: "#FFFFFF",
+    fontSize: 11,
+    fontWeight: "700",
+  },
+
+  addButton: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  addButtonText: { color: "#FFFFFF", fontSize: 13, fontWeight: "700" },
+
+  emptyText: { fontSize: 13, textAlign: "center", paddingVertical: 18, fontStyle: "italic" },
+
+  lineCardWrapper: {},
+  lineRow: {
+    position: "relative",
+    flexDirection: "row",
+    alignItems: "flex-start",
+    borderWidth: 1,
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 11,
+    paddingTop: 10,
+  },
+  lineRowRelated: {
+    paddingVertical: 8,
+    paddingHorizontal: 9,
+    borderRadius: 12,
+  },
+  lineRowMain: { flex: 1, minWidth: 0 },
+  lineRowMainWithThumb: {
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 10,
+  },
+  lineRowThumb: { width: 40, height: 40, borderRadius: 10 },
+  lineRowThumbRelated: { width: 32, height: 32, borderRadius: 8 },
+  lineRowTextBlock: { flex: 1, minWidth: 0, gap: 2, paddingRight: 112 },
+  lineRowTextBlockRelated: { paddingRight: 76 },
+  lineRowTopRight: {
+    position: "absolute",
+    top: 6,
+    right: 6,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    zIndex: 2,
+  },
+  lineRowCode: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.2,
+    paddingRight: 4,
+  },
+  lineRowName: {
+    fontSize: 13,
+    fontWeight: "600",
+    lineHeight: 17,
+    marginTop: 1,
+  },
+  lineRowMainBadge: {
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 5,
+    flexShrink: 0,
+  },
+  lineRowMainBadgeText: { fontSize: 7, fontWeight: "700" },
+  lineRowDesc: { fontSize: 10, fontWeight: "500", marginTop: 2, opacity: 0.92 },
+  lineRowMeta: {
+    marginTop: 4,
+    fontWeight: "400",
+    ...Platform.select({
+      ios: { fontVariant: ["tabular-nums"] as const },
+      default: {},
+    }),
+  },
+  lineRowMetaFine: { fontSize: 10, lineHeight: 13.5 },
+  lineRowApproval: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginTop: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 8,
+    alignSelf: "flex-start",
+  },
+  lineRowApprovalText: { fontSize: 10, fontWeight: "600" },
+  lineIconButton: {
+    width: 30,
+    height: 30,
+    borderRadius: 9,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  relatedLinesBlock: { marginTop: 8, gap: 6 },
+  relatedLinesTitle: {
+    fontSize: 10,
+    fontWeight: "700",
+    letterSpacing: 0.35,
+    textTransform: "uppercase",
+    opacity: 0.72,
+    marginBottom: 2,
+  },
+  relatedLineIndent: {
+    paddingLeft: 10,
+    marginLeft: 2,
+    borderLeftWidth: 2,
+  },
+
+  summaryRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  summaryLabel: { fontSize: 13, fontWeight: "500" },
+  summaryValue: {
+    fontSize: 14,
+    fontWeight: "600",
+    ...Platform.select({
+      ios: { fontVariant: ["tabular-nums"] as const },
+      default: {},
+    }),
+  },
+  summaryGrandRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 6,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  summaryGrandLabel: { fontSize: 14, fontWeight: "700", letterSpacing: 0.2 },
+  summaryGrandValue: {
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+    ...Platform.select({
+      ios: { fontVariant: ["tabular-nums"] as const },
+      default: {},
+    }),
+  },
+
+  actionBar: {
+    flexDirection: "row",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingTop: 10,
+    borderTopWidth: 1,
+  },
+  actionRejectButton: {
+    flex: 1,
+    minHeight: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionApproveButtonWrap: { flex: 1 },
+  actionApproveButton: {
+    minHeight: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionFullButtonWrap: { flex: 1 },
+  actionFullButton: {
+    minHeight: 52,
+    borderRadius: 16,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  actionButtonText: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+
+  submitButtonDisabled: { opacity: 0.55 },
+
   modalOverlay: { flex: 1, justifyContent: "flex-end" },
   deleteConfirmOverlay: { justifyContent: "center", alignItems: "center" },
-  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.5)" },
+  modalBackdrop: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.55)" },
+  modalContent: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 12 },
+  modalHeader: { paddingHorizontal: 20, paddingBottom: 12, borderBottomWidth: 1 },
+  modalTitle: { fontSize: 17, fontWeight: "700" },
+  modalOkBtn: {
+    marginHorizontal: 20,
+    marginTop: 16,
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: "center",
+  },
+  modalOkTxt: { color: "#FFFFFF", fontSize: 15, fontWeight: "700" },
+
   deleteConfirmBox: {
     marginHorizontal: 24,
     padding: 20,
-    borderRadius: 12,
+    borderRadius: 16,
+    borderWidth: 1,
     width: "100%",
-    maxWidth: 340,
+    maxWidth: 360,
   },
-  deleteConfirmTitle: { fontSize: 18, fontWeight: "600", marginBottom: 8 },
-  deleteConfirmMessage: { fontSize: 14, marginBottom: 20 },
+  deleteConfirmTitle: { fontSize: 17, fontWeight: "700", marginBottom: 8 },
+  deleteConfirmMessage: { fontSize: 13.5, marginBottom: 20, lineHeight: 19 },
   deleteConfirmActions: { flexDirection: "row", gap: 12 },
   deleteConfirmCancelBtn: {
     flex: 1,
     borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
   },
-  deleteConfirmCancelTxt: { fontSize: 16, fontWeight: "600" },
+  deleteConfirmCancelTxt: { fontSize: 14, fontWeight: "700" },
   deleteConfirmDeleteBtn: {
     flex: 1,
-    borderRadius: 10,
-    paddingVertical: 14,
+    borderRadius: 12,
+    paddingVertical: 12,
     alignItems: "center",
     justifyContent: "center",
-    minHeight: 48,
+    minHeight: 44,
   },
-  deleteConfirmDeleteTxt: { color: "#FFF", fontSize: 16, fontWeight: "600" },
+  deleteConfirmDeleteTxt: { color: "#FFFFFF", fontSize: 14, fontWeight: "700" },
   deleteConfirmBtnDisabled: { opacity: 0.7 },
-  modalBox: { borderTopLeftRadius: 20, borderTopRightRadius: 20, paddingTop: 16 },
-  modalTitle: { fontSize: 18, fontWeight: "600", marginBottom: 16, paddingHorizontal: 20 },
-  modalOkBtn: { marginHorizontal: 20, marginTop: 16, paddingVertical: 14, borderRadius: 10, alignItems: "center" },
-  modalOkTxt: { color: "#FFF", fontSize: 16, fontWeight: "600" },
 });
