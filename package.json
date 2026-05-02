@@ -19,6 +19,7 @@
     "@gluestack-ui/utils": "^3.0.11",
     "@hookform/resolvers": "^5.2.2",
     "@legendapp/motion": "^2.4.0",
+    "@microsoft/signalr": "^10.0.0",
     "@react-native-async-storage/async-storage": "^2.1.2",
     "@react-native-community/datetimepicker": "8.4.4",
     "@react-native-ml-kit/barcode-scanning": "^2.0.0",

@@ -29,6 +29,7 @@ import {
   type VersionCheckResult,
 } from "../lib/versionCheck";
 import { clearPerfMarks, perfMark, perfMeasure, perfMeasureOnNextPaint } from "../lib/perf-metrics";
+import { realtimeAccessControlService } from "../lib/realtime-access-control";
 import "../../global.css";
 
 const VERSION_CHECK_INTERVAL_MS = 1000 * 60 * 30;
@@ -240,9 +241,14 @@ export default function RootLayout(): React.ReactElement {
       return;
     }
 
+    void (token ? realtimeAccessControlService.connect(token) : realtimeAccessControlService.disconnect()).catch(() => undefined);
+
     const subscription = AppState.addEventListener("change", (nextState) => {
       if (nextState === "active") {
         void runVersionCheck();
+        if (token) {
+          void realtimeAccessControlService.connect(token).catch(() => undefined);
+        }
         void Promise.all([authAccessApi.getMyPermissions(), getSystemSettings()])
           .then(async ([permissions, settings]) => {
             await setPermissions(permissions);
@@ -251,6 +257,8 @@ export default function RootLayout(): React.ReactElement {
             lastAccessControlRefreshAtRef.current = Date.now();
           })
           .catch(() => undefined);
+      } else {
+        void realtimeAccessControlService.disconnect().catch(() => undefined);
       }
     });
 
@@ -261,8 +269,9 @@ export default function RootLayout(): React.ReactElement {
     return () => {
       subscription.remove();
       clearInterval(interval);
+      void realtimeAccessControlService.disconnect().catch(() => undefined);
     };
-  }, [isHydrated, runVersionCheck]);
+  }, [isHydrated, runVersionCheck, setPermissions, setSystemSettings, token]);
 
   const handleOpenDetails = useCallback(() => {
     setVersionState(null);
