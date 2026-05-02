@@ -228,9 +228,11 @@ export function DemandListScreen(): React.ReactElement {
           refreshing={isRefetching}
           onRefresh={refetch}
           onEndReached={handleEndReached}
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={0.8}
           showsVerticalScrollIndicator={false}
           isFetchingNextPage={isFetchingNextPage}
+          hasNextPage={hasNextPage}
+          totalCount={data?.pages[0]?.totalCount}
           contentContainerStyle={{
             paddingHorizontal: PADDING,
             paddingTop: 12,

@@ -1,26 +1,29 @@
 import React from "react";
-import { FlatList, View, type FlatListProps, type StyleProp, type ViewStyle } from "react-native";
+import { Platform, ScrollView, type ScrollViewProps } from "react-native";
 
-interface FlatListScrollViewProps
-  extends Omit<FlatListProps<number>, "data" | "renderItem" | "keyExtractor"> {
+export type FlatListScrollViewProps = ScrollViewProps & {
   children?: React.ReactNode;
-  contentContainerStyle?: StyleProp<ViewStyle>;
-}
+};
+
+const ANDROID = Platform.OS === "android";
 
 export function FlatListScrollView({
   children,
-  contentContainerStyle,
+  keyboardShouldPersistTaps = "handled",
+  removeClippedSubviews,
+  scrollEventThrottle,
+  overScrollMode,
   ...rest
 }: FlatListScrollViewProps): React.ReactElement {
   return (
-    <FlatList
-      data={[0]}
-      extraData={children}
-      keyExtractor={(item) => String(item)}
-      renderItem={() => <View style={{ width: "100%" }}>{children}</View>}
-      removeClippedSubviews={false}
-      contentContainerStyle={contentContainerStyle}
+    <ScrollView
+      keyboardShouldPersistTaps={keyboardShouldPersistTaps}
+      removeClippedSubviews={removeClippedSubviews ?? ANDROID}
+      scrollEventThrottle={scrollEventThrottle ?? 16}
+      overScrollMode={overScrollMode ?? "never"}
       {...rest}
-    />
+    >
+      {children}
+    </ScrollView>
   );
 }

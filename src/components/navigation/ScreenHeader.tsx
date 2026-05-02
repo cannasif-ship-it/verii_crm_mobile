@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from "react";
-import { View, StyleSheet, Pressable, Platform } from "react-native";
+import { View, StyleSheet, Pressable, Platform, InteractionManager } from "react-native";
 import { useRouter, usePathname } from "expo-router";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { LinearGradient } from "expo-linear-gradient";
@@ -88,7 +88,11 @@ export function ScreenHeader({
       router.replace(homeRoute);
     };
 
-    requestAnimationFrame(executeNavigation);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        InteractionManager.runAfterInteractions(executeNavigation);
+      });
+    });
   }, [showBackButton, openSidebar, router, isMenuRootPage, homeRoute]);
 
   return (

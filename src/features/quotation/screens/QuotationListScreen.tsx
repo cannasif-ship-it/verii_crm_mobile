@@ -274,8 +274,10 @@ export function QuotationListScreen(): React.ReactElement {
           refreshing={isRefetching}
           onRefresh={refetch}
           isFetchingNextPage={isFetchingNextPage}
+          hasNextPage={hasNextPage}
+          totalCount={data?.pages[0]?.totalCount}
           onEndReached={handleEndReached}
-          onEndReachedThreshold={0.5}
+          onEndReachedThreshold={0.8}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.flatListContent,

@@ -3,6 +3,9 @@ import "react-native-gesture-handler";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, AppState, InteractionManager, LogBox, Modal, Pressable, StyleSheet, View } from "react-native";
 import { Stack, router, usePathname } from "expo-router";
+import { enableFreeze } from "react-native-screens";
+
+enableFreeze(true);
 import { I18nextProvider } from "react-i18next";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -59,6 +62,7 @@ LogBox.ignoreLogs([
   /React keys must be passed directly/i,
   /SafeAreaView.*deprecated/i,
   /Path|Circle/i,
+  /unsupported SVG element.*ellipse/i,
 ]);
 
 export default function RootLayout(): React.ReactElement {

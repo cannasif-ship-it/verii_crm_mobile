@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   FlatList,
   type FlatListProps,
+  Platform,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -29,6 +30,9 @@ interface PagedFlatListProps<ItemT>
   afterToolbarContent?: React.ReactNode;
   isLoading?: boolean;
   isFetchingNextPage?: boolean;
+  hasNextPage?: boolean;
+  totalCount?: number;
+  endOfListLabel?: string;
   refreshing?: boolean;
   onRefresh?: () => void;
   emptyComponent?: React.ReactNode;
@@ -50,6 +54,9 @@ export function PagedFlatList<ItemT>({
   afterToolbarContent,
   isLoading = false,
   isFetchingNextPage = false,
+  hasNextPage,
+  totalCount,
+  endOfListLabel,
   refreshing = false,
   onRefresh,
   emptyComponent,
@@ -81,12 +88,33 @@ export function PagedFlatList<ItemT>({
       ? React.createElement(emptyComponent as React.ComponentType)
       : emptyComponent;
 
+  const showEndOfList =
+    !isFetchingNextPage &&
+    hasNextPage === false &&
+    data.length > 0;
+
+  const endLabel =
+    endOfListLabel ??
+    t("common.endOfList", "Tüm kayıtlar yüklendi");
+
   const combinedFooter = (
     <>
       {footerNode}
       {isFetchingNextPage ? (
         <View style={styles.footerLoader}>
           <ActivityIndicator size="small" color={theme.accent} />
+          <Text style={[styles.footerLoaderText, { color: theme.textMuted }]}>
+            {t("common.loadingMore", "Daha fazla yükleniyor…")}
+          </Text>
+        </View>
+      ) : showEndOfList ? (
+        <View style={styles.footerEnd}>
+          <View style={[styles.footerEndDivider, { backgroundColor: theme.border }]} />
+          <Text style={[styles.footerEndText, { color: theme.textMuted }]}>
+            {totalCount != null && totalCount > 0
+              ? `${endLabel} • ${data.length} / ${totalCount}`
+              : endLabel}
+          </Text>
         </View>
       ) : null}
     </>
@@ -168,6 +196,11 @@ export function PagedFlatList<ItemT>({
           contentContainerStyle={contentContainerStyle}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
+          removeClippedSubviews={Platform.OS === "android"}
+          initialNumToRender={6}
+          maxToRenderPerBatch={6}
+          updateCellsBatchingPeriod={60}
+          windowSize={7}
           {...flatListProps}
         />
       )}
@@ -241,6 +274,29 @@ bottomRightActions: {
     paddingVertical: 20,
     alignItems: "center",
     justifyContent: "center",
+    flexDirection: "row",
+    gap: 8,
+  },
+  footerLoaderText: {
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  footerEnd: {
+    paddingTop: 18,
+    paddingBottom: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+  },
+  footerEndDivider: {
+    width: 56,
+    height: 1,
+    borderRadius: 1,
+  },
+  footerEndText: {
+    fontSize: 11,
+    fontWeight: "600",
+    letterSpacing: 0.3,
   },
   filterInlineBtn: {
   flexDirection: "row",

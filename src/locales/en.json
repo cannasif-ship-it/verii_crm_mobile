@@ -21,6 +21,8 @@
   },
   "common": {
     "loading": "Loading...",
+    "loadingMore": "Loading more…",
+    "endOfList": "All records loaded",
     "refreshing": "Refreshing...",
     "error": "An error occurred",
     "retry": "Retry",
@@ -68,6 +70,10 @@
     "voiceSearchStartError": "Voice search could not be started.",
     "lineDeleted": "The line has been deleted.",
     "selectCustomerRepresentativeCurrency": "Please select customer, representative and currency.",
+    "profil": "Profile",
+    "demir": "Iron",
+    "vida": "Screw",
+    "discount": "Discount",
     "approvalFlowStartError": "The approval process could not be started",
     "demandUpdateFailed": "The request could not be updated",
     "demandRowsUpdateFailed": "The request lines could not be updated",
@@ -735,7 +741,17 @@
     "quickAdd": "Quick Add Activity",
     "quickAddPlaceholder": "Enter activity subject...",
     "addForDate": "Add activity for this date",
-    "quickAddSuccess": "Activity created successfully"
+    "quickAddSuccess": "Activity created successfully",
+    "todaysTasks": "Today's Tasks",
+    "weekTasks": "Week Plan",
+    "taskCount": "{{count}} Tasks",
+    "taskCount_one": "{{count}} Task",
+    "taskCount_other": "{{count}} Tasks",
+    "legendPlanned": "Planned/Active",
+    "legendCompleted": "Completed",
+    "legendSelected": "Selected",
+    "assigneeFallback": "User",
+    "noEvent": "Empty"
   },
   "salesActionSheet": {
     "title": "Quick Sales Action",
@@ -1182,6 +1198,14 @@
     "exchangeRate": {
       "inUseCannotEdit": "The exchange rate in use cannot be changed."
     },
+    "status": {
+      "notStarted": "Draft",
+      "pending": "In Approval",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "generalSection": "General",
+    "linesSection": "Lines",
     "projectCode": "Project Code",
     "projectCodeSearch": "Project search...",
     "deliveryMethod": "Shipping/Delivery Method",
@@ -1308,6 +1332,14 @@
       "overallStatus": "Overall Status",
       "rejectedReason": "Rejection Reason"
     },
+    "status": {
+      "notStarted": "Draft",
+      "pending": "In Approval",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "generalSection": "General",
+    "linesSection": "Lines",
     "deleteLineTitle": "Are you sure you want to delete this line?",
     "deleteLineMessage": "This action cannot be undone.",
     "deleteRelatedGroupTitle": "Are you sure you want to delete this line group?",
@@ -1443,6 +1475,14 @@
       "overallStatus": "Overall Status",
       "rejectedReason": "Rejection Reason"
     },
+    "status": {
+      "notStarted": "Draft",
+      "pending": "In Approval",
+      "approved": "Approved",
+      "rejected": "Rejected"
+    },
+    "generalSection": "General",
+    "linesSection": "Lines",
     "deleteLineTitle": "Are you sure you want to delete this line?",
     "deleteLineMessage": "This action cannot be undone.",
     "deleteRelatedGroupTitle": "Are you sure you want to delete this line group?",

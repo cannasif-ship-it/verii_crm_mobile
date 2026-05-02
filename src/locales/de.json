@@ -17,6 +17,8 @@
   },
   "common": {
     "loading": "Laden...",
+    "loadingMore": "Weitere werden geladen…",
+    "endOfList": "Alle Einträge geladen",
     "refreshing": "Aktualisieren...",
     "error": "Ein Fehler ist aufgetreten",
     "retry": "Wiederholen",

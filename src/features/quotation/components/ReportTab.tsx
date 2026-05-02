@@ -6,12 +6,22 @@ import {
   TouchableOpacity,
   useWindowDimensions,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { FlatListScrollView } from "@/components/FlatListScrollView";
 import { useTranslation } from "react-i18next";
 import { Buffer } from "buffer";
 import * as FileSystem from "expo-file-system/legacy";
 import * as Sharing from "expo-sharing";
 import { WebView } from "react-native-webview";
+import {
+  Pdf01Icon,
+  ArrowDown01Icon,
+  Share05Icon,
+  ViewIcon,
+  Alert02Icon,
+  FileEditIcon,
+  SparklesIcon,
+} from "hugeicons-react-native";
 import { Text } from "../../../components/ui/text";
 import { useUIStore } from "../../../store/ui";
 import { useToastStore } from "../../../store/toast";
@@ -259,6 +269,17 @@ export function ReportTab({
           },
         ]}
       >
+        <View
+          style={[
+            styles.stateIconWrap,
+            {
+              backgroundColor: isDark ? "rgba(244,114,182,0.14)" : "rgba(219,39,119,0.10)",
+              borderColor: isDark ? "rgba(244,114,182,0.36)" : "rgba(219,39,119,0.26)",
+            },
+          ]}
+        >
+          <Alert02Icon size={22} color={colors.error} variant="stroke" strokeWidth={2.2} />
+        </View>
         <Text style={[styles.stateTitle, { color: colors.error }]}>
           {t("common.error")}
         </Text>
@@ -295,6 +316,17 @@ export function ReportTab({
           },
         ]}
       >
+        <View
+          style={[
+            styles.stateIconWrap,
+            {
+              backgroundColor: isDark ? "rgba(148,163,184,0.16)" : "rgba(148,163,184,0.14)",
+              borderColor: isDark ? "rgba(148,163,184,0.32)" : "rgba(148,163,184,0.30)",
+            },
+          ]}
+        >
+          <FileEditIcon size={22} color={isDark ? "#94A3B8" : "#475569"} variant="stroke" strokeWidth={2} />
+        </View>
         <Text style={[styles.stateTitle, { color: palette.text }]}>
           {t("report.noTemplates")}
         </Text>
@@ -321,9 +353,12 @@ export function ReportTab({
             },
           ]}
         >
-          <Text style={[styles.label, { color: palette.muted }]}>
-            {t("report.template")}
-          </Text>
+          <View style={styles.labelRow}>
+            <FileEditIcon size={11} color={palette.muted} variant="stroke" strokeWidth={2.2} />
+            <Text style={[styles.label, { color: palette.muted }]}>
+              {t("report.template")}
+            </Text>
+          </View>
 
           <TouchableOpacity
             activeOpacity={0.85}
@@ -339,6 +374,7 @@ export function ReportTab({
             <Text style={[styles.templateSelectorText, { color: palette.text }]} numberOfLines={1}>
               {selectedTemplate?.title ?? t("report.selectTemplate")}
             </Text>
+            <ArrowDown01Icon size={16} color={palette.muted} variant="stroke" strokeWidth={2} />
           </TouchableOpacity>
         </View>
 
@@ -347,33 +383,34 @@ export function ReportTab({
           style={[
             styles.reportPrimaryButton,
             {
-              backgroundColor: generatePdf.isPending
-                ? isDark
-                  ? "rgba(236,72,153,0.10)"
-                  : "rgba(219,39,119,0.08)"
-                : isDark
-                  ? "rgba(236,72,153,0.18)"
-                  : "rgba(219,39,119,0.12)",
-              borderColor: generatePdf.isPending
-                ? isDark
-                  ? "rgba(236,72,153,0.22)"
-                  : "rgba(219,39,119,0.16)"
-                : isDark
-                  ? "rgba(236,72,153,0.38)"
-                  : "rgba(219,39,119,0.24)",
-              opacity: selectedTemplateId == null ? 0.7 : 1,
+              opacity: selectedTemplateId == null ? 0.6 : 1,
+              shadowColor: palette.brand,
             },
           ]}
           onPress={handleGeneratePdf}
           disabled={generatePdf.isPending || selectedTemplateId == null}
         >
-          {generatePdf.isPending ? (
-            <ActivityIndicator color={palette.brand} size="small" />
-          ) : (
-            <Text style={[styles.reportPrimaryButtonText, { color: palette.brand }]}>
-              {t("report.generatePdf")}
-            </Text>
-          )}
+          <LinearGradient
+            colors={
+              isDark
+                ? ["rgba(236,72,153,0.95)", "rgba(192,38,211,0.92)"]
+                : ["#EC4899", "#A855F7"]
+            }
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.reportPrimaryButtonInner}
+          >
+            {generatePdf.isPending ? (
+              <ActivityIndicator color="#FFFFFF" size="small" />
+            ) : (
+              <>
+                <SparklesIcon size={16} color="#FFFFFF" variant="stroke" strokeWidth={2.2} />
+                <Text style={[styles.reportPrimaryButtonText, { color: "#FFFFFF" }]}>
+                  {t("report.generatePdf")}
+                </Text>
+              </>
+            )}
+          </LinearGradient>
         </TouchableOpacity>
 
         <View style={styles.pdfActionRow}>
@@ -385,15 +422,15 @@ export function ReportTab({
                 flex: 1,
                 backgroundColor: pdfFileUri
                   ? isDark
-                    ? "rgba(56,189,248,0.10)"
-                    : "rgba(14,165,233,0.08)"
+                    ? "rgba(56,189,248,0.12)"
+                    : "rgba(14,165,233,0.10)"
                   : isDark
                     ? "rgba(255,255,255,0.025)"
                     : "rgba(15,23,42,0.035)",
                 borderColor: pdfFileUri
                   ? isDark
-                    ? "rgba(56,189,248,0.26)"
-                    : "rgba(14,165,233,0.18)"
+                    ? "rgba(56,189,248,0.32)"
+                    : "rgba(14,165,233,0.22)"
                   : palette.border,
                 opacity: pdfFileUri ? 1 : 0.55,
               },
@@ -401,6 +438,12 @@ export function ReportTab({
             onPress={handleOpenPdf}
             disabled={!pdfFileUri}
           >
+            <ViewIcon
+              size={14}
+              color={pdfFileUri ? (isDark ? "#7DD3FC" : "#0284C7") : palette.muted}
+              variant="stroke"
+              strokeWidth={2.2}
+            />
             <Text
               style={[
                 styles.reportSecondaryButtonText,
@@ -419,15 +462,15 @@ export function ReportTab({
                 flex: 1,
                 backgroundColor: pdfFileUri
                   ? isDark
-                    ? "rgba(249,115,22,0.10)"
-                    : "rgba(245,158,11,0.08)"
+                    ? "rgba(249,115,22,0.12)"
+                    : "rgba(245,158,11,0.10)"
                   : isDark
                     ? "rgba(255,255,255,0.025)"
                     : "rgba(15,23,42,0.035)",
                 borderColor: pdfFileUri
                   ? isDark
-                    ? "rgba(249,115,22,0.24)"
-                    : "rgba(245,158,11,0.18)"
+                    ? "rgba(249,115,22,0.30)"
+                    : "rgba(245,158,11,0.24)"
                   : palette.border,
                 opacity: pdfFileUri ? 1 : 0.55,
               },
@@ -435,6 +478,12 @@ export function ReportTab({
             onPress={handleSharePdf}
             disabled={!pdfFileUri}
           >
+            <Share05Icon
+              size={14}
+              color={pdfFileUri ? (isDark ? "#FDBA74" : "#D97706") : palette.muted}
+              variant="stroke"
+              strokeWidth={2.2}
+            />
             <Text
               style={[
                 styles.reportSecondaryButtonText,
@@ -458,9 +507,22 @@ export function ReportTab({
               },
             ]}
           >
-            <Text style={[styles.previewTitle, { color: palette.text }]}>
-              PDF henüz oluşturulmadı
-            </Text>
+            <View style={styles.previewHeaderRow}>
+              <View
+                style={[
+                  styles.previewIconWrap,
+                  {
+                    backgroundColor: isDark ? "rgba(148,163,184,0.16)" : "rgba(148,163,184,0.14)",
+                    borderColor: isDark ? "rgba(148,163,184,0.30)" : "rgba(148,163,184,0.26)",
+                  },
+                ]}
+              >
+                <Pdf01Icon size={16} color={palette.muted} variant="stroke" strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.previewTitle, { color: palette.text }]}>
+                PDF henüz oluşturulmadı
+              </Text>
+            </View>
             <Text style={[styles.previewInfoText, { color: palette.muted }]}>
               Önce PDF oluşturun, ardından açabilir veya paylaşabilirsiniz.
             </Text>
@@ -475,9 +537,22 @@ export function ReportTab({
               },
             ]}
           >
-            <Text style={[styles.previewTitle, { color: palette.text }]}>
-              {t("report.preview")}
-            </Text>
+            <View style={styles.previewHeaderRow}>
+              <View
+                style={[
+                  styles.previewIconWrap,
+                  {
+                    backgroundColor: palette.brandSoft,
+                    borderColor: isDark ? "rgba(236,72,153,0.34)" : "rgba(219,39,119,0.26)",
+                  },
+                ]}
+              >
+                <Pdf01Icon size={16} color={palette.brand} variant="stroke" strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.previewTitle, { color: palette.text }]}>
+                {t("report.preview")}
+              </Text>
+            </View>
 
             <View
               style={[
@@ -504,17 +579,30 @@ export function ReportTab({
               styles.previewInfoCard,
               {
                 borderColor: isDark
-                  ? "rgba(236,72,153,0.18)"
-                  : "rgba(219,39,119,0.14)",
+                  ? "rgba(236,72,153,0.22)"
+                  : "rgba(219,39,119,0.18)",
                 backgroundColor: isDark
-                  ? "rgba(236,72,153,0.08)"
-                  : "rgba(219,39,119,0.06)",
+                  ? "rgba(236,72,153,0.10)"
+                  : "rgba(219,39,119,0.07)",
               },
             ]}
           >
-            <Text style={[styles.previewTitle, { color: palette.text }]}>
-              PDF hazır
-            </Text>
+            <View style={styles.previewHeaderRow}>
+              <View
+                style={[
+                  styles.previewIconWrap,
+                  {
+                    backgroundColor: palette.brandSoft,
+                    borderColor: isDark ? "rgba(236,72,153,0.34)" : "rgba(219,39,119,0.26)",
+                  },
+                ]}
+              >
+                <Pdf01Icon size={16} color={palette.brand} variant="stroke" strokeWidth={2.2} />
+              </View>
+              <Text style={[styles.previewTitle, { color: palette.text }]}>
+                PDF hazır
+              </Text>
+            </View>
             <Text style={[styles.previewInfoText, { color: palette.muted }]}>
               {t("report.androidPreviewFallback")}
             </Text>
@@ -560,10 +648,20 @@ const styles = StyleSheet.create({
   stateCard: {
     borderWidth: 1,
     borderRadius: 14,
-    padding: 14,
+    padding: 18,
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
+  },
+
+  stateIconWrap: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 4,
   },
 
   stateTitle: {
@@ -596,12 +694,18 @@ const styles = StyleSheet.create({
     lineHeight: 14,
   },
 
+  labelRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    marginBottom: 6,
+  },
+
   label: {
     fontSize: 10,
     fontWeight: "700",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginBottom: 5,
     lineHeight: 12,
   },
 
@@ -618,28 +722,45 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 12,
     minHeight: 46,
-    justifyContent: "center",
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 8,
   },
 
   templateSelectorText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: "500",
     lineHeight: 14,
+    flex: 1,
   },
 
   reportPrimaryButton: {
-    minHeight: 46,
-    borderRadius: 12,
-    borderWidth: 1,
+    minHeight: 48,
+    borderRadius: 14,
+    overflow: "hidden",
+    marginTop: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.18,
+    shadowRadius: 10,
+    elevation: 4,
+  },
+
+  reportPrimaryButtonInner: {
+    flex: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 2,
+    gap: 8,
+    paddingHorizontal: 16,
+    minHeight: 48,
   },
 
   reportPrimaryButtonText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: "700",
-    lineHeight: 14,
+    lineHeight: 16,
+    letterSpacing: 0.3,
   },
   pdfActionRow: {
     flexDirection: "row",
@@ -651,9 +772,11 @@ const styles = StyleSheet.create({
     minHeight: 44,
     borderRadius: 12,
     borderWidth: 1,
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     paddingHorizontal: 10,
+    gap: 6,
   },
   reportSecondaryButtonText: {
     fontSize: 12,
@@ -675,8 +798,23 @@ const styles = StyleSheet.create({
     gap: 6,
   },
 
+  previewHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+
+  previewIconWrap: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
   previewTitle: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: "700",
     lineHeight: 14,
   },
