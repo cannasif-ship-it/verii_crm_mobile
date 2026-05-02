@@ -21,6 +21,8 @@
   },
   "common": {
     "loading": "Yükleniyor...",
+    "loadingMore": "Daha fazla yükleniyor…",
+    "endOfList": "Tüm kayıtlar yüklendi",
     "refreshing": "Yenileniyor...",
     "error": "Bir hata oluştu",
     "retry": "Tekrar Dene",
@@ -69,6 +71,10 @@
     "voiceSearchStartError": "Sesli arama başlatılamadı.",
     "lineDeleted": "Satır silindi.",
     "selectCustomerRepresentativeCurrency": "Lütfen müşteri, temsilci ve para birimi seçimlerini yapınız.",
+    "profil": "Profil",
+    "demir": "Demir",
+    "vida": "Vida",
+    "discount": "İskonto",
     "approvalFlowStartError": "Onay süreci başlatılamadı",
     "demandUpdateFailed": "Talep güncellenemedi",
     "demandRowsUpdateFailed": "Talep satırları güncellenemedi",
@@ -760,7 +766,17 @@
     "quickAdd": "Hızlı Aktivite Ekle",
     "quickAddPlaceholder": "Aktivite konusu girin...",
     "addForDate": "Bu tarihe aktivite ekle",
-    "quickAddSuccess": "Aktivite başarıyla oluşturuldu"
+    "quickAddSuccess": "Aktivite başarıyla oluşturuldu",
+    "todaysTasks": "Bugünün Görevleri",
+    "weekTasks": "Haftanın Planı",
+    "taskCount": "{{count}} Görev",
+    "taskCount_one": "{{count}} Görev",
+    "taskCount_other": "{{count}} Görev",
+    "legendPlanned": "Planlı/Aktif",
+    "legendCompleted": "Tamamlanan",
+    "legendSelected": "Seçili",
+    "assigneeFallback": "Kullanıcı",
+    "noEvent": "Boş"
   },
   "salesActionSheet": {
     "title": "Hızlı Satış İşlemi",
@@ -1232,11 +1248,13 @@
       "inUseCannotEdit": "Kullanımda olan kur değiştirilemez."
     },
     "status": {
-      "pending": "Beklemede",
+      "pending": "Onayda",
       "approved": "Onaylandı",
       "rejected": "Reddedildi",
-      "notStarted": "Başlamadı"
+      "notStarted": "Taslak"
     },
+    "generalSection": "Genel",
+    "linesSection": "Satırlar",
     "projectCode": "Proje Kodu",
     "projectCodeSearch": "Proje ara...",
     "deliveryMethod": "Teslimat Yöntemi",
@@ -1363,6 +1381,14 @@
       "overallStatus": "Genel Durum",
       "rejectedReason": "Red Nedeni"
     },
+    "status": {
+      "notStarted": "Taslak",
+      "pending": "Onayda",
+      "approved": "Onaylandı",
+      "rejected": "Reddedildi"
+    },
+    "generalSection": "Genel",
+    "linesSection": "Satırlar",
     "deleteLineTitle": "Satırı silmek istediğinize emin misiniz?",
     "deleteLineMessage": "Bu işlem geri alınamaz.",
     "deleteRelatedGroupTitle": "Bu satır grubunu silmek istediğinize emin misiniz?",
@@ -1498,6 +1524,14 @@
       "overallStatus": "Genel Durum",
       "rejectedReason": "Red Nedeni"
     },
+    "status": {
+      "notStarted": "Taslak",
+      "pending": "Onayda",
+      "approved": "Onaylandı",
+      "rejected": "Reddedildi"
+    },
+    "generalSection": "Genel",
+    "linesSection": "Satırlar",
     "deleteLineTitle": "Satırı silmek istediğinize emin misiniz?",
     "deleteLineMessage": "Bu işlem geri alınamaz.",
     "deleteRelatedGroupTitle": "Bu satır grubunu silmek istediğinize emin misiniz?",
