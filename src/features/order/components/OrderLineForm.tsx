@@ -1032,6 +1032,7 @@ export function OrderLineForm({
 
             <View style={styles.fieldContainer}>
               <Text style={[styles.label, { color: colors.textSecondary }]}>Açıklama Alanları</Text>
+              <Text style={[styles.label, { color: colors.textSecondary }]}>Açıklama 1</Text>
               <TextInput
                 style={[
                   styles.input,
@@ -1041,6 +1042,7 @@ export function OrderLineForm({
                 onChangeText={setDescription1}
                 placeholder="Açıklama 1"
               />
+              <Text style={[styles.label, { color: colors.textSecondary, marginTop: 8 }]}>Açıklama 2</Text>
               <TextInput
                 style={[
                   styles.input,
@@ -1050,6 +1052,7 @@ export function OrderLineForm({
                 onChangeText={setDescription2}
                 placeholder="Açıklama 2"
               />
+              <Text style={[styles.label, { color: colors.textSecondary, marginTop: 8 }]}>Açıklama 3</Text>
               <TextInput
                 style={[
                   styles.input,
