@@ -8,6 +8,7 @@ function toOptions(items: WindoDefinitionDto[]): WindoDefinitionOption[] {
     id: item.id,
     name: item.name,
     code: item.code ?? undefined,
+    profilDefinitionId: item.profilDefinitionId ?? null,
   }));
 }
 
@@ -18,7 +19,18 @@ function toMap(items: WindoDefinitionDto[]): Record<number, string> {
   }, {});
 }
 
-export function useWindoDefinitionOptions() {
+interface UseWindoDefinitionOptionsParams {
+  selectedProfilDefinitionId?: number | null;
+  preserveSelection?: {
+    demirDefinitionId?: number | null;
+    vidaDefinitionId?: number | null;
+  };
+}
+
+export function useWindoDefinitionOptions({
+  selectedProfilDefinitionId,
+  preserveSelection,
+}: UseWindoDefinitionOptionsParams = {}) {
   const results = useQueries({
     queries: [
       {
@@ -51,13 +63,29 @@ export function useWindoDefinitionOptions() {
       demirDefinitions,
       vidaDefinitions,
       profilOptions: toOptions(profilDefinitions),
-      demirOptions: toOptions(demirDefinitions),
-      vidaOptions: toOptions(vidaDefinitions),
+      demirOptions: toOptions(demirDefinitions).filter((option) => {
+        if (selectedProfilDefinitionId == null) return true;
+        if (option.profilDefinitionId === selectedProfilDefinitionId) return true;
+        return option.id === preserveSelection?.demirDefinitionId;
+      }),
+      vidaOptions: toOptions(vidaDefinitions).filter((option) => {
+        if (selectedProfilDefinitionId == null) return true;
+        if (option.profilDefinitionId === selectedProfilDefinitionId) return true;
+        return option.id === preserveSelection?.vidaDefinitionId;
+      }),
       profilMap: toMap(profilDefinitions),
       demirMap: toMap(demirDefinitions),
       vidaMap: toMap(vidaDefinitions),
       isLoading: results.some((result) => result.isLoading),
     }),
-    [profilDefinitions, demirDefinitions, vidaDefinitions, results]
+    [
+      demirDefinitions,
+      preserveSelection?.demirDefinitionId,
+      preserveSelection?.vidaDefinitionId,
+      profilDefinitions,
+      results,
+      selectedProfilDefinitionId,
+      vidaDefinitions,
+    ]
   );
 }

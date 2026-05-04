@@ -215,7 +215,23 @@ export function QuotationLineForm({
   const lastHydratedLineIdRef = useRef<string | null>(null);
 
   const { data: projects = [] } = useErpProjects();
-  const { profilOptions, demirOptions, vidaOptions, profilMap, demirMap, vidaMap, isLoading: isDefinitionOptionsLoading } = useWindoDefinitionOptions();
+  const {
+    profilOptions,
+    demirOptions,
+    vidaOptions,
+    profilMap,
+    demirMap,
+    vidaMap,
+    demirDefinitions: allDemirDefinitions,
+    vidaDefinitions: allVidaDefinitions,
+    isLoading: isDefinitionOptionsLoading,
+  } = useWindoDefinitionOptions({
+    selectedProfilDefinitionId: profilDefinitionId,
+    preserveSelection: {
+      demirDefinitionId,
+      vidaDefinitionId,
+    },
+  });
   const { data: stockData } = useStock(selectedStock?.id);
   const isMultiSelectMode = !line && Boolean(onMultiProductSelect);
   const hasBulkDrafts = bulkDraftLines.length > 0;
@@ -456,6 +472,45 @@ export function QuotationLineForm({
 
     prevLineFormVisibleRef.current = true;
   }, [visible, line, resetForm, hydrateFromEditingLine, hasBulkDrafts]);
+
+  useEffect(() => {
+    if (profilDefinitionId == null) {
+      if (demirDefinitionId == null && vidaDefinitionId == null) {
+        return;
+      }
+
+      setDemirDefinitionId(null);
+      setVidaDefinitionId(null);
+      return;
+    }
+
+    const currentDemir = allDemirDefinitions.find((item) => item.id === demirDefinitionId);
+    const currentVida = allVidaDefinitions.find((item) => item.id === vidaDefinitionId);
+    const nextDemirId =
+      currentDemir?.profilDefinitionId === profilDefinitionId
+        ? demirDefinitionId
+        : (demirOptions[0]?.id ?? null);
+    const nextVidaId =
+      currentVida?.profilDefinitionId === profilDefinitionId
+        ? vidaDefinitionId
+        : (vidaOptions[0]?.id ?? null);
+
+    if (nextDemirId !== demirDefinitionId) {
+      setDemirDefinitionId(nextDemirId);
+    }
+
+    if (nextVidaId !== vidaDefinitionId) {
+      setVidaDefinitionId(nextVidaId);
+    }
+  }, [
+    allDemirDefinitions,
+    allVidaDefinitions,
+    demirDefinitionId,
+    demirOptions,
+    profilDefinitionId,
+    vidaDefinitionId,
+    vidaOptions,
+  ]);
 
   const handlePickImage = useCallback(async (mode: "camera" | "gallery") => {
     const permission =

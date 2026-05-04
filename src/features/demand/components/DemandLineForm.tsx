@@ -132,8 +132,16 @@ export function DemandLineForm({
     profilMap,
     demirMap,
     vidaMap,
+    demirDefinitions: allDemirDefinitions,
+    vidaDefinitions: allVidaDefinitions,
     isLoading: isDefinitionOptionsLoading,
-  } = useWindoDefinitionOptions();
+  } = useWindoDefinitionOptions({
+    selectedProfilDefinitionId: profilDefinitionId,
+    preserveSelection: {
+      demirDefinitionId,
+      vidaDefinitionId,
+    },
+  });
 
   const currentLine: DemandLineFormState = useMemo(() => {
     const qty = parseDecimalInput(quantity);
@@ -230,6 +238,45 @@ export function DemandLineForm({
       resetForm();
     }
   }, [line, visible]);
+
+  useEffect(() => {
+    if (profilDefinitionId == null) {
+      if (demirDefinitionId == null && vidaDefinitionId == null) {
+        return;
+      }
+
+      setDemirDefinitionId(null);
+      setVidaDefinitionId(null);
+      return;
+    }
+
+    const currentDemir = allDemirDefinitions.find((item) => item.id === demirDefinitionId);
+    const currentVida = allVidaDefinitions.find((item) => item.id === vidaDefinitionId);
+    const nextDemirId =
+      currentDemir?.profilDefinitionId === profilDefinitionId
+        ? demirDefinitionId
+        : (demirOptions[0]?.id ?? null);
+    const nextVidaId =
+      currentVida?.profilDefinitionId === profilDefinitionId
+        ? vidaDefinitionId
+        : (vidaOptions[0]?.id ?? null);
+
+    if (nextDemirId !== demirDefinitionId) {
+      setDemirDefinitionId(nextDemirId);
+    }
+
+    if (nextVidaId !== vidaDefinitionId) {
+      setVidaDefinitionId(nextVidaId);
+    }
+  }, [
+    allDemirDefinitions,
+    allVidaDefinitions,
+    demirDefinitionId,
+    demirOptions,
+    profilDefinitionId,
+    vidaDefinitionId,
+    vidaOptions,
+  ]);
 
   const displayedRelatedLines = useMemo((): DemandLineFormState[] => {
     if (relatedLinesDisplay.length === 0) return [];
