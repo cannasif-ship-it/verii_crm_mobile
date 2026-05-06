@@ -292,16 +292,17 @@ export const activityImageApi = {
 
 export const activityTypeApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<ActivityTypeDto>> => {
-    const queryParams = buildQueryParams({
-      pageNumber: 1,
-      pageSize: 10000,
-      sortBy: "Id",
-      sortDirection: "desc",
-      ...params,
-    });
-    const response = await apiClient.get<ApiResponse<RawPagedPayload<ActivityTypeDto>>>(
-      "/api/ActivityType",
-      { params: queryParams }
+    const response = await apiClient.post<ApiResponse<RawPagedPayload<ActivityTypeDto>>>(
+      "/api/ActivityType/query",
+      {
+        pageNumber: params.pageNumber ?? 1,
+        pageSize: params.pageSize ?? 10000,
+        search: params.search ?? "",
+        sortBy: params.sortBy ?? "Id",
+        sortDirection: params.sortDirection ?? "desc",
+        filterLogic: params.filterLogic ?? "and",
+        filters: params.filters ?? [],
+      }
     );
 
     if (!response.data.success) {
