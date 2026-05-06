@@ -106,8 +106,14 @@ export const lookupApi = {
   },
 
   getTitles: async (): Promise<TitleDto[]> => {
-    const response = await apiClient.get<LookupApiResponse<TitleDto>>("/api/Title", {
-      params: { ...PAGE_PARAMS } 
+    const response = await apiClient.post<LookupApiResponse<TitleDto>>("/api/Title/query", {
+      pageNumber: 1,
+      pageSize: 10000,
+      search: "",
+      sortBy: "Name",
+      sortDirection: "asc",
+      filterLogic: "and",
+      filters: [],
     });
 
     if (!response.data.success) {

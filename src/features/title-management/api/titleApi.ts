@@ -9,39 +9,16 @@ import type {
   PagedApiResponse,
 } from "../types";
 
-const buildQueryParams = (params: PagedParams): Record<string, string | number> => {
-  const queryParams: Record<string, string | number> = {};
-
-  if (params.pageNumber) {
-    queryParams.pageNumber = params.pageNumber;
-  }
-  if (params.pageSize) {
-    queryParams.pageSize = params.pageSize;
-  }
-  if (params.search) {
-    queryParams.search = params.search;
-  }
-  if (params.sortBy) {
-    queryParams.sortBy = params.sortBy;
-  }
-  if (params.sortDirection) {
-    queryParams.sortDirection = params.sortDirection;
-  }
-  if (params.filters && params.filters.length > 0) {
-    queryParams.filters = JSON.stringify(params.filters);
-  }
-  if (params.filterLogic) {
-    queryParams.filterLogic = params.filterLogic;
-  }
-
-  return queryParams;
-};
-
 export const titleApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<TitleDto>> => {
-    const queryParams = buildQueryParams(params);
-    const response = await apiClient.get<PagedApiResponse<TitleDto>>("/api/Title", {
-      params: queryParams,
+    const response = await apiClient.post<PagedApiResponse<TitleDto>>("/api/Title/query", {
+      pageNumber: params.pageNumber ?? 1,
+      pageSize: params.pageSize ?? 10,
+      search: params.search ?? "",
+      sortBy: params.sortBy ?? "Id",
+      sortDirection: params.sortDirection ?? "asc",
+      filterLogic: params.filterLogic ?? "and",
+      filters: params.filters ?? [],
     });
 
     if (!response.data.success) {
