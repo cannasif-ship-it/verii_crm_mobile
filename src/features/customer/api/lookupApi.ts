@@ -78,15 +78,17 @@ export const lookupApi = {
   },
 
   getDistricts: async (cityId?: number): Promise<DistrictDto[]> => {
-    const params: Record<string, any> = { ...PAGE_PARAMS }; 
-
-    if (cityId) {
-      params.filters = buildFilterParam([
-        { column: "cityId", operator: "equals", value: String(cityId) },
-      ]);
-    }
-
-    const response = await apiClient.get<LookupApiResponse<DistrictDto>>("/api/District", { params });
+    const response = await apiClient.post<LookupApiResponse<DistrictDto>>("/api/District/query", {
+      pageNumber: 1,
+      pageSize: 10000,
+      search: "",
+      sortBy: "Name",
+      sortDirection: "asc",
+      filterLogic: "and",
+      filters: cityId
+        ? [{ column: "cityId", operator: "equals", value: String(cityId) }]
+        : [],
+    });
 
     if (!response.data.success) {
       throw new Error(response.data.message || response.data.exceptionMessage || "İlçe listesi alınamadı");
