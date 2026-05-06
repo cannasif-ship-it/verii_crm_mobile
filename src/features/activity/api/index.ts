@@ -393,7 +393,7 @@ async function getLookupListByQuery(endpoint: string): Promise<ActivityLookupDto
 
 export const activityLookupApi = {
   getPaymentTypes: async (): Promise<ActivityLookupDto[]> => getLookupListByQuery("/api/PaymentType"),
-  getMeetingTypes: async (): Promise<ActivityLookupDto[]> => getLookupList("/api/ActivityMeetingType"),
+  getMeetingTypes: async (): Promise<ActivityLookupDto[]> => getLookupListByQuery("/api/ActivityMeetingType"),
   getTopicPurposes: async (): Promise<ActivityLookupDto[]> => getLookupList("/api/ActivityTopicPurpose"),
   getShippings: async (): Promise<ActivityLookupDto[]> => getLookupList("/api/ActivityShipping"),
 };
