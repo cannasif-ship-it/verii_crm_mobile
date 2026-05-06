@@ -80,37 +80,6 @@ async function assertUploadFileIsValid(imageUri: string): Promise<void> {
   }
 }
 
-const buildQueryParams = (params: PagedParams): Record<string, string | number> => {
-  const queryParams: Record<string, string | number> = {};
-
-  if (params.pageNumber) {
-    queryParams.pageNumber = params.pageNumber;
-  }
-  if (params.pageSize) {
-    queryParams.pageSize = params.pageSize;
-  }
-  if (params.search) {
-    queryParams.search = params.search;
-  }
-  if (params.sortBy) {
-    queryParams.sortBy = params.sortBy;
-  }
-  if (params.sortDirection) {
-    queryParams.sortDirection = params.sortDirection;
-  }
-  if (params.filterLogic) {
-    queryParams.filterLogic = params.filterLogic;
-  }
-  if (params.contextUserId != null) {
-    queryParams.contextUserId = params.contextUserId;
-  }
-  if (params.filters && params.filters.length > 0) {
-    queryParams.filters = JSON.stringify(params.filters);
-  }
-
-  return queryParams;
-};
-
 function normalizeMobileOcrCreateError(error: unknown): Error {
   if (error instanceof Error) {
     const enhanced = error as Error & {
@@ -149,13 +118,15 @@ function normalizeMobileOcrCreateError(error: unknown): Error {
 
 export const customerApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<CustomerGetDto>> => {
-    const queryParams = buildQueryParams({
-      sortBy: "Id",
-      sortDirection: "asc",
-      ...params,
-    });
-    const response = await apiClient.get<PagedApiResponse<CustomerGetDto>>("/api/Customer", {
-      params: queryParams,
+    const response = await apiClient.post<PagedApiResponse<CustomerGetDto>>("/api/Customer/query", {
+      pageNumber: params.pageNumber ?? 1,
+      pageSize: params.pageSize ?? 10,
+      search: params.search ?? "",
+      sortBy: params.sortBy ?? "Id",
+      sortDirection: params.sortDirection ?? "asc",
+      filterLogic: params.filterLogic ?? "and",
+      filters: params.filters ?? [],
+      ...(params.contextUserId != null ? { contextUserId: params.contextUserId } : {}),
     });
 
     if (!response.data.success) {
