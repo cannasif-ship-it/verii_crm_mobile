@@ -530,9 +530,14 @@ export const orderApi = {
   },
 
   getUserList: async (params: PagedParams = {}): Promise<UserDto[]> => {
-    const queryParams = buildQueryParams({ pageNumber: 1, pageSize: 100, ...params });
-    const response = await apiClient.get<UserListResponse>("/api/User", {
-      params: queryParams,
+    const response = await apiClient.post<UserListResponse>("/api/User/query", {
+      pageNumber: params.pageNumber ?? 1,
+      pageSize: params.pageSize ?? 100,
+      search: params.search ?? "",
+      sortBy: params.sortBy ?? "Id",
+      sortDirection: params.sortDirection ?? "asc",
+      filterLogic: params.filterLogic ?? "and",
+      filters: params.filters ?? [],
     });
 
     if (!response.data.success) {
