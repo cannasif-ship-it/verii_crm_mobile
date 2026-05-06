@@ -70,30 +70,15 @@ const normalizeStock = (raw: unknown): StockGetDto | null => {
 
 export const stockApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<StockGetDto>> => {
-    
-    // 1. Temel URL Parametreleri
-    const queryParams = new URLSearchParams();
-    if (params.pageNumber) queryParams.append("PageNumber", params.pageNumber.toString());
-    if (params.pageSize) queryParams.append("PageSize", params.pageSize.toString());
-    if (params.search) queryParams.append("search", params.search);
-    queryParams.append("SortBy", params.sortBy || "StockName"); // Sıralama dinamik olsun
-    queryParams.append("SortDirection", params.sortDirection || "asc");
-    if (params.filterLogic) queryParams.append("FilterLogic", params.filterLogic);
-
-    // 2. FİLTRELERİ EKLEME (BURASI EKSİKTİ!)
-    // Backend'in anladığı dil: Filters[0].Column=StockName&Filters[0].Value=dene
-    if (params.filters && params.filters.length > 0) {
-      params.filters.forEach((filter, index) => {
-        queryParams.append(`Filters[${index}].Column`, filter.column);
-        queryParams.append(`Filters[${index}].Operator`, filter.operator);
-        queryParams.append(`Filters[${index}].Value`, filter.value);
-      });
-    }
-
-    const fullPath = `/api/Stock?${queryParams.toString()}`;
-    console.log("📡 API REQUEST (Filtreli):", fullPath); // Log'da artık filtreleri göreceksin
-
-    const response = await apiClient.get<PagedApiResponse<StockGetDto>>(fullPath);
+    const response = await apiClient.post<PagedApiResponse<StockGetDto>>("/api/Stock/query", {
+      pageNumber: params.pageNumber ?? 1,
+      pageSize: params.pageSize ?? 20,
+      search: params.search ?? "",
+      sortBy: params.sortBy ?? "StockName",
+      sortDirection: params.sortDirection ?? "asc",
+      filterLogic: params.filterLogic ?? "and",
+      filters: params.filters ?? [],
+    });
 
     if (!response.data.success) {
       throw new Error(response.data.message || "Hata");

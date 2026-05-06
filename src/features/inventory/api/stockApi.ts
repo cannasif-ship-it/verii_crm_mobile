@@ -39,9 +39,14 @@ const buildQueryParams = (params: PagedParams): Record<string, string | number> 
 
 export const stockApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<StockGetDto>> => {
-    const queryParams = buildQueryParams(params);
-    const response = await apiClient.get<PagedApiResponse<StockGetDto>>("/api/Stock", {
-      params: queryParams,
+    const response = await apiClient.post<PagedApiResponse<StockGetDto>>("/api/Stock/query", {
+      pageNumber: params.pageNumber ?? 1,
+      pageSize: params.pageSize ?? 20,
+      search: params.search ?? "",
+      sortBy: params.sortBy ?? "Id",
+      sortDirection: params.sortDirection ?? "asc",
+      filterLogic: params.filterLogic ?? "and",
+      filters: params.filters ?? [],
     });
 
     if (!response.data.success) {
