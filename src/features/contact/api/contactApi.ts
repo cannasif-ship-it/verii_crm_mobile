@@ -9,34 +9,6 @@ import type {
   PagedApiResponse,
 } from "../types";
 
-const buildQueryParams = (params: PagedParams): Record<string, string | number> => {
-  const queryParams: Record<string, string | number> = {};
-
-  if (params.pageNumber) {
-    queryParams.pageNumber = params.pageNumber;
-  }
-  if (params.pageSize) {
-    queryParams.pageSize = params.pageSize;
-  }
-  if (params.search) {
-    queryParams.search = params.search;
-  }
-  if (params.sortBy) {
-    queryParams.sortBy = params.sortBy;
-  }
-  if (params.sortDirection) {
-    queryParams.sortDirection = params.sortDirection;
-  }
-  if (params.filters && params.filters.length > 0) {
-    queryParams.filters = JSON.stringify(params.filters);
-  }
-  if (params.filterLogic) {
-    queryParams.filterLogic = params.filterLogic;
-  }
-
-  return queryParams;
-};
-
 const toNumber = (value: unknown): number | undefined => {
   if (typeof value === "number" && Number.isFinite(value)) return value;
   if (typeof value === "string" && value.trim() !== "") {
@@ -103,9 +75,14 @@ const normalizeContact = (raw: unknown): ContactDto | null => {
 
 export const contactApi = {
   getList: async (params: PagedParams = {}): Promise<PagedResponse<ContactDto>> => {
-    const queryParams = buildQueryParams(params);
-    const response = await apiClient.get<PagedApiResponse<ContactDto>>("/api/Contact", {
-      params: queryParams,
+    const response = await apiClient.post<PagedApiResponse<ContactDto>>("/api/Contact/query", {
+      pageNumber: params.pageNumber ?? 1,
+      pageSize: params.pageSize ?? 20,
+      search: params.search ?? "",
+      sortBy: params.sortBy ?? "Id",
+      sortDirection: params.sortDirection ?? "asc",
+      filterLogic: params.filterLogic ?? "and",
+      filters: params.filters ?? [],
     });
 
     if (!response.data.success) {
@@ -226,12 +203,14 @@ export const contactApi = {
   },
 
   getByCustomerId: async (customerId: number): Promise<ContactDto[]> => {
-    const queryParams = buildQueryParams({
-      filters: [{ column: "customerId", operator: "equals", value: String(customerId) }],
+    const response = await apiClient.post<PagedApiResponse<ContactDto>>("/api/Contact/query", {
+      pageNumber: 1,
       pageSize: 100,
-    });
-    const response = await apiClient.get<PagedApiResponse<ContactDto>>("/api/Contact", {
-      params: queryParams,
+      search: "",
+      sortBy: "Id",
+      sortDirection: "asc",
+      filterLogic: "and",
+      filters: [{ column: "customerId", operator: "equals", value: String(customerId) }],
     });
 
     if (!response.data.success) {
