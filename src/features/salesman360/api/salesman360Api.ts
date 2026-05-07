@@ -4,6 +4,7 @@ import type {
   Salesmen360OverviewDto,
   Salesmen360AnalyticsSummaryDto,
   Salesmen360AnalyticsChartsDto,
+  Salesmen360VisibleUserDto,
 } from "../types";
 
 const SALESMEN_360_STALE_MS = 30 * 1000;
@@ -44,6 +45,13 @@ function assertSuccess<T>(response: { data: ApiResponse<T> & { data: T | null } 
 }
 
 export const salesman360Api = {
+  getVisibleUsers: async (): Promise<Salesmen360VisibleUserDto[]> => {
+    const response = await apiClient.get<
+      ApiResponse<Salesmen360VisibleUserDto[]> & { data: Salesmen360VisibleUserDto[] | null }
+    >("/api/salesmen/visible-users");
+    return assertSuccess(response, "Satışçı listesi yüklenemedi");
+  },
+
   getOverview: async (userId: number, currency: string | null): Promise<Salesmen360OverviewDto> => {
     const config = buildConfig(currency);
     const response = await apiClient.get<ApiResponse<Salesmen360OverviewDto> & { data: Salesmen360OverviewDto | null }>(

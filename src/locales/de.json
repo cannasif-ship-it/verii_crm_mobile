@@ -1451,6 +1451,12 @@
       "label": "Währung",
       "all": "Alle"
     },
+    "salesmanFilter": {
+      "label": "Vertriebsmitarbeiter",
+      "title": "Vertriebsmitarbeiter auswählen",
+      "self": "Ich",
+      "selfOnly": "Meine Verkäufe"
+    },
     "currencyTotals": {
       "title": "Summen nach Währung",
       "currency": "Währung",

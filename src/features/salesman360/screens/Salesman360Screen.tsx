@@ -1,9 +1,12 @@
-import React, { useState, useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   View,
   StyleSheet,
   TouchableOpacity,
   ActivityIndicator,
+  Modal,
+  Pressable,
+  ScrollView,
 } from "react-native";
 import { useTranslation } from "react-i18next";
 import { StatusBar } from "expo-status-bar";
@@ -15,10 +18,12 @@ import {
   useSalesman360Overview,
   useSalesman360AnalyticsSummary,
   useSalesman360AnalyticsCharts,
+  useSalesman360VisibleUsers,
 } from "../hooks";
 import { CurrencyPicker } from "../components";
 import { Salesman360OverviewTab } from "./Salesman360OverviewTab";
 import { Salesman360AnalyticsTab } from "./Salesman360AnalyticsTab";
+import type { Salesmen360VisibleUserDto } from "../types";
 
 type TabType = "overview" | "analytics";
 
@@ -51,15 +56,66 @@ function collectCurrencyOptions(
   return Array.from(set).sort();
 }
 
+function createSelfVisibleUser(user: { id: number; name?: string; email?: string } | null): Salesmen360VisibleUserDto | null {
+  if (!user?.id) {
+    return null;
+  }
+
+  return {
+    userId: user.id,
+    fullName: user.name || user.email || String(user.id),
+    email: user.email ?? null,
+    isSelf: true,
+  };
+}
+
 export function Salesman360Screen(): React.ReactElement {
   const { t } = useTranslation();
   const { user } = useAuthStore();
   const { colors } = useUIStore();
   const [activeTab, setActiveTab] = useState<TabType>("overview");
   const [selectedCurrency, setSelectedCurrency] = useState<string>("ALL");
+  const [selectedUserId, setSelectedUserId] = useState<number | undefined>(user?.id);
+  const [salesmanPickerVisible, setSalesmanPickerVisible] = useState(false);
 
-  const userId = user?.id;
+  const currentUserId = user?.id;
   const currencyParam = selectedCurrency === "ALL" ? null : selectedCurrency;
+  const visibleUsersQuery = useSalesman360VisibleUsers();
+  const selfVisibleUser = useMemo(() => createSelfVisibleUser(user), [user]);
+  const visibleUsers = useMemo(() => {
+    const apiUsers = visibleUsersQuery.data ?? [];
+    if (apiUsers.length > 0) {
+      return apiUsers;
+    }
+    return selfVisibleUser ? [selfVisibleUser] : [];
+  }, [selfVisibleUser, visibleUsersQuery.data]);
+  const selectedUser = useMemo(
+    () => visibleUsers.find((item) => item.userId === selectedUserId) ?? visibleUsers[0] ?? null,
+    [selectedUserId, visibleUsers]
+  );
+  const userId = selectedUser?.userId ?? selectedUserId ?? currentUserId;
+
+  useEffect(() => {
+    if (!currentUserId) {
+      return;
+    }
+
+    setSelectedUserId((prev) => prev ?? currentUserId);
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (visibleUsers.length === 0) {
+      return;
+    }
+
+    setSelectedUserId((prev) => {
+      if (prev && visibleUsers.some((item) => item.userId === prev)) {
+        return prev;
+      }
+      const self = visibleUsers.find((item) => item.isSelf);
+      return self?.userId ?? visibleUsers[0].userId;
+    });
+  }, [visibleUsers]);
 
   const overviewQuery = useSalesman360Overview(
     userId,
@@ -93,9 +149,12 @@ export function Salesman360Screen(): React.ReactElement {
 
   const subtitle = overviewQuery.data
     ? [overviewQuery.data.fullName, overviewQuery.data.email].filter(Boolean).join(" · ")
+    : selectedUser
+      ? [selectedUser.fullName, selectedUser.email].filter(Boolean).join(" · ")
     : "";
   const contentBackground = colors.background;
   const isSingleCurrency = selectedCurrency !== "ALL";
+  const canSelectSalesman = visibleUsers.length > 1;
 
   if (showNotFound) {
     return (
@@ -126,6 +185,29 @@ export function Salesman360Screen(): React.ReactElement {
               {subtitle}
             </Text>
           ) : null}
+          <View style={styles.salesmanSection}>
+            <TouchableOpacity
+              activeOpacity={canSelectSalesman ? 0.85 : 1}
+              disabled={!canSelectSalesman}
+              onPress={() => setSalesmanPickerVisible(true)}
+              style={[
+                styles.salesmanSelector,
+                { backgroundColor: colors.card, borderColor: colors.cardBorder },
+              ]}
+            >
+              <View style={styles.salesmanSelectorText}>
+                <Text style={[styles.salesmanLabel, { color: colors.textMuted }]}>
+                  {t("salesman360.salesmanFilter.label")}
+                </Text>
+                <Text style={[styles.salesmanName, { color: colors.text }]} numberOfLines={1}>
+                  {selectedUser?.fullName || overviewQuery.data?.fullName || t("salesman360.salesmanFilter.selfOnly")}
+                </Text>
+              </View>
+              <Text style={[styles.salesmanChevron, { color: canSelectSalesman ? colors.accent : colors.textMuted }]}>
+                {canSelectSalesman ? ">" : "-"}
+              </Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.currencySection}>
             <CurrencyPicker
               selectedCurrency={selectedCurrency}
@@ -241,6 +323,62 @@ export function Salesman360Screen(): React.ReactElement {
               />
             )
           )}
+          <Modal
+            visible={salesmanPickerVisible}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setSalesmanPickerVisible(false)}
+          >
+            <Pressable style={styles.modalBackdrop} onPress={() => setSalesmanPickerVisible(false)}>
+              <Pressable
+                style={[
+                  styles.salesmanModal,
+                  { backgroundColor: colors.card, borderColor: colors.cardBorder },
+                ]}
+              >
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  {t("salesman360.salesmanFilter.title")}
+                </Text>
+                <ScrollView style={styles.salesmanList} showsVerticalScrollIndicator={false}>
+                  {visibleUsers.map((item) => {
+                    const selected = item.userId === userId;
+                    return (
+                      <TouchableOpacity
+                        key={item.userId}
+                        onPress={() => {
+                          setSelectedUserId(item.userId);
+                          setSalesmanPickerVisible(false);
+                        }}
+                        style={[
+                          styles.salesmanOption,
+                          {
+                            borderColor: selected ? colors.accent : colors.cardBorder,
+                            backgroundColor: selected ? `${colors.accent}18` : colors.background,
+                          },
+                        ]}
+                      >
+                        <View style={styles.salesmanOptionText}>
+                          <Text style={[styles.salesmanOptionName, { color: colors.text }]} numberOfLines={1}>
+                            {item.fullName}
+                          </Text>
+                          {item.email ? (
+                            <Text style={[styles.salesmanOptionEmail, { color: colors.textMuted }]} numberOfLines={1}>
+                              {item.email}
+                            </Text>
+                          ) : null}
+                        </View>
+                        {item.isSelf ? (
+                          <Text style={[styles.selfBadge, { color: colors.accent }]}>
+                            {t("salesman360.salesmanFilter.self")}
+                          </Text>
+                        ) : null}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </Pressable>
+            </Pressable>
+          </Modal>
         </View>
       </View>
     </>
@@ -261,6 +399,37 @@ const styles = StyleSheet.create({
     fontSize: 14,
     paddingHorizontal: 20,
     paddingTop: 12,
+  },
+  salesmanSection: {
+    paddingHorizontal: 20,
+    paddingTop: 12,
+  },
+  salesmanSelector: {
+    minHeight: 58,
+    borderRadius: 14,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  salesmanSelectorText: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  salesmanLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    marginBottom: 4,
+  },
+  salesmanName: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  salesmanChevron: {
+    fontSize: 28,
+    fontWeight: "600",
   },
   currencySection: {
     paddingHorizontal: 20,
@@ -318,5 +487,52 @@ const styles = StyleSheet.create({
   notFoundText: {
     fontSize: 16,
     textAlign: "center",
+  },
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(15, 23, 42, 0.42)",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 20,
+  },
+  salesmanModal: {
+    width: "100%",
+    maxHeight: "72%",
+    borderRadius: 20,
+    borderWidth: 1,
+    padding: 16,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    marginBottom: 12,
+  },
+  salesmanList: {
+    maxHeight: 420,
+  },
+  salesmanOption: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+  },
+  salesmanOptionText: {
+    flex: 1,
+    paddingRight: 12,
+  },
+  salesmanOptionName: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  salesmanOptionEmail: {
+    fontSize: 12,
+    marginTop: 4,
+  },
+  selfBadge: {
+    fontSize: 12,
+    fontWeight: "700",
   },
 });

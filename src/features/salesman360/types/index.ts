@@ -24,6 +24,13 @@ export interface Salesmen360OverviewDto {
   kpis: Salesmen360KpiDto;
 }
 
+export interface Salesmen360VisibleUserDto {
+  userId: number;
+  fullName: string;
+  email?: string | null;
+  isSelf: boolean;
+}
+
 export interface Salesmen360AnalyticsSummaryDto {
   currency?: string | null;
   last12MonthsOrderAmount: number;

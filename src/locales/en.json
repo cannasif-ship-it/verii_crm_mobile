@@ -1538,6 +1538,12 @@
       "label": "Currency",
       "all": "All"
     },
+    "salesmanFilter": {
+      "label": "Sales representative",
+      "title": "Select sales representative",
+      "self": "Me",
+      "selfOnly": "My sales"
+    },
     "currencyTotals": {
       "title": "Totals by currency",
       "currency": "Currency",
