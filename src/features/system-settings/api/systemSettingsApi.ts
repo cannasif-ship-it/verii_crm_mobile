@@ -5,6 +5,9 @@ export interface SystemSettingsDto {
   numberFormat: string;
   decimalPlaces: number;
   restrictCustomersBySalesRepMatch: boolean;
+  demandApprovalCompletionAction: number;
+  quotationApprovalCompletionAction: number;
+  orderApprovalCompletionAction: number;
   updatedAt?: string;
 }
 

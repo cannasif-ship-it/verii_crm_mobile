@@ -7,6 +7,9 @@ const DEFAULT_SYSTEM_SETTINGS: SystemSettingsDto = {
   numberFormat: "tr-TR",
   decimalPlaces: 2,
   restrictCustomersBySalesRepMatch: false,
+  demandApprovalCompletionAction: 1,
+  quotationApprovalCompletionAction: 1,
+  orderApprovalCompletionAction: 1,
 };
 
 interface SystemSettingsState {
