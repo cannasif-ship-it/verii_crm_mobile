@@ -25,6 +25,7 @@ const ENTITY_OPTIONS = [
   { value: "Demand", labelKey: "accessControlSimulator.entityDemand" },
   { value: "Order", labelKey: "accessControlSimulator.entityOrder" },
   { value: "Activity", labelKey: "accessControlSimulator.entityActivity" },
+  { value: "Salesman360", labelKey: "accessControlSimulator.entitySalesman360" },
 ];
 
 export default function AccessControlSimulatorScreen(): React.ReactElement {

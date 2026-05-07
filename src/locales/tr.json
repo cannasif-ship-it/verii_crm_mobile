@@ -116,6 +116,7 @@
     "entityDemand": "Talep",
     "entityOrder": "Sipariş",
     "entityActivity": "Aktivite",
+    "entitySalesman360": "Satışçı KPI",
     "visibleUsers": "Görünen kullanıcılar",
     "approvalOverrides": "Approval override",
     "actionPanelTitle": "Kayıt bazlı aksiyon kararı",

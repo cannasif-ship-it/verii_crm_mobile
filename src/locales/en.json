@@ -115,6 +115,7 @@
     "entityDemand": "Demand",
     "entityOrder": "Order",
     "entityActivity": "Activity",
+    "entitySalesman360": "Salesperson KPI",
     "visibleUsers": "Visible users",
     "approvalOverrides": "Approval overrides",
     "actionPanelTitle": "Record-level action decision",
