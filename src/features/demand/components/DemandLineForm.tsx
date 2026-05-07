@@ -1236,10 +1236,12 @@ export function DemandLineForm({
               style={[
                 styles.saveButton,
                 { backgroundColor: colors.accent },
-                !(selectedStock || (line?.productCode && lineToSave.productCode)) && styles.saveButtonDisabled,
+                !hasBulkDrafts &&
+                  !(selectedStock || (line?.productCode && lineToSave.productCode)) &&
+                  styles.saveButtonDisabled,
               ]}
               onPress={handleSave}
-              disabled={!(selectedStock || (line?.productCode && lineToSave.productCode))}
+              disabled={!hasBulkDrafts && !(selectedStock || (line?.productCode && lineToSave.productCode))}
             >
               <Text style={styles.saveButtonText}>
                 {hasBulkDrafts ? "Taslağa Kaydet" : "Kaydet"}
