@@ -139,7 +139,7 @@ export const stockApi = {
   },
 
   getGroups: async (): Promise<StockGroupDto[]> => {
-    const response = await apiClient.get<ApiResponse<StockGroupDto[]>>("/api/Erp/getStokGroup");
+    const response = await apiClient.get<ApiResponse<StockGroupDto[]>>("/api/NetsisRead/getStokGroup");
     if (!response.data.success) {
       throw new Error(response.data.message || "Stok gruplari alinamadi");
     }

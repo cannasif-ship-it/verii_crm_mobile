@@ -28,7 +28,7 @@ const normalizeCari = (raw: unknown): CariDto | null => {
 export const erpCustomerApi = {
   getCaris: async (): Promise<CariDto[]> => {
     // Backend her şeyi gönderdiği için parametre yollamıyoruz
-    const response = await apiClient.get<ApiResponse<unknown[]>>("/api/Erp/getAllCustomers");
+    const response = await apiClient.get<ApiResponse<unknown[]>>("/api/NetsisRead/getAllCustomers");
 
     if (!response.data.success) throw new Error("Veri çekilemedi");
 

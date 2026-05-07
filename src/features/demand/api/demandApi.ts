@@ -388,7 +388,7 @@ export const demandApi = {
   },
 
   getExchangeRate: async (params?: { tarih?: string; fiyatTipi?: number }): Promise<ExchangeRateDto[]> => {
-    const response = await apiClient.get<ExchangeRateResponse>("/api/Erp/getExchangeRate", {
+    const response = await apiClient.get<ExchangeRateResponse>("/api/NetsisRead/getExchangeRate", {
       params,
     });
 

@@ -24,7 +24,7 @@ const mapBranch = (branch: BranchErp): Branch => ({
 export const authApi = {
   getBranches: async (): Promise<Branch[]> => {
     try {
-      const response = await apiClient.get<BranchListResponse>("/api/Erp/getBranches");
+      const response = await apiClient.get<BranchListResponse>("/api/NetsisRead/getBranches");
 
       if (!response.data.success) {
         const errorMessage =

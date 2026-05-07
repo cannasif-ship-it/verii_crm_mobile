@@ -441,7 +441,7 @@ export const quotationApi = {
   },
 
   getProjectCodes: async (): Promise<ProjeDto[]> => {
-    const response = await apiClient.get<ErpProjectCodesResponse>("/api/Erp/getProjectCodes");
+    const response = await apiClient.get<ErpProjectCodesResponse>("/api/NetsisRead/getProjectCodes");
     const body = response.data as { success?: boolean; data?: ProjeDto[]; message?: string };
     if (body.success === false) {
       throw new Error(body.message || "Proje kodları alınamadı");
@@ -516,7 +516,7 @@ export const quotationApi = {
   },
 
   getExchangeRate: async (params?: { tarih?: string; fiyatTipi?: number }): Promise<ExchangeRateDto[]> => {
-    const response = await apiClient.get<ExchangeRateResponse>("/api/Erp/getExchangeRate", {
+    const response = await apiClient.get<ExchangeRateResponse>("/api/NetsisRead/getExchangeRate", {
       params,
     });
 
