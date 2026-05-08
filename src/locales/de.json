@@ -1008,7 +1008,9 @@
         "title": "Produkte",
         "description": "Endgültige Bestände auf dieser Ebene auswählen."
       }
-    }
+    },
+    "catalogAllStocks": "Alle Bestände",
+    "catalogFavoriteStocks": "Meine Favoriten"
   },
   "quotation": {
     "list": "Angebotsliste",

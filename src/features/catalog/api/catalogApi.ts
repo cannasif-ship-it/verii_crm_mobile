@@ -3,6 +3,8 @@ import type { ApiResponse } from "@/features/auth/types";
 import type { PagedResponse } from "@/features/stocks/types";
 import type {
   CatalogCategoryNodeDto,
+  CatalogCategoryFavoriteToggleDto,
+  CatalogCategoryFavoriteToggleResultDto,
   CatalogFavoriteToggleDto,
   CatalogFavoriteToggleResultDto,
   CatalogStockItemDto,
@@ -80,6 +82,46 @@ export const catalogApi = {
     };
   },
 
+  getCatalogFavorites: async (
+    catalogId: number,
+    params?: { catalogCategoryId?: number | null; pageNumber?: number; pageSize?: number; search?: string }
+  ): Promise<PagedResponse<CatalogStockItemDto>> => {
+    const query = new URLSearchParams();
+    if (params?.catalogCategoryId != null) query.append("catalogCategoryId", String(params.catalogCategoryId));
+    if (params?.pageNumber) query.append("pageNumber", String(params.pageNumber));
+    if (params?.pageSize) query.append("pageSize", String(params.pageSize));
+    if (params?.search?.trim()) query.append("search", params.search.trim());
+
+    const suffix = query.toString() ? `?${query.toString()}` : "";
+    const response = await apiClient.get<ApiResponse<PagedResponse<CatalogStockItemDto>>>(
+      `/api/Catalog/${catalogId}/favorites${suffix}`
+    );
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || "Catalog favorites could not be loaded");
+    }
+
+    const paged = response.data.data as unknown as
+      | PagedResponse<CatalogStockItemDto>
+      | ({ data?: CatalogStockItemDto[] } & Partial<PagedResponse<CatalogStockItemDto>>);
+
+    const items = Array.isArray((paged as { items?: CatalogStockItemDto[] }).items)
+      ? ((paged as { items: CatalogStockItemDto[] }).items)
+      : Array.isArray((paged as { data?: CatalogStockItemDto[] }).data)
+        ? ((paged as { data: CatalogStockItemDto[] }).data)
+        : [];
+
+    return {
+      items,
+      totalCount: paged.totalCount ?? items.length,
+      pageNumber: paged.pageNumber ?? params?.pageNumber ?? 1,
+      pageSize: paged.pageSize ?? params?.pageSize ?? items.length,
+      totalPages: paged.totalPages ?? 1,
+      hasPreviousPage: paged.hasPreviousPage ?? false,
+      hasNextPage: paged.hasNextPage ?? false,
+    };
+  },
+
   toggleCatalogFavorite: async (
     catalogId: number,
     data: CatalogFavoriteToggleDto
@@ -91,6 +133,23 @@ export const catalogApi = {
 
     if (!response.data.success || !response.data.data) {
       throw new Error(response.data.message || "Favorite status could not be updated");
+    }
+
+    return response.data.data;
+  },
+
+  toggleCatalogCategoryFavorite: async (
+    catalogId: number,
+    catalogCategoryId: number,
+    data: CatalogCategoryFavoriteToggleDto
+  ): Promise<CatalogCategoryFavoriteToggleResultDto> => {
+    const response = await apiClient.post<ApiResponse<CatalogCategoryFavoriteToggleResultDto>>(
+      `/api/Catalog/${catalogId}/categories/${catalogCategoryId}/favorite/toggle`,
+      data
+    );
+
+    if (!response.data.success || !response.data.data) {
+      throw new Error(response.data.message || "Category favorite status could not be updated");
     }
 
     return response.data.data;

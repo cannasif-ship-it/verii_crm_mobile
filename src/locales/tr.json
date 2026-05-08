@@ -1121,7 +1121,9 @@
         "title": "Ürünler",
         "description": "Son seviye leaf olmalı ve stok seçimi burada yapılmalı."
       }
-    }
+    },
+    "catalogAllStocks": "Tüm Stoklar",
+    "catalogFavoriteStocks": "Favori Stoklarım"
   },
   "quotation": {
     "list": "Teklif Listesi",

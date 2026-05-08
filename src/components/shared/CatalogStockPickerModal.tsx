@@ -27,6 +27,7 @@ import type {
 import type { StockGetDto } from "@/features/stocks/types";
 
 const PAGE_SIZE = 20;
+type StockListMode = "all" | "favorites";
 
 interface CatalogStockPickerModalProps {
   visible: boolean;
@@ -62,6 +63,7 @@ export function CatalogStockPickerModal({
   const [catalogSearch, setCatalogSearch] = useState("");
   const [pageNumber, setPageNumber] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
+  const [stockListMode, setStockListMode] = useState<StockListMode>("all");
   const [loadingCatalogs, setLoadingCatalogs] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [loadingStocks, setLoadingStocks] = useState(false);
@@ -71,6 +73,7 @@ export function CatalogStockPickerModal({
   const [keyboardInset, setKeyboardInset] = useState(0);
   const [stocksReloadNonce, setStocksReloadNonce] = useState(0);
   const [favoriteTogglingStockId, setFavoriteTogglingStockId] = useState<number | null>(null);
+  const [favoriteTogglingCategoryId, setFavoriteTogglingCategoryId] = useState<number | null>(null);
 
   const currentParentCategoryId =
     navigationPath.length > 0 ? navigationPath[navigationPath.length - 1]?.catalogCategoryId ?? null : null;
@@ -88,6 +91,7 @@ export function CatalogStockPickerModal({
       setCatalogSearch("");
       setPageNumber(1);
       setHasNextPage(false);
+      setStockListMode("all");
       setTempSelectedStocks([]);
       setGuideExpanded(false);
       setKeyboardInset(0);
@@ -194,16 +198,24 @@ export function CatalogStockPickerModal({
     const loadStocks = async (): Promise<void> => {
       setLoadingStocks(true);
       try {
-        const response = await catalogApi.getCatalogCategoryStocks(
-          selectedCatalog.id,
-          selectedLeafCategory.catalogCategoryId,
-          {
-            pageNumber,
-            pageSize: PAGE_SIZE,
-            search: stockSearch.trim() || undefined,
-            includeDescendants,
-          }
-        );
+        const response =
+          stockListMode === "favorites"
+            ? await catalogApi.getCatalogFavorites(selectedCatalog.id, {
+                catalogCategoryId: selectedLeafCategory.catalogCategoryId,
+                pageNumber,
+                pageSize: PAGE_SIZE,
+                search: stockSearch.trim() || undefined,
+              })
+            : await catalogApi.getCatalogCategoryStocks(
+                selectedCatalog.id,
+                selectedLeafCategory.catalogCategoryId,
+                {
+                  pageNumber,
+                  pageSize: PAGE_SIZE,
+                  search: stockSearch.trim() || undefined,
+                  includeDescendants,
+                }
+              );
 
         const nextItems = response.items ?? [];
         if (cancelled) return;
@@ -222,7 +234,7 @@ export function CatalogStockPickerModal({
     return () => {
       cancelled = true;
     };
-  }, [includeDescendants, pageNumber, selectedCatalog, selectedLeafCategory, stockSearch, visible, stocksReloadNonce]);
+  }, [includeDescendants, pageNumber, selectedCatalog, selectedLeafCategory, stockListMode, stockSearch, visible, stocksReloadNonce]);
 
   useEffect(() => {
     if (!visible) return;
@@ -231,7 +243,7 @@ export function CatalogStockPickerModal({
     }, 350);
 
     return () => clearTimeout(timer);
-  }, [includeDescendants, stockSearch, selectedLeafCategory?.catalogCategoryId, visible, stocksReloadNonce]);
+  }, [includeDescendants, stockListMode, stockSearch, selectedLeafCategory?.catalogCategoryId, visible, stocksReloadNonce]);
 
   const selectedLeafLabel = selectedLeafCategory?.name ?? t("stockPicker.catalogNoLeafSelected");
   const selectedLeafPathLabel =
@@ -272,6 +284,7 @@ export function CatalogStockPickerModal({
       setStockSearch("");
       setPageNumber(1);
       setHasNextPage(false);
+      setStockListMode("all");
       return;
     }
     setSelectedCatalog(catalog);
@@ -283,6 +296,7 @@ export function CatalogStockPickerModal({
     setStocks([]);
     setStockSearch("");
     setPageNumber(1);
+    setStockListMode("all");
     setHasNextPage(false);
   }, [selectedCatalog?.id]);
 
@@ -293,6 +307,8 @@ export function CatalogStockPickerModal({
       setIncludeDescendants(false);
       setTempSelectedStocks([]);
       setStocks([]);
+      setPageNumber(1);
+      setStockListMode("all");
       return;
     }
 
@@ -302,6 +318,7 @@ export function CatalogStockPickerModal({
       setTempSelectedStocks([]);
       setStocks([]);
       setPageNumber(1);
+      setStockListMode("all");
       return;
     }
 
@@ -310,6 +327,7 @@ export function CatalogStockPickerModal({
     setTempSelectedStocks([]);
     setStocks([]);
     setPageNumber(1);
+    setStockListMode("all");
   }, [selectedLeafCategory?.catalogCategoryId]);
 
   const handleCategoryList = useCallback((category: CatalogCategoryNodeDto) => {
@@ -318,6 +336,7 @@ export function CatalogStockPickerModal({
     setTempSelectedStocks([]);
     setStocks([]);
     setPageNumber(1);
+    setStockListMode("all");
     setStocksReloadNonce((prev) => prev + 1);
   }, []);
 
@@ -328,6 +347,7 @@ export function CatalogStockPickerModal({
     setTempSelectedStocks([]);
     setStocks([]);
     setPageNumber(1);
+    setStockListMode("all");
   }, []);
 
   const handleApply = useCallback(async () => {
@@ -425,6 +445,9 @@ export function CatalogStockPickerModal({
               : item
           )
         );
+        if (stockListMode === "favorites" && !nextIsFavorite) {
+          setStocks((prev) => prev.filter((item) => item.stockId !== stock.stockId));
+        }
       } catch (error) {
         setStocks((prev) =>
           prev.map((item) =>
@@ -438,7 +461,54 @@ export function CatalogStockPickerModal({
         setFavoriteTogglingStockId(null);
       }
     },
-    [favoriteTogglingStockId, selectedCatalog]
+    [favoriteTogglingStockId, selectedCatalog, stockListMode]
+  );
+
+  const handleCategoryFavoritePress = useCallback(
+    async (event: GestureResponderEvent, category: CatalogCategoryNodeDto): Promise<void> => {
+      event.stopPropagation();
+      if (!selectedCatalog || favoriteTogglingCategoryId === category.catalogCategoryId) return;
+
+      const nextIsFavorite = !category.isFavorite;
+      setFavoriteTogglingCategoryId(category.catalogCategoryId);
+      setCategories((prev) =>
+        prev.map((item) =>
+          item.catalogCategoryId === category.catalogCategoryId
+            ? { ...item, isFavorite: nextIsFavorite, favoriteId: nextIsFavorite ? item.favoriteId : null }
+            : item
+        )
+      );
+      if (selectedLeafCategory?.catalogCategoryId === category.catalogCategoryId) {
+        setSelectedLeafCategory((prev) =>
+          prev ? { ...prev, isFavorite: nextIsFavorite, favoriteId: nextIsFavorite ? prev.favoriteId : null } : prev
+        );
+      }
+
+      try {
+        const result = await catalogApi.toggleCatalogCategoryFavorite(selectedCatalog.id, category.catalogCategoryId, {
+          isFavorite: nextIsFavorite,
+        });
+        const applyResult = (item: CatalogCategoryNodeDto): CatalogCategoryNodeDto =>
+          item.catalogCategoryId === category.catalogCategoryId
+            ? { ...item, isFavorite: result.isFavorite, favoriteId: result.favoriteId ?? null }
+            : item;
+        setCategories((prev) => prev.map(applyResult));
+        setNavigationPath((prev) => prev.map(applyResult));
+        setSelectedLeafCategory((prev) => (prev ? applyResult(prev) : prev));
+      } catch (error) {
+        const rollback = (item: CatalogCategoryNodeDto): CatalogCategoryNodeDto =>
+          item.catalogCategoryId === category.catalogCategoryId
+            ? { ...item, isFavorite: category.isFavorite, favoriteId: category.favoriteId }
+            : item;
+        setCategories((prev) => prev.map(rollback));
+        setNavigationPath((prev) => prev.map(rollback));
+        setSelectedLeafCategory((prev) => (prev ? rollback(prev) : prev));
+        console.error("Catalog category favorite toggle error", error);
+      } finally {
+        setFavoriteTogglingCategoryId(null);
+      }
+    },
+    [favoriteTogglingCategoryId, selectedCatalog, selectedLeafCategory?.catalogCategoryId]
   );
 
   return (
@@ -706,14 +776,38 @@ export function CatalogStockPickerModal({
                               {category.name}
                             </Text>
                           </View>
-                          <Text
-                            style={[
-                              styles.categoryTypeBadge,
-                              { color: category.hasChildren ? colors.textSecondary : colors.accent, backgroundColor: nestedCardBackground },
-                            ]}
-                          >
-                            {category.hasChildren ? t("stockPicker.catalogSubCategory") : t("stockPicker.catalogLeafCategory")}
-                          </Text>
+                          <View style={styles.categoryHeaderActions}>
+                            <TouchableOpacity
+                              style={[
+                                styles.categoryFavoriteButton,
+                                {
+                                  borderColor: category.isFavorite ? colors.accent + "66" : colors.border,
+                                  backgroundColor: category.isFavorite ? colors.accent + "14" : nestedCardBackground,
+                                },
+                              ]}
+                              onPress={(event) => void handleCategoryFavoritePress(event, category)}
+                              disabled={favoriteTogglingCategoryId === category.catalogCategoryId}
+                              activeOpacity={0.82}
+                            >
+                              {favoriteTogglingCategoryId === category.catalogCategoryId ? (
+                                <ActivityIndicator size="small" color={colors.accent} />
+                              ) : (
+                                <Ionicons
+                                  name={category.isFavorite ? "heart" : "heart-outline"}
+                                  size={14}
+                                  color={category.isFavorite ? colors.accent : colors.textSecondary}
+                                />
+                              )}
+                            </TouchableOpacity>
+                            <Text
+                              style={[
+                                styles.categoryTypeBadge,
+                                { color: category.hasChildren ? colors.textSecondary : colors.accent, backgroundColor: nestedCardBackground },
+                              ]}
+                            >
+                              {category.hasChildren ? t("stockPicker.catalogSubCategory") : t("stockPicker.catalogLeafCategory")}
+                            </Text>
+                          </View>
                         </View>
                         <Text style={[styles.categoryCode, { color: colors.textMuted }]} numberOfLines={1}>
                           {category.code}
@@ -791,6 +885,37 @@ export function CatalogStockPickerModal({
                   placeholderTextColor={colors.textMuted}
                   editable={!!selectedLeafCategory}
                 />
+              </View>
+              <View style={styles.stockModeTabs}>
+                {(["all", "favorites"] as const).map((mode) => {
+                  const isActive = stockListMode === mode;
+                  return (
+                    <TouchableOpacity
+                      key={mode}
+                      style={[
+                        styles.stockModeTab,
+                        { borderColor: colors.border, backgroundColor: modalCardBackground },
+                        isActive && { borderColor: colors.accent + "77", backgroundColor: colors.accent + "14" },
+                      ]}
+                      onPress={() => {
+                        setStockListMode(mode);
+                        setStocks([]);
+                        setPageNumber(1);
+                        setStocksReloadNonce((prev) => prev + 1);
+                      }}
+                      activeOpacity={0.84}
+                    >
+                      <Ionicons
+                        name={mode === "favorites" ? "heart" : "albums-outline"}
+                        size={13}
+                        color={isActive ? colors.accent : colors.textSecondary}
+                      />
+                      <Text style={[styles.stockModeTabText, { color: isActive ? colors.accent : colors.textSecondary }]}>
+                        {mode === "favorites" ? t("stockPicker.catalogFavoriteStocks") : t("stockPicker.catalogAllStocks")}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
               </View>
               {tempSelectedStocks.length > 0 ? (
                 <View style={[styles.selectedSummaryCard, { borderColor: colors.border, backgroundColor: modalCardBackground }]}>
@@ -1161,6 +1286,15 @@ const styles = StyleSheet.create({
   categoryCard: { borderWidth: 1, borderRadius: 14, padding: 11 },
   categoryCardHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
   categoryNameWrap: { flexDirection: "row", alignItems: "center", gap: 8, flex: 1 },
+  categoryHeaderActions: { flexDirection: "row", alignItems: "center", gap: 6, flexShrink: 0 },
+  categoryFavoriteButton: {
+    width: 28,
+    height: 28,
+    borderRadius: 999,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
   categoryIconWrap: {
     width: 24,
     height: 24,
@@ -1199,6 +1333,19 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchInput: { minHeight: 42, fontSize: 14, flex: 1, paddingVertical: 0 },
+  stockModeTabs: { flexDirection: "row", gap: 8, marginBottom: 10 },
+  stockModeTab: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    minHeight: 34,
+    paddingHorizontal: 10,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  stockModeTabText: { fontSize: 10.7, fontWeight: "700" },
   selectionMetaWrap: { flexDirection: "row", flexWrap: "wrap", gap: 8, marginBottom: 10 },
   selectionMetaBadge: {
     paddingHorizontal: 10,

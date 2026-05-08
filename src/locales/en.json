@@ -1072,7 +1072,9 @@
         "title": "Products",
         "description": "This should be the final leaf level and stock selection should happen here."
       }
-    }
+    },
+    "catalogAllStocks": "All Stocks",
+    "catalogFavoriteStocks": "My Favorite Stocks"
   },
   "quotation": {
     "list": "Quotation List",
