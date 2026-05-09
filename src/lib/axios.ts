@@ -14,6 +14,14 @@ export const apiClient = axios.create({
   },
 });
 
+function appendPathSegment(url: string | undefined, segment: string): string | undefined {
+  if (!url) return url;
+
+  const [path, query] = url.split("?");
+  const nextPath = path.endsWith(`/${segment}`) ? path : `${path.replace(/\/$/, "")}/${segment}`;
+  return query ? `${nextPath}?${query}` : nextPath;
+}
+
 function isIsoDateTimeWithoutOffset(value: string): boolean {
   return /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(?::\d{2}(?:\.\d+)?)?$/.test(value);
 }
@@ -88,6 +96,13 @@ apiClient.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
     config.baseURL = getApiBaseUrl();
     const originalMethod = (config.method ?? "get").toLowerCase();
+    if (originalMethod === "put") {
+      config.method = "post";
+    } else if (originalMethod === "delete") {
+      config.method = "post";
+      config.url = appendPathSegment(config.url, "delete");
+    }
+
     const authState = useAuthStore.getState();
     if (!authState.isHydrated && !config.url?.includes("/api/auth/login")) {
       await authState.hydrate();
