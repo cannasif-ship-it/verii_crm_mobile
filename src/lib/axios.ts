@@ -124,11 +124,6 @@ apiClient.interceptors.request.use(
       config.headers.BranchCode = normalizedBranchCode;
     }
 
-    if (originalMethod === "put" || originalMethod === "patch" || originalMethod === "delete") {
-      config.headers["X-HTTP-Method-Override"] = originalMethod.toUpperCase();
-      config.method = "post";
-    }
-
     if (__DEV__) {
       console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`, {
         params: config.params,
