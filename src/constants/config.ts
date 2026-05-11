@@ -43,7 +43,7 @@ export async function saveApiBaseUrl(url: string): Promise<string> {
 
 export async function testApiBaseUrl(url: string): Promise<void> {
   const normalized = normalizeApiBaseUrl(url);
-  const response = await axios.get(`${normalized}/api/NetsisRead/getBranches`, {
+  const response = await axios.get(`${normalized}/api/NetsisRead/health-check`, {
     timeout: API_TIMEOUT,
     headers: {
       Accept: "application/json",

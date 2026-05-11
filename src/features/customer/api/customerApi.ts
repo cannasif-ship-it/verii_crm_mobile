@@ -1,4 +1,5 @@
 import { apiClient } from "../../../lib/axios";
+import { normalizeApiRequestError } from "../../../lib/api-error";
 import * as FileSystem from "expo-file-system/legacy";
 import { normalizeLocalMediaUri } from "../../../lib/mediaUri";
 import i18n from "../../../locales";
@@ -109,11 +110,11 @@ function normalizeMobileOcrCreateError(error: unknown): Error {
     }
   }
 
-  if (error instanceof Error) {
-    return error;
-  }
-
-  return new Error(i18n.t("customer.ocrCreateError", "Kartvizitten müşteri oluşturulamadı"));
+  return normalizeApiRequestError(
+    error,
+    i18n.t("customer.ocrCreateError", "Kartvizitten müşteri oluşturulamadı"),
+    "/api/Customer/mobile/create-from-ocr"
+  );
 }
 
 export const customerApi = {

@@ -1,5 +1,6 @@
 import { apiClient } from "../../../lib/axios";
 import i18n from "../../../locales";
+import { normalizeApiRequestError } from "../../../lib/api-error";
 import { normalizeLocalMediaUri } from "../../../lib/mediaUri";
 import type { ApiResponse } from "../../auth/types";
 import type {
@@ -242,10 +243,19 @@ export const activityImageApi = {
       }
     }
 
-    const response = await apiClient.post<ApiResponse<ActivityImageDto[]>>(
-      `/api/ActivityImage/upload/${activityId}`,
-      formData
-    );
+    let response;
+    const endpoint = `/api/ActivityImage/upload/${activityId}`;
+    try {
+      response = await apiClient.post<ApiResponse<ActivityImageDto[]>>(
+        endpoint,
+        formData,
+        {
+          timeout: 120000,
+        }
+      );
+    } catch (error) {
+      throw normalizeApiRequestError(error, i18n.t("activity.imageUploadError"), endpoint);
+    }
 
     if (!response.data.success) {
       throw new Error(
