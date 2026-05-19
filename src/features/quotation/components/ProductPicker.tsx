@@ -853,8 +853,10 @@ function ProductPickerInner(
   );
 
   const stocks = useMemo(() => {
-    return data?.pages.flatMap((page) => page.items) || [];
-  }, [data]);
+    const items = data?.pages.flatMap((page) => page.items) || [];
+    if (debouncedSearchText.trim().length < 2) return items;
+    return filterAndRankStocksLocal(items, debouncedSearchText);
+  }, [data, debouncedSearchText]);
 
   const handleOpen = useCallback(() => {
     if (!disabled) {
@@ -877,6 +879,16 @@ function ProductPickerInner(
   const handleCloseCatalog = useCallback(() => {
     setCatalogModalVisible(false);
   }, []);
+
+  const handleCatalogMultiSelect = useCallback(
+    async (results: ProductSelectionResult[]) => {
+      setCatalogModalVisible(false);
+      if (!onMultiSelect || results.length === 0) return;
+      await Promise.resolve(onMultiSelect(results));
+      handleClose();
+    },
+    [onMultiSelect, handleClose]
+  );
 
   useImperativeHandle(ref, () => ({ close: handleClose }), [handleClose]);
 
@@ -1131,6 +1143,21 @@ function ProductPickerInner(
         index,
       })),
     [selectedResults]
+  );
+
+  const catalogExistingLineMarkers = useMemo(
+    () =>
+      queuedProductKeys.map((key) => {
+        if (key.startsWith("id:")) {
+          const id = Number(key.slice(3));
+          return { id: Number.isFinite(id) ? id : undefined, code: "", name: "" };
+        }
+        if (key.startsWith("code:")) {
+          return { code: key.slice(5), name: "" };
+        }
+        return { code: key, name: "" };
+      }),
+    [queuedProductKeys]
   );
 
   const removeOneSelection = useCallback((index: number) => {
@@ -1538,12 +1565,12 @@ function ProductPickerInner(
                             {
                               width: selectionChipWidth,
                               maxWidth: selectionChipWidth,
-                              borderColor: brandColor + "55",
-                              backgroundColor: brandColor + "14",
+                              borderColor: borderColor,
+                              backgroundColor: isDark ? "rgba(255,255,255,0.04)" : cardBg,
                             },
                           ]}
                         >
-                          <Text style={[styles.selectionChipText, { color: mutedColor }]} numberOfLines={1}>
+                          <Text style={[styles.selectionChipText, { color: brandColor }]} numberOfLines={1}>
                             {item.label}
                           </Text>
                           <TouchableOpacity
@@ -1630,15 +1657,22 @@ function ProductPickerInner(
 
       <CatalogStockPickerModal
         visible={catalogModalVisible}
-        selectedStock={{ code: value, name: productName }}
         onClose={handleCloseCatalog}
-        onApply={async (stock) => {
-          if (!stock) {
-            handleClear();
-            return;
-          }
-          await handleSelect(stock);
+        multiSelect={multiSelect}
+        pricingRuleType="Quotation"
+        initialDraftSnapshot={initialSelectedResults}
+        existingLineStockMarkers={catalogExistingLineMarkers}
+        onSelect={async (result) => {
+          await handleSelect({
+            id: result.id ?? 0,
+            erpStockCode: result.code,
+            stockName: result.name,
+            unit: result.unit ?? undefined,
+            grupKodu: result.groupCode ?? undefined,
+            branchCode: 0,
+          });
         }}
+        onMultiSelect={handleCatalogMultiSelect}
       />
 
       <Modal
@@ -2043,9 +2077,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pickerTextProductName: {
-    fontSize: 11.5,
+    fontSize: 11,
     lineHeight: 15,
-    fontWeight: "500",
+    fontWeight: "400",
+    letterSpacing: 0.1,
   },
   clearButton: {
     width: 30,
@@ -2660,8 +2695,9 @@ const styles = StyleSheet.create({
   selectionChipText: {
     flex: 1,
     minWidth: 0,
-    fontSize: 10,
-    fontWeight: "500",
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 0.15,
   },
   selectionChipRemove: {
     width: 20,

@@ -23,6 +23,7 @@ import {
   getProductSelectionKey,
   type ProductSelectionResult,
 } from "../../stocks/types";
+import { filterAndRankStocks } from "../../stocks/utils/advancedSearch";
 
 export interface ProductPickerRef {
   close: () => void;
@@ -310,8 +311,10 @@ function ProductPickerInner(
   });
 
   const stocks = useMemo(() => {
-    return data?.pages.flatMap((page) => page.items) || [];
-  }, [data]);
+    const items = data?.pages.flatMap((page) => page.items) || [];
+    if (debouncedSearchText.trim().length < 2) return items;
+    return filterAndRankStocks(items, debouncedSearchText);
+  }, [data, debouncedSearchText]);
 
   const handleOpen = useCallback(() => {
     if (!disabled) {
@@ -355,6 +358,16 @@ function ProductPickerInner(
   const handleCloseCatalog = useCallback(() => {
     setCatalogModalVisible(false);
   }, []);
+
+  const handleCatalogMultiSelect = useCallback(
+    async (results: ProductSelectionResult[]) => {
+      setCatalogModalVisible(false);
+      if (!onMultiSelect || results.length === 0) return;
+      await Promise.resolve(onMultiSelect(results));
+      handleClose();
+    },
+    [onMultiSelect, handleClose]
+  );
 
   const handleApplyFilters = useCallback(() => {
     setAppliedCodeFilter(tempCodeFilter);
@@ -447,6 +460,21 @@ function ProductPickerInner(
         index,
       })),
     [selectedResults]
+  );
+
+  const catalogExistingLineMarkers = useMemo(
+    () =>
+      queuedProductKeys.map((key) => {
+        if (key.startsWith("id:")) {
+          const id = Number(key.slice(3));
+          return { id: Number.isFinite(id) ? id : undefined, code: "", name: "" };
+        }
+        if (key.startsWith("code:")) {
+          return { code: key.slice(5), name: "" };
+        }
+        return { code: key, name: "" };
+      }),
+    [queuedProductKeys]
   );
 
   const handleConfirmMultiSelect = useCallback(async () => {
@@ -732,12 +760,12 @@ function ProductPickerInner(
                             {
                               width: selectionChipWidth,
                               maxWidth: selectionChipWidth,
-                              borderColor: colors.accent + "55",
-                              backgroundColor: colors.accent + "14",
+                              borderColor: colors.border,
+                              backgroundColor: isDark ? "rgba(255,255,255,0.04)" : colors.card,
                             },
                           ]}
                         >
-                          <Text style={[styles.selectionChipText, { color: colors.textSecondary }]} numberOfLines={1}>
+                          <Text style={[styles.selectionChipText, { color: colors.accent }]} numberOfLines={1}>
                             {item.label}
                           </Text>
                           <TouchableOpacity
@@ -822,15 +850,22 @@ function ProductPickerInner(
       </Modal>
       <CatalogStockPickerModal
         visible={catalogModalVisible}
-        selectedStock={{ code: value, name: productName }}
         onClose={handleCloseCatalog}
-        onApply={async (stock) => {
-          if (!stock) {
-            handleClear();
-            return;
-          }
-          await handleSelect(stock);
+        multiSelect={multiSelect}
+        pricingRuleType="Demand"
+        initialDraftSnapshot={initialSelectedResults}
+        existingLineStockMarkers={catalogExistingLineMarkers}
+        onSelect={async (result) => {
+          await handleSelect({
+            id: result.id ?? 0,
+            erpStockCode: result.code,
+            stockName: result.name,
+            unit: result.unit ?? undefined,
+            grupKodu: result.groupCode ?? undefined,
+            branchCode: 0,
+          });
         }}
+        onMultiSelect={handleCatalogMultiSelect}
       />
       <Modal visible={isFilterModalVisible} transparent animationType="fade" onRequestClose={() => setIsFilterModalVisible(false)}>
         <View style={styles.filterModalOverlay}>
@@ -963,9 +998,10 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   pickerTextProductName: {
-    fontSize: 12,
-    lineHeight: 16,
-    fontWeight: "500",
+    fontSize: 11,
+    lineHeight: 15,
+    fontWeight: "400",
+    letterSpacing: 0.1,
   },
   clearButton: {
     marginLeft: 8,
@@ -1430,8 +1466,9 @@ const styles = StyleSheet.create({
   selectionChipText: {
     flex: 1,
     minWidth: 0,
-    fontSize: 10,
-    fontWeight: "500",
+    fontSize: 9,
+    fontWeight: "600",
+    letterSpacing: 0.15,
   },
   selectionChipRemove: {
     width: 20,
