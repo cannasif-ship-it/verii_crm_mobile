@@ -870,7 +870,14 @@ export function DemandLineForm({
                         applyDraftLineToForm(bulkDraftLines[index]);
                       }}
                     >
-                      <Text style={[styles.bulkDraftChipText, { color: colors.text }]} numberOfLines={1}>
+                      <Text
+                        style={[
+                          styles.bulkDraftChipText,
+                          { color: draft.productCode ? colors.accent : colors.text },
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
                         {draft.productCode || draft.productName || `Kalem ${index + 1}`}
                       </Text>
                       <TouchableOpacity
@@ -1538,34 +1545,37 @@ const styles = StyleSheet.create({
   },
   bulkDraftChip: {
     borderWidth: 1,
-    borderRadius: 14,
-    paddingLeft: 8,
-    paddingRight: 6,
-    paddingVertical: 5,
+    borderRadius: 10,
+    paddingLeft: 6,
+    paddingRight: 4,
+    paddingVertical: 3,
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    gap: 4,
+    gap: 3,
     minWidth: 0,
   },
   bulkDraftChipText: {
     flex: 1,
     minWidth: 0,
-    fontSize: 11,
-    fontWeight: "600",
+    fontSize: 8,
+    lineHeight: 10,
+    fontWeight: "500",
+    letterSpacing: 0.2,
   },
   bulkDraftChipRemove: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
-    borderWidth: 1,
+    width: 15,
+    height: 15,
+    borderRadius: 8,
+    borderWidth: StyleSheet.hairlineWidth,
     alignItems: "center",
     justifyContent: "center",
+    flexShrink: 0,
   },
   bulkDraftChipRemoveText: {
-    fontSize: 12,
-    lineHeight: 13,
-    fontWeight: "700",
+    fontSize: 10,
+    lineHeight: 11,
+    fontWeight: "600",
   },
   cancelButton: {
     flex: 1,
